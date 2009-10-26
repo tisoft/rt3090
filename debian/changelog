@@ -1,0 +1,8 @@
+rt3090 (2.2.0.1-0ubuntu0~ppa1) karmic; urgency=low
+
+  * Initial release
+  * Added 2.6.31 patch from Orcan Ogetbil <oget@rpmfusion.org>
+  * http://lists.rpmfusion.org/pipermail/rpmfusion-commits/2009-August/006214.html 
+
+ -- Markus Heberling <markus@tisoft.de>  Mon, 26 Oct 2009 12:22:23 +0100
+
