@@ -1,14 +1,14 @@
 #! /bin/sh /usr/share/dpatch/dpatch-run
-## 02disable_tftpboot.dpatch by  <markus@ubuntu-media-server>
+## Makefile.dpatch by  <markus@mheberling1>
 ##
 ## All lines beginning with `## DP:' are a description of the patch.
 ## DP: No description.
 
 @DPATCH@
-diff -urNad rt3090-2.1.0.0~/Makefile rt3090-2.1.0.0/Makefile
---- rt3090-2.1.0.0~/Makefile	2009-06-11 04:44:08.000000000 +0200
-+++ rt3090-2.1.0.0/Makefile	2009-06-29 15:24:11.000000000 +0200
-@@ -154,30 +154,9 @@
+diff -urNad rt3090~/Makefile rt3090/Makefile
+--- rt3090~/Makefile	2009-12-17 22:38:51.000000000 +0100
++++ rt3090/Makefile	2009-12-17 22:45:58.000000000 +0100
+@@ -154,30 +154,30 @@
  ifneq (,$(findstring 2.4,$(LINUX_SRC)))
  	cp -f os/linux/Makefile.4 $(RT28xx_DIR)/os/linux/Makefile
  	make -C $(RT28xx_DIR)/os/linux/
@@ -24,6 +24,18 @@ diff -urNad rt3090-2.1.0.0~/Makefile rt3090-2.1.0.0/Makefile
 -	cp -f $(RT28xx_DIR)/os/linux/rt$(CHIPSET)sta.o /tftpboot
 -endif	
 -endif	
++#ifeq ($(RT28xx_MODE),AP)
++#	cp -f $(RT28xx_DIR)/os/linux/rt$(CHIPSET)ap.o /tftpboot
++#ifeq ($(PLATFORM),INF_AMAZON_SE)
++#	cp -f /tftpboot/rt2870ap.o /backup/ifx/build/root_filesystem/lib/modules/2.4.31-Amazon_SE-3.6.2.2-R0416_Ralink/kernel/drivers/net
++#endif
++#else	
++#ifeq ($(RT28xx_MODE),APSTA)
++#	cp -f $(RT28xx_DIR)/os/linux/rt$(CHIPSET)apsta.o /tftpboot
++#else
++#	cp -f $(RT28xx_DIR)/os/linux/rt$(CHIPSET)sta.o /tftpboot
++#endif	
++#endif	
  else
  	cp -f os/linux/Makefile.6 $(RT28xx_DIR)/os/linux/Makefile
  	make  -C  $(LINUX_SRC) SUBDIRS=$(RT28xx_DIR)/os/linux modules
@@ -36,6 +48,15 @@ diff -urNad rt3090-2.1.0.0~/Makefile rt3090-2.1.0.0/Makefile
 -	cp -f $(RT28xx_DIR)/os/linux/rt$(CHIPSET)sta.ko /tftpboot
 -endif	
 -endif
++#ifeq ($(RT28xx_MODE),AP)
++#	cp -f $(RT28xx_DIR)/os/linux/rt$(CHIPSET)ap.ko /tftpboot
++#else	
++#ifeq ($(RT28xx_MODE),APSTA)
++#	cp -f $(RT28xx_DIR)/os/linux/rt$(CHIPSET)apsta.ko /tftpboot
++#else
++#	cp -f $(RT28xx_DIR)/os/linux/rt$(CHIPSET)sta.ko /tftpboot
++#endif	
++#endif
  endif
  
  release:

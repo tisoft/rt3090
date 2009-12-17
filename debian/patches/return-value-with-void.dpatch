@@ -1,0 +1,28 @@
+#! /bin/sh /usr/share/dpatch/dpatch-run
+## return-value-with-void.dpatch by  <markus@mheberling1>
+##
+## All lines beginning with `## DP:' are a description of the patch.
+## DP: No description.
+
+@DPATCH@
+diff -urNad rt3090~/os/linux/pci_main_dev.c rt3090/os/linux/pci_main_dev.c
+--- rt3090~/os/linux/pci_main_dev.c	2009-12-17 22:38:51.000000000 +0100
++++ rt3090/os/linux/pci_main_dev.c	2009-12-17 22:47:36.000000000 +0100
+@@ -894,7 +894,7 @@
+ 
+ 	// Check PSControl Configuration
+ 	if (pAd->StaCfg.PSControl.field.EnableNewPS == FALSE)
+-		return TRUE;
++		return;
+ 
+ 	//3090 will not execute the following codes.
+     	// Check interface : If not PCIe interface, return. 
+@@ -982,7 +982,7 @@
+ 
+ 	// Check PSControl Configuration
+ 	if (pAd->StaCfg.PSControl.field.EnableNewPS == FALSE)
+-		return TRUE;
++		return;
+ 
+ 	// Check interface : If not PCIe interface, return.
+ 	//Block 3090 to enter the following function

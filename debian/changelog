@@ -1,3 +1,12 @@
+rt3090 (1:2.1.0.1-0ubuntu0~ppa0) karmic; urgency=low
+
+  * reverted back to 2.1.0.1
+  * Use patches from Mandriva
+  * WPA now working in kernel 2.6.31 
+
+ -- Markus Heberling <markus@tisoft.de>  Thu, 17 Dec 2009 11:31:23 +0200
+
+
 rt3090 (2.2.0.1-0ubuntu0~ppa2) karmic; urgency=low
 
   * http://www.kernel.org/pub/linux/kernel/people/gregkh/staging/2.6/2.6.31/staging-rt3090-port-changes-in-wpa_mix_pair_cipher-to-rt3090.patch 

@@ -1,3 +1,6 @@
-01disable_tftpboot.dpatch
-02-2.6.31-compile.dpatch
-03port-changes-in-wpa_mix_pair_cipher-to-rt3090.dpatch
+net_device_ops.dpatch
+Makefile.dpatch
+enable-wpa-supplicant.dpatch
+fix-rt_ioctl_siwencode-check.dpatch
+return-value-with-void.dpatch
+unexpected-format.dpatch

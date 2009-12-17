@@ -1,0 +1,19 @@
+#! /bin/sh /usr/share/dpatch/dpatch-run
+## enable-wpa-supplicant.dpatch by  <markus@mheberling1>
+##
+## All lines beginning with `## DP:' are a description of the patch.
+## DP: No description.
+
+@DPATCH@
+diff -urNad rt3090~/os/linux/config.mk rt3090/os/linux/config.mk
+--- rt3090~/os/linux/config.mk	2009-12-17 22:57:38.000000000 +0100
++++ rt3090/os/linux/config.mk	2009-12-17 23:25:04.000000000 +0100
+@@ -20,7 +20,7 @@
+ HAS_WPA_SUPPLICANT=y
+ 
+ # Support Native WpaSupplicant for Network Maganger
+-HAS_NATIVE_WPA_SUPPLICANT_SUPPORT=n
++HAS_NATIVE_WPA_SUPPLICANT_SUPPORT=y
+ 
+ #Support Net interface block while Tx-Sw queue full
+ HAS_BLOCK_NET_IF=n

@@ -1,0 +1,19 @@
+#! /bin/sh /usr/share/dpatch/dpatch-run
+## fix-rt_ioctl_siwencode-check.dpatch by  <markus@mheberling1>
+##
+## All lines beginning with `## DP:' are a description of the patch.
+## DP: No description.
+
+@DPATCH@
+diff -urNad rt3090~/os/linux/sta_ioctl.c rt3090/os/linux/sta_ioctl.c
+--- rt3090~/os/linux/sta_ioctl.c	2009-12-17 22:38:51.000000000 +0100
++++ rt3090/os/linux/sta_ioctl.c	2009-12-17 22:46:47.000000000 +0100
+@@ -1840,7 +1840,7 @@
+             }
+         else
+ 			/* Don't complain if only change the mode */
+-		if(!erq->flags & IW_ENCODE_MODE) 
++		if(!(erq->flags & IW_ENCODE_MODE)) 
+ 		{
+ 				return -EINVAL;
+ 		}
