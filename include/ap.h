@@ -55,10 +55,6 @@ BOOLEAN APBridgeToWirelessSta(
     IN  UINT            DataLen,
     IN  ULONG           fromwdsidx);
 
-VOID RTMP_BASetup(
-	IN PRTMP_ADAPTER pAd,
-	IN PMAC_TABLE_ENTRY pMacEntry,
-	IN UINT8 UserPriority);
 
 VOID	APSendPackets(
 	IN	NDIS_HANDLE		MiniportAdapterContext,
@@ -313,7 +309,6 @@ VOID APQuickResponeForRateUpExec(
     IN PVOID SystemSpecific3);
 
 
-
 VOID RTMPSetPiggyBack(
 	IN PRTMP_ADAPTER	pAd,
 	IN BOOLEAN			bPiggyBack);
@@ -507,24 +502,12 @@ BOOLEAN APPeerBeaconAndProbeRspSanity(
     OUT UCHAR *RateLen,
     OUT BOOLEAN *ExtendedRateIeExist,
     OUT UCHAR *Erp);
-
-/* ap_cfg.h */
-INT	Set_OwnIPAddr_Proc(
-	IN	PRTMP_ADAPTER	pAd, 
-	IN	PSTRING			arg);
-
-INT	Set_EAPIfName_Proc(
-	IN	PRTMP_ADAPTER	pAd, 
-	IN	PSTRING			arg);
-
-INT	Set_PreAuthIfName_Proc(
-	IN	PRTMP_ADAPTER	pAd, 
-	IN	PSTRING			arg);
-
+#if defined(RT30xx) || defined(RT305x)
 VOID EnableAPMIMOPS(
     IN PRTMP_ADAPTER pAd);
 
 VOID DisableAPMIMOPS(
     IN PRTMP_ADAPTER pAd);
+#endif 
 #endif  // __AP_H__
 

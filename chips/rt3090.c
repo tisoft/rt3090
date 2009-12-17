@@ -28,7 +28,7 @@
 	rt3090.c
 
 	Abstract:
-	Specific funcitons and variables for RT3090
+	Specific funcitons and variables for RT3070
 
 	Revision History:
 	Who         When          What

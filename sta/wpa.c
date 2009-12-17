@@ -112,7 +112,7 @@ VOID	RTMPReportMicError(
 				MLME_CNTL_STATE_MACHINE,
 				OID_802_11_MIC_FAILURE_REPORT_FRAME,
 				1,
-				&unicastKey, 0);
+				&unicastKey);
 
     if (pAd->StaCfg.MicErrCnt == 2)
     {
@@ -170,8 +170,7 @@ VOID	WpaMicFailureReportFrame(
 	PUCHAR              pOutBuffer = NULL;
 	UCHAR               Header802_3[14];
 	ULONG               FrameLen = 0;
-	UCHAR				*mpool;
-	PEAPOL_PACKET       pPacket;
+	EAPOL_PACKET        Packet;
 	UCHAR               Mic[16];
     BOOLEAN             bUnicast;
         
@@ -183,64 +182,53 @@ VOID	WpaMicFailureReportFrame(
 	// init 802.3 header and Fill Packet
 	MAKE_802_3_HEADER(Header802_3, pAd->CommonCfg.Bssid, pAd->CurrentAddress, EAPOL);	
 
-	// Allocate memory for output
-	os_alloc_mem(NULL, (PUCHAR *)&mpool, TX_EAPOL_BUFFER);
-	if (mpool == NULL)
-    {
-        DBGPRINT(RT_DEBUG_ERROR, ("!!!%s : no memory!!!\n", __FUNCTION__));
-        return;
-    }
-
-	pPacket = (PEAPOL_PACKET)mpool;
-	NdisZeroMemory(pPacket, TX_EAPOL_BUFFER);
+	NdisZeroMemory(&Packet, sizeof(Packet));
+	Packet.ProVer	= EAPOL_VER;
+	Packet.ProType	= EAPOLKey;
 	
-	pPacket->ProVer	= EAPOL_VER;
-	pPacket->ProType	= EAPOLKey;
-	
-	pPacket->KeyDesc.Type = WPA1_KEY_DESC;
+	Packet.KeyDesc.Type = WPA1_KEY_DESC;
 
     // Request field presented
-    pPacket->KeyDesc.KeyInfo.Request = 1;
+    Packet.KeyDesc.KeyInfo.Request = 1;
     
 	if(pAd->StaCfg.WepStatus  == Ndis802_11Encryption3Enabled)
 	{
-		pPacket->KeyDesc.KeyInfo.KeyDescVer = 2;
+		Packet.KeyDesc.KeyInfo.KeyDescVer = 2;
 	} 
 	else	  // TKIP
 	{
-		pPacket->KeyDesc.KeyInfo.KeyDescVer = 1;
+		Packet.KeyDesc.KeyInfo.KeyDescVer = 1;
 	}
 
-    pPacket->KeyDesc.KeyInfo.KeyType = (bUnicast ? PAIRWISEKEY : GROUPKEY);
+    Packet.KeyDesc.KeyInfo.KeyType = (bUnicast ? PAIRWISEKEY : GROUPKEY);
 
 	// KeyMic field presented
-	pPacket->KeyDesc.KeyInfo.KeyMic  = 1;
+	Packet.KeyDesc.KeyInfo.KeyMic  = 1;
 
     // Error field presented
-	pPacket->KeyDesc.KeyInfo.Error  = 1;
+	Packet.KeyDesc.KeyInfo.Error  = 1;
     
 	// Update packet length after decide Key data payload
-	SET_UINT16_TO_ARRARY(pPacket->Body_Len, MIN_LEN_OF_EAPOL_KEY_MSG)
+	SET_UINT16_TO_ARRARY(Packet.Body_Len, LEN_EAPOL_KEY_MSG)
 
 	// Key Replay Count
-	NdisMoveMemory(pPacket->KeyDesc.ReplayCounter, pAd->StaCfg.ReplayCounter, LEN_KEY_DESC_REPLAY);
+	NdisMoveMemory(Packet.KeyDesc.ReplayCounter, pAd->StaCfg.ReplayCounter, LEN_KEY_DESC_REPLAY);
     inc_byte_array(pAd->StaCfg.ReplayCounter, 8);
 
 	// Convert to little-endian format.
-	*((USHORT *)&pPacket->KeyDesc.KeyInfo) = cpu2le16(*((USHORT *)&pPacket->KeyDesc.KeyInfo));
+	*((USHORT *)&Packet.KeyDesc.KeyInfo) = cpu2le16(*((USHORT *)&Packet.KeyDesc.KeyInfo));
 
 
 	MlmeAllocateMemory(pAd, (PUCHAR *)&pOutBuffer);  // allocate memory
 	if(pOutBuffer == NULL)
 	{
-		os_free_mem(NULL, mpool);
 		return;
 	}
     
 	// Prepare EAPOL frame for MIC calculation
 	// Be careful, only EAPOL frame is counted for MIC calculation
 	MakeOutgoingFrame(pOutBuffer,               &FrameLen,
-		              CONV_ARRARY_TO_UINT16(pPacket->Body_Len) + 4,   pPacket,
+		              CONV_ARRARY_TO_UINT16(Packet.Body_Len) + 4,   &Packet,
 		              END_OF_ARGS);
 
 	// Prepare and Fill MIC value
@@ -248,24 +236,22 @@ VOID	WpaMicFailureReportFrame(
 	if(pAd->StaCfg.WepStatus  == Ndis802_11Encryption3Enabled)
 	{	// AES
         UCHAR digest[20] = {0};
-		HMAC_SHA1(pAd->StaCfg.PTK, LEN_PTK_KCK, pOutBuffer, FrameLen, digest, SHA1_DIGEST_SIZE);
+		HMAC_SHA1(pAd->StaCfg.PTK, LEN_EAP_MICK, pOutBuffer, FrameLen, digest, SHA1_DIGEST_SIZE);
 		NdisMoveMemory(Mic, digest, LEN_KEY_DESC_MIC);
 	} 
 	else
 	{	// TKIP
-		HMAC_MD5(pAd->StaCfg.PTK, LEN_PTK_KCK, pOutBuffer, FrameLen, Mic, MD5_DIGEST_SIZE);
+		HMAC_MD5(pAd->StaCfg.PTK,  LEN_EAP_MICK, pOutBuffer, FrameLen, Mic, MD5_DIGEST_SIZE);
 	}
-	NdisMoveMemory(pPacket->KeyDesc.KeyMic, Mic, LEN_KEY_DESC_MIC);
+	NdisMoveMemory(Packet.KeyDesc.KeyMic, Mic, LEN_KEY_DESC_MIC);
 
 	// copy frame to Tx ring and send MIC failure report frame to authenticator
 	RTMPToWirelessSta(pAd, &pAd->MacTab.Content[BSSID_WCID],
 					  Header802_3, LENGTH_802_3, 
-					  (PUCHAR)pPacket, 
-					  CONV_ARRARY_TO_UINT16(pPacket->Body_Len) + 4, FALSE);
+					  (PUCHAR)&Packet, 
+					  CONV_ARRARY_TO_UINT16(Packet.Body_Len) + 4, FALSE);
 
 	MlmeFreeMemory(pAd, (PUCHAR)pOutBuffer);
-
-	os_free_mem(NULL, mpool);
 
 	DBGPRINT(RT_DEBUG_TRACE, ("WpaMicFailureReportFrame <-----\n"));
 }
@@ -302,7 +288,7 @@ VOID WpaDisassocApAndBlockAssoc(
 	// disassoc from current AP first
 	DBGPRINT(RT_DEBUG_TRACE, ("RTMPReportMicError - disassociate with current AP after sending second continuous EAPOL frame\n"));
 	DisassocParmFill(pAd, &DisassocReq, pAd->CommonCfg.Bssid, REASON_MIC_FAILURE);
-	MlmeEnqueue(pAd, ASSOC_STATE_MACHINE, MT2_MLME_DISASSOC_REQ, sizeof(MLME_DISASSOC_REQ_STRUCT), &DisassocReq, 0);
+	MlmeEnqueue(pAd, ASSOC_STATE_MACHINE, MT2_MLME_DISASSOC_REQ, sizeof(MLME_DISASSOC_REQ_STRUCT), &DisassocReq);
 
 	pAd->Mlme.CntlMachine.CurrState = CNTL_WAIT_DISASSOC;
 	pAd->StaCfg.bBlockAssoc = TRUE;
@@ -323,10 +309,10 @@ VOID WpaStaPairwiseKeySetting(
 	
 	// Prepare pair-wise key information into shared key table
 	NdisZeroMemory(pSharedKey, sizeof(CIPHER_KEY));  
-	pSharedKey->KeyLen = LEN_TK;
-    NdisMoveMemory(pSharedKey->Key, &pAd->StaCfg.PTK[32], LEN_TK);
-	NdisMoveMemory(pSharedKey->RxMic, &pAd->StaCfg.PTK[48], LEN_TKIP_MIC);
-	NdisMoveMemory(pSharedKey->TxMic, &pAd->StaCfg.PTK[48+LEN_TKIP_MIC], LEN_TKIP_MIC);            
+	pSharedKey->KeyLen = LEN_TKIP_EK;
+    NdisMoveMemory(pSharedKey->Key, &pAd->StaCfg.PTK[32], LEN_TKIP_EK);
+	NdisMoveMemory(pSharedKey->RxMic, &pAd->StaCfg.PTK[48], LEN_TKIP_RXMICK);
+	NdisMoveMemory(pSharedKey->TxMic, &pAd->StaCfg.PTK[48+LEN_TKIP_RXMICK], LEN_TKIP_TXMICK);            
 
 	// Decide its ChiperAlg
 	if (pAd->StaCfg.PairCipher == Ndis802_11Encryption2Enabled)
@@ -337,26 +323,27 @@ VOID WpaStaPairwiseKeySetting(
 		pSharedKey->CipherAlg = CIPHER_NONE;
 
 	// Update these related information to MAC_TABLE_ENTRY
-	NdisMoveMemory(pEntry->PairwiseKey.Key, &pAd->StaCfg.PTK[32], LEN_TK);
-	NdisMoveMemory(pEntry->PairwiseKey.RxMic, &pAd->StaCfg.PTK[48], LEN_TKIP_MIC);
-	NdisMoveMemory(pEntry->PairwiseKey.TxMic, &pAd->StaCfg.PTK[48+LEN_TKIP_MIC], LEN_TKIP_MIC);            
+	NdisMoveMemory(pEntry->PairwiseKey.Key, &pAd->StaCfg.PTK[32], LEN_TKIP_EK);
+	NdisMoveMemory(pEntry->PairwiseKey.RxMic, &pAd->StaCfg.PTK[48], LEN_TKIP_RXMICK);
+	NdisMoveMemory(pEntry->PairwiseKey.TxMic, &pAd->StaCfg.PTK[48+LEN_TKIP_RXMICK], LEN_TKIP_TXMICK);            
 	pEntry->PairwiseKey.CipherAlg = pSharedKey->CipherAlg;
 	
 	// Update pairwise key information to ASIC Shared Key Table	   
-	RTMP_ASIC_SHARED_KEY_TABLE(pAd, 
+	AsicAddSharedKeyEntry(pAd, 
 						  BSS0, 
 						  0, 
-						  pSharedKey);
+						  pSharedKey->CipherAlg,
+						  pSharedKey->Key,
+						  pSharedKey->TxMic, 
+						  pSharedKey->RxMic);
 
 	// Update ASIC WCID attribute table and IVEIV table
-	RTMP_SET_WCID_SEC_INFO(pAd, 
-						BSS0, 
-						0, 
-						pSharedKey->CipherAlg, 
-						BSSID_WCID,
-						SHAREDKEYTABLE);
-
-	RTMP_SET_PORT_SECURED(pAd);
+	RTMPAddWcidAttributeEntry(pAd, 
+							  BSS0, 
+							  0, 
+							  pSharedKey->CipherAlg, 
+							  pEntry);
+	STA_PORT_SECURED(pAd);
 	pAd->IndicateMediaState = NdisMediaStateConnected;
 	
 	DBGPRINT(RT_DEBUG_TRACE, ("%s : AID(%d) port secured\n", __FUNCTION__, pEntry->Aid));
@@ -372,10 +359,10 @@ VOID WpaStaGroupKeySetting(
 
 	// Prepare pair-wise key information into shared key table
 	NdisZeroMemory(pSharedKey, sizeof(CIPHER_KEY));  
-	pSharedKey->KeyLen = LEN_TK;
-	NdisMoveMemory(pSharedKey->Key, pAd->StaCfg.GTK, LEN_TK);
-	NdisMoveMemory(pSharedKey->RxMic, &pAd->StaCfg.GTK[16], LEN_TKIP_MIC);
-	NdisMoveMemory(pSharedKey->TxMic, &pAd->StaCfg.GTK[24], LEN_TKIP_MIC);
+	pSharedKey->KeyLen = LEN_TKIP_EK;
+	NdisMoveMemory(pSharedKey->Key, pAd->StaCfg.GTK, LEN_TKIP_EK);
+	NdisMoveMemory(pSharedKey->RxMic, &pAd->StaCfg.GTK[16], LEN_TKIP_RXMICK);
+	NdisMoveMemory(pSharedKey->TxMic, &pAd->StaCfg.GTK[24], LEN_TKIP_TXMICK);
 
 	// Update Shared Key CipherAlg
 	pSharedKey->CipherAlg = CIPHER_NONE;
@@ -389,60 +376,20 @@ VOID WpaStaGroupKeySetting(
 		pSharedKey->CipherAlg = CIPHER_WEP128;
 
 	// Update group key information to ASIC Shared Key Table	   
-	RTMP_ASIC_SHARED_KEY_TABLE(pAd, 
-						  	BSS0, 
-						  	pAd->StaCfg.DefaultKeyId, 
-							pSharedKey);
+	AsicAddSharedKeyEntry(pAd, 
+						  BSS0, 
+						  pAd->StaCfg.DefaultKeyId, 
+						  pSharedKey->CipherAlg,
+						  pSharedKey->Key,
+						  pSharedKey->TxMic, 
+						  pSharedKey->RxMic);
 
-	/* STA doesn't need to set WCID attribute for group key */
+	// Update ASIC WCID attribute table and IVEIV table
+	RTMPAddWcidAttributeEntry(pAd, 
+							  BSS0, 
+							  pAd->StaCfg.DefaultKeyId, 
+							  pSharedKey->CipherAlg, 
+							  NULL);
+
 }
-
-
-/*
-	========================================================================
-	
-	Routine Description:
-		Send EAPoL-Start packet to AP.
-
-	Arguments:
-		pAd         - NIC Adapter pointer
-		
-	Return Value:
-		None
-		
-	IRQL = DISPATCH_LEVEL
-	
-	Note:
-		Actions after link up
-		1. Change the correct parameters
-		2. Send EAPOL - START
-		
-	========================================================================
-*/
-VOID    WpaSendEapolStart(
-	IN	PRTMP_ADAPTER	pAd,
-	IN  PUCHAR          pBssid)
-{
-	IEEE8021X_FRAME		Packet;
-	UCHAR               Header802_3[14];
-	
-	DBGPRINT(RT_DEBUG_TRACE, ("-----> WpaSendEapolStart\n"));
-
-	NdisZeroMemory(Header802_3,sizeof(UCHAR)*14);
-
-	MAKE_802_3_HEADER(Header802_3, pBssid, &pAd->CurrentAddress[0], EAPOL);
-	
-	// Zero message 2 body
-	NdisZeroMemory(&Packet, sizeof(Packet));
-	Packet.Version = EAPOL_VER;
-	Packet.Type    = EAPOLStart;
-	Packet.Length  = cpu2be16(0);
-	
-	// Copy frame to Tx ring
-	RTMPToWirelessSta((PRTMP_ADAPTER)pAd, &pAd->MacTab.Content[BSSID_WCID],
-					 Header802_3, LENGTH_802_3, (PUCHAR)&Packet, 4, TRUE);
-
-	DBGPRINT(RT_DEBUG_TRACE, ("<----- WpaSendEapolStart\n"));
-}
-
 

@@ -346,7 +346,7 @@ NDIS_STATUS RtmpAsicLoadFirmware(
 	//Use Second Part
 	{
 #ifdef RTMP_MAC_PCI
-		if ((Version == 0x2860) || (Version == 0x3572) || IS_RT3090(pAd)||IS_RT3390(pAd))
+		if ((Version == 0x2860) || IS_RT3090(pAd)||IS_RT3390(pAd))
 		{
 			pFirmwareImage = FirmwareImage;
 			FileLength = FIRMWAREIMAGE_LENGTH;
@@ -403,8 +403,8 @@ INT RtmpAsicSendCommandToMcu(
 	static UINT32 j = 0;
 #endif // RALINK_ATE //
 #endif // RTMP_MAC_PCI //
-#ifdef CONFIG_STA_SUPPORT
 #ifdef PCIE_PS_SUPPORT
+#ifdef CONFIG_STA_SUPPORT
 	// 3090F power solution 3 has hw limitation that needs to ban all mcu command 
 	// when firmware is in radio state.  For other chip doesn't have this limitation. 
 	if (((IS_RT3090(pAd) || IS_RT3572(pAd) || IS_RT3390(pAd)) && IS_VERSION_AFTER_F(pAd)) && IS_VERSION_AFTER_F(pAd)
@@ -438,8 +438,8 @@ INT RtmpAsicSendCommandToMcu(
 		&& (Command == WAKE_MCU_CMD))
 	{
 
-	do
-	{
+		do
+		{
 			RTMP_IO_FORCE_READ32(pAd, H2M_MAILBOX_CSR, &H2MMailbox.word);
 			if (H2MMailbox.field.Owner == 0)
 				break;
@@ -539,8 +539,8 @@ INT RtmpAsicSendCommandToMcu(
 	{
 	}
 }
-#ifdef CONFIG_STA_SUPPORT
 #ifdef PCIE_PS_SUPPORT
+#ifdef CONFIG_STA_SUPPORT
 	// 3090 MCU Wakeup command needs more time to be stable. 
 	// Before stable, don't issue other MCU command to prevent from firmware error.
 	if (((IS_RT3090(pAd) || IS_RT3572(pAd) || IS_RT3390(pAd)) && IS_VERSION_AFTER_F(pAd)) && IS_VERSION_AFTER_F(pAd)

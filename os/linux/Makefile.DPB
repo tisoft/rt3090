@@ -1,0 +1,27 @@
+#
+# Release file for AP Mode
+#
+include $(RT28xx_DIR)/os/linux/config.mk
+
+ifeq ($(RT28xx_MODE),AP)
+release:
+	echo "MAKE Linux AP Code DPB Release"
+	rm -rf $(RT28xx_DIR)/DPB
+	mv $(RT28xx_DIR)/build $(RT28xx_DIR)/DPB
+endif
+
+
+#
+# Release file for Station Mode
+#
+ifeq ($(RT28xx_MODE),STA)
+release:
+	echo "MAKE Linux Station Code DPB Release"
+	rm -rf $(RT28xx_DIR)/DPB
+	mv $(RT28xx_DIR)/build $(RT28xx_DIR)/DPB
+	cp $(RT28xx_DIR)/iwpriv_usage.txt $(RT28xx_DIR)/DPB; \
+	cp $(RT28xx_DIR)/wps_iwpriv_usage.txt $(RT28xx_DIR)/DPB; \
+	cp $(RT28xx_DIR)/sta_ate_iwpriv_usage.txt $(RT28xx_DIR)/DPB; \
+	cp $(RT28xx_DIR)/README_STA $(RT28xx_DIR)/DPB;
+endif
+

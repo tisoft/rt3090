@@ -22,19 +22,19 @@
  * Free Software Foundation, Inc.,                                       * 
  * 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             * 
  *                                                                       * 
- ***************************************************************************
+ *************************************************************************
 
-	Module Name:
-	mlme.h
+    Module Name:
+    mlme.h
 
-	Abstract:
+    Abstract:
+    Miniport generic portion header file
 
-	Revision History:
-	Who			When			What
-	--------	----------		----------------------------------------------
+    Revision History:
+    Who         When          What
+    --------    ----------    ----------------------------------------------
 	John Chang	2003-08-28		Created
 	John Chang  2004-09-06      modified for RT2600
-	
 */
 #ifndef __MLME_H__
 #define __MLME_H__
@@ -43,6 +43,7 @@
 
 #ifdef CONFIG_STA_SUPPORT
 #endif // CONFIG_STA_SUPPORT //
+
 
 // maximum supported capability information - 
 // ESS, IBSS, Privacy, Short Preamble, Spectrum mgmt, Short Slot
@@ -144,9 +145,9 @@ extern UINT32 CW_MAX_IN_BITS;
 //#define BSS_TABLE_EMPTY(x)             ((x).BssNr == 0)
 #define MAC_ADDR_IS_GROUP(Addr)       (((Addr[0]) & 0x01))
 #define MAC_ADDR_HASH(Addr)            (Addr[0] ^ Addr[1] ^ Addr[2] ^ Addr[3] ^ Addr[4] ^ Addr[5])
-#define MAC_ADDR_HASH_INDEX(Addr)      (MAC_ADDR_HASH(Addr) & (HASH_TABLE_SIZE - 1))
+#define MAC_ADDR_HASH_INDEX(Addr)      (MAC_ADDR_HASH(Addr) % HASH_TABLE_SIZE)
 #define TID_MAC_HASH(Addr,TID)            (TID^Addr[0] ^ Addr[1] ^ Addr[2] ^ Addr[3] ^ Addr[4] ^ Addr[5])
-#define TID_MAC_HASH_INDEX(Addr,TID)      (TID_MAC_HASH(Addr,TID) & (HASH_TABLE_SIZE - 1))
+#define TID_MAC_HASH_INDEX(Addr,TID)      (TID_MAC_HASH(Addr,TID) % HASH_TABLE_SIZE)
 
 // LED Control
 // assoiation ON. one LED ON. another blinking when TX, OFF when idle
@@ -210,7 +211,6 @@ if (((__pEntry)) != NULL) \
 	(__pEntry)->OneSecTxFailCount = 0; \
 	(__pEntry)->OneSecTxNoRetryOkCount = 0; \
 }
-
 
 //
 // 802.11 frame formats
@@ -978,15 +978,6 @@ typedef struct PACKED {
 #endif /* !RT_BIG_ENDIAN */
 } QBSS_STA_INFO_PARM, *PQBSS_STA_INFO_PARM;
 
-typedef struct {
-	QBSS_STA_INFO_PARM	QosInfo;
-	UCHAR	Rsv;
-	UCHAR	Q_AC_BE[4];
-	UCHAR	Q_AC_BK[4];
-	UCHAR	Q_AC_VI[4];
-	UCHAR	Q_AC_VO[4];
-} QBSS_STA_EDCA_PARM, *PQBSS_STA_EDCA_PARM;
-
 // QBSS Info field in QAP's Beacon/ProbeRsp
 typedef struct PACKED {
 #ifdef RT_BIG_ENDIAN
@@ -1108,7 +1099,9 @@ typedef struct _MLME_QUEUE_ELEM {
     UCHAR             Channel;
     UCHAR             Wcid;
     BOOLEAN           Occupied;
-	ULONG             Priv;
+#ifdef MLME_EX
+	USHORT            Idx;
+#endif // MLME_EX //
 } MLME_QUEUE_ELEM, *PMLME_QUEUE_ELEM;
 
 typedef struct _MLME_QUEUE {
@@ -1300,7 +1293,6 @@ typedef struct PACKED _RTMP_TX_RATE_SWITCH
 	UCHAR   TrainDown;
 } RRTMP_TX_RATE_SWITCH, *PRTMP_TX_RATE_SWITCH;
 
-
 // ========================== AP mlme.h ===============================
 #define TBTT_PRELOAD_TIME       384        // usec. LomgPreamble + 24-byte at 1Mbps
 #define DEFAULT_DTIM_PERIOD     1
@@ -1311,7 +1303,6 @@ typedef struct PACKED _RTMP_TX_RATE_SWITCH
 //#define RX_WEIGHTING                     60
 
 #define MAC_TABLE_AGEOUT_TIME			300			// unit: sec
-#define MAC_TABLE_MIN_AGEOUT_TIME		60			// unit: sec
 #define MAC_TABLE_ASSOC_TIMEOUT			5			// unit: sec
 #define MAC_TABLE_FULL(Tab)				((Tab).size == MAX_LEN_OF_MAC_TABLE)
 
@@ -1333,6 +1324,36 @@ typedef enum _AuthState {
     AS_AUTHENTICATING   // STA is waiting for AUTH seq#3 using SHARED KEY
 } AUTH_STATE;
 
+//for-wpa value domain of pMacEntry->WpaState  802.1i D3   p.114
+typedef enum _ApWpaState {
+    AS_NOTUSE,              // 0
+    AS_DISCONNECT,          // 1
+    AS_DISCONNECTED,        // 2
+    AS_INITIALIZE,          // 3
+    AS_AUTHENTICATION,      // 4
+    AS_AUTHENTICATION2,     // 5
+    AS_INITPMK,             // 6
+    AS_INITPSK,             // 7
+    AS_PTKSTART,            // 8
+    AS_PTKINIT_NEGOTIATING, // 9
+    AS_PTKINITDONE,         // 10
+    AS_UPDATEKEYS,          // 11
+    AS_INTEGRITY_FAILURE,   // 12
+    AS_KEYUPDATE,           // 13
+} AP_WPA_STATE;
+
+// for-wpa value domain of pMacEntry->WpaState  802.1i D3   p.114
+typedef enum _GTKState {
+    REKEY_NEGOTIATING,
+    REKEY_ESTABLISHED,
+    KEYERROR,
+} GTK_STATE;
+
+//  for-wpa  value domain of pMacEntry->WpaState  802.1i D3   p.114
+typedef enum _WpaGTKState {
+    SETKEYS,
+    SETKEYS_DONE,
+} WPA_GTK_STATE;
 // ====================== end of AP mlme.h ============================
 
 

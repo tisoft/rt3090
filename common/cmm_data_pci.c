@@ -23,15 +23,7 @@
  * 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             * 
  *                                                                       * 
  *************************************************************************
-    Module Name:
-	cmm_data_pci.c
- 
-    Abstract:
- 
-    Revision History:
-    Who          When          What
-    ---------    ----------    ----------------------------------------------
- */
+*/ 
  
 /*
    All functions in this file must be PCI-depended, or you should out your function
@@ -557,13 +549,10 @@ NDIS_STATUS RTMPCheckRxError(
 	// Drop ToDs promiscous frame, it is opened due to CCX 2 channel load statistics
 	if (pHeader != NULL)
 	{
-#ifndef CLIENT_WDS
-		if (pHeader->FC.ToDs
-			)
+		if (pHeader->FC.ToDs)
 		{
 			return(NDIS_STATUS_FAILURE);
 		}
-#endif // CLIENT_WDS //
 	}
 
 	// Drop not U2M frames, cant's drop here because we will drop beacon in this case
@@ -739,25 +728,7 @@ BOOLEAN  RTMPFreeTXDUponTxDmaDone(
 
 		// static rate also need NICUpdateFifoStaCounters() function.
 		//if (OPSTATUS_TEST_FLAG(pAd, fOP_STATUS_TX_RATE_SWITCH_ENABLED))
-#ifdef VENDOR_FEATURE1_SUPPORT
-		/*
-			Note:
-
-			Can not take off the NICUpdateFifoStaCounters(); Or the
-			FIFO overflow rate will be high, i.e. > 3%
-			(see the rate by "iwpriv ra0 show stainfo")
-
-			Based on different platform, try to find the best value to
-			replace '4' here (overflow rate target is about 0%).
-		*/
-		if (++pAd->FifoUpdateRx >= 4)
-		{
 			NICUpdateFifoStaCounters(pAd);
-			pAd->FifoUpdateRx = 0;
-		}
-#else
-		NICUpdateFifoStaCounters(pAd);
-#endif // VENDOR_FEATURE1_SUPPORT //
 
 		/* Note : If (pAd->ate.bQATxStart == TRUE), we will never reach here. */
 		FREE++;
@@ -911,9 +882,10 @@ BOOLEAN	RTMPHandleTxRingDmaDoneInterrupt(
 
 	if (TxRingBitmap.field.Ac0DmaDone)
 		bReschedule = RTMPFreeTXDUponTxDmaDone(pAd, QID_AC_BE);
-
+/*
 	if (TxRingBitmap.field.HccaDmaDone)
 		bReschedule |= RTMPFreeTXDUponTxDmaDone(pAd, QID_HCCA);
+*/
 
 	if (TxRingBitmap.field.Ac3DmaDone)
 		bReschedule |= RTMPFreeTXDUponTxDmaDone(pAd, QID_AC_VO);
@@ -1008,17 +980,6 @@ VOID	RTMPHandleMgmtRingDmaDoneInterrupt(
 	NdisReleaseSpinLock(&pAd->MgmtRingLock);
 
 #ifdef CONFIG_STA_SUPPORT
-#ifdef WMM_ACM_SUPPORT
-        /* return power save right if possible, ex:
-			0. sta enter PS mode;
-			1. sta enters ACTIVE mode;
-			2. sta sends ADDTS request frame;
-			3. sta receives ADDTS response frame;
-			4. sta enter PS mode; (ACMP_StaPsCtrlRightReturn) */
-		if (ACMR_IS_ENABLED(pAd))
-	        ACMP_StaPsCtrlRightReturn(pAd);
-		/* End of if */
-#endif // WMM_ACM_SUPPORT //
 #endif // CONFIG_STA_SUPPORT //
 }
 
@@ -1093,7 +1054,7 @@ VOID	RTMPHandleRxCoherentInterrupt(
 	RTMPRingCleanUp(pAd, QID_AC_BK);
 	RTMPRingCleanUp(pAd, QID_AC_VI);
 	RTMPRingCleanUp(pAd, QID_AC_VO);
-	RTMPRingCleanUp(pAd, QID_HCCA);
+	/*RTMPRingCleanUp(pAd, QID_HCCA);*/
 	RTMPRingCleanUp(pAd, QID_MGMT);
 	RTMPRingCleanUp(pAd, QID_RX);
 
@@ -1237,7 +1198,6 @@ PNDIS_PACKET GetPacketFromRxRing(
 	PVOID					AllocVa;
 	NDIS_PHYSICAL_ADDRESS	AllocPa;
 	BOOLEAN					bReschedule = FALSE;
-	RTMP_DMACB				*pRxCell;
 
 	RTMP_SEM_LOCK(&pAd->RxRingLock);
 
@@ -1261,16 +1221,14 @@ PNDIS_PACKET GetPacketFromRxRing(
 
 	}
 
-	pRxCell = &pAd->RxRing.Cell[pAd->RxRing.RxSwReadIdx];
-
 #ifdef RT_BIG_ENDIAN
-	pDestRxD = (PRXD_STRUC) pRxCell->AllocVa;
+	pDestRxD = (PRXD_STRUC) pAd->RxRing.Cell[pAd->RxRing.RxSwReadIdx].AllocVa;
 	RxD = *pDestRxD;
 	pRxD = &RxD;
 	RTMPDescriptorEndianChange((PUCHAR)pRxD, TYPE_RXD);
 #else
 	// Point to Rx indexed rx ring descriptor
-	pRxD = (PRXD_STRUC) pRxCell->AllocVa;
+	pRxD = (PRXD_STRUC) pAd->RxRing.Cell[pAd->RxRing.RxSwReadIdx].AllocVa;
 #endif
 
 	if (pRxD->DDONE == 0)
@@ -1290,14 +1248,14 @@ PNDIS_PACKET GetPacketFromRxRing(
 	if (pNewPacket)
 	{
 		// unmap the rx buffer
-		PCI_UNMAP_SINGLE(pAd, pRxCell->DmaBuf.AllocPa,
-					 pRxCell->DmaBuf.AllocSize, PCI_DMA_FROMDEVICE);
-		pRxPacket = pRxCell->pNdisPacket;
+		PCI_UNMAP_SINGLE(pAd, pAd->RxRing.Cell[pAd->RxRing.RxSwReadIdx].DmaBuf.AllocPa,
+					 pAd->RxRing.Cell[pAd->RxRing.RxSwReadIdx].DmaBuf.AllocSize, PCI_DMA_FROMDEVICE);
+		pRxPacket = pAd->RxRing.Cell[pAd->RxRing.RxSwReadIdx].pNdisPacket;
 
-		pRxCell->DmaBuf.AllocSize	= RX_BUFFER_AGGRESIZE;
-		pRxCell->pNdisPacket		= (PNDIS_PACKET) pNewPacket;
-		pRxCell->DmaBuf.AllocVa	= AllocVa;
-		pRxCell->DmaBuf.AllocPa	= AllocPa;
+		pAd->RxRing.Cell[pAd->RxRing.RxSwReadIdx].DmaBuf.AllocSize	= RX_BUFFER_AGGRESIZE;
+		pAd->RxRing.Cell[pAd->RxRing.RxSwReadIdx].pNdisPacket		= (PNDIS_PACKET) pNewPacket;
+		pAd->RxRing.Cell[pAd->RxRing.RxSwReadIdx].DmaBuf.AllocVa	= AllocVa;
+		pAd->RxRing.Cell[pAd->RxRing.RxSwReadIdx].DmaBuf.AllocPa	= AllocPa;
 		/* update SDP0 to new buffer of rx packet */
 		pRxD->SDP0 = AllocPa;
 	}
@@ -1610,7 +1568,9 @@ VOID RTMPWriteTxDescriptor(
 	pTxD->QSEL= (QueueSEL);
 	//RT2860c??  fixed using EDCA queue for test...  We doubt Queue1 has problem.  2006-09-26 Jan
 	//pTxD->QSEL= FIFO_EDCA;
+	/*
 	if (pAd->bGenOneHCCA == TRUE)
 		pTxD->QSEL= FIFO_HCCA;
+	*/
 	pTxD->DMADONE = 0;
 }

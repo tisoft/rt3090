@@ -52,7 +52,13 @@
 
 
 
+#ifdef RT3370
+#include "chip/rt3370.h"
+#endif // RT3370 //
 
+#ifdef RT3390
+#include "chip/rt3390.h"
+#endif // RT3390 //
 // We will have a cost down version which mac version is 0x3090xxxx
 //
 // RT3090A facts
@@ -77,8 +83,6 @@
 
 /* RT3572, 3592, 3562, 3062 share the same MAC version */
 #define IS_RT3572(_pAd)		(((_pAd)->MACVersion & 0xffff0000) == 0x35720000)
-
-#define IS_RT2883(_pAd)		(((_pAd)->MACVersion & 0xffff0000) == 0x28830000)
 #define IS_VERSION_BEFORE_F(_pAd)			(((_pAd)->MACVersion&0xffff) <= 0x0211)
 // F version is 0x0212, E version is 0x0211. 309x can save more power after F version.
 #define IS_VERSION_AFTER_F(_pAd)			((((_pAd)->MACVersion&0xffff) >= 0x0212) || (((_pAd)->b3090ESpecialChip == TRUE)))
@@ -130,15 +134,11 @@
 
 #define NUM_EEPROM_BBP_PARMS		19			// Include NIC Config 0, 1, CR, TX ALC step, BBPs
 #define NUM_EEPROM_TX_G_PARMS		7
-
-#define VALID_EEPROM_VERSION        1
-#define EEPROM_VERSION_OFFSET       0x02
 #define EEPROM_NIC1_OFFSET          0x34		// The address is from NIC config 0, not BBP register ID
-#define EEPROM_NIC2_OFFSET          0x36		// The address is from NIC config 1, not BBP register ID
-#define EEPROM_TXPOWER_DELTA		0x50	// 20MHZ AND 40 MHZ use different power. This is delta in 40MHZ.
-#define EEPROM_COUNTRY_REGION		0x38
+#define EEPROM_NIC2_OFFSET          0x36		// The address is from NIC config 0, not BBP register ID
 #define EEPROM_BBP_BASE_OFFSET		0xf0		// The address is from NIC config 0, not BBP register ID
-#define EEPROM_FREQ_OFFSET			0x3a
+#define EEPROM_G_TX_PWR_OFFSET		0x52
+#define EEPROM_G_TX2_PWR_OFFSET		0x60
 #define EEPROM_LED1_OFFSET			0x3c
 #define EEPROM_LED2_OFFSET			0x3e
 #define EEPROM_LED3_OFFSET			0x40
@@ -148,32 +148,23 @@
 #define EEPROM_RSSI_A_OFFSET		0x4a
 #define EEPROM_TXMIXER_GAIN_5G		0x4c
 #define EEPROM_DEFINE_MAX_TXPWR		0x4e
-#define EEPROM_G_TX_PWR_OFFSET		0x52
-#define EEPROM_G_TX2_PWR_OFFSET		0x60
-#define EEPROM_G_TSSI_BOUND1		0x6e
-#define EEPROM_G_TSSI_BOUND2		0x70
-#define EEPROM_G_TSSI_BOUND3		0x72
-#define EEPROM_G_TSSI_BOUND4		0x74
-#define EEPROM_G_TSSI_BOUND5		0x76
-#define EEPROM_A_TX_PWR_OFFSET      0x78
-#define EEPROM_A_TX2_PWR_OFFSET      0xa6
-#define EEPROM_A_TSSI_BOUND1		0xd4
-#define EEPROM_A_TSSI_BOUND2		0xd6
-#define EEPROM_A_TSSI_BOUND3		0xd8
-#define EEPROM_A_TSSI_BOUND4		0xda
-#define EEPROM_A_TSSI_BOUND5		0xdc
 #define EEPROM_TXPOWER_BYRATE_20MHZ_2_4G	0xde	// 20MHZ 2.4G tx power.
 #define EEPROM_TXPOWER_BYRATE_40MHZ_2_4G	0xee	// 40MHZ 2.4G tx power.
 #define EEPROM_TXPOWER_BYRATE_20MHZ_5G		0xfa	// 20MHZ 5G tx power.
 #define EEPROM_TXPOWER_BYRATE_40MHZ_5G		0x10a	// 40MHZ 5G tx power.
-#define EEPROM_TXPOWER_BYRATE 	0xde	// 20MHZ power. 
+#define EEPROM_A_TX_PWR_OFFSET      0x78
+#define EEPROM_A_TX2_PWR_OFFSET      0xa6
 //#define EEPROM_Japan_TX_PWR_OFFSET      0x90 // 802.11j
 //#define EEPROM_Japan_TX2_PWR_OFFSET      0xbe
 //#define EEPROM_TSSI_REF_OFFSET	0x54
 //#define EEPROM_TSSI_DELTA_OFFSET	0x24
 //#define EEPROM_CCK_TX_PWR_OFFSET  0x62
 //#define EEPROM_CALIBRATE_OFFSET	0x7c
-
+#define EEPROM_VERSION_OFFSET       0x02
+#define EEPROM_FREQ_OFFSET			0x3a
+#define EEPROM_TXPOWER_BYRATE 	0xde	// 20MHZ power. 
+#define EEPROM_TXPOWER_DELTA		0x50	// 20MHZ AND 40 MHZ use different power. This is delta in 40MHZ.
+#define VALID_EEPROM_VERSION        1
 
 
 /*

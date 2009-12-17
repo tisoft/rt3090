@@ -22,25 +22,28 @@
  * Free Software Foundation, Inc.,                                       * 
  * 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             * 
  *                                                                       * 
- ***************************************************************************/
+ *************************************************************************
 
-
-/****************************************************************************
     Module Name:
-    HMAC
+    crypt_hmac.h
 
     Abstract:
-    FIPS 198: The Keyed-Hash Message Authentication Code (HMAC)
-    
+    Miniport generic portion header file
+
     Revision History:
-    Who         When            What
-    --------    ----------      ------------------------------------------
+    Who         When          What
+    --------    ----------    ----------------------------------------------
     Eddy        2008/11/24      Create HMAC-SHA1, HMAC-SHA256
-***************************************************************************/
+*/
+
 #ifndef __CRYPT_HMAC_H__
 #define __CRYPT_HMAC_H__
 
+#ifdef CRYPT_TESTPLAN
+#include "crypt_testplan.h"
+#else
 #include "rt_config.h"
+#endif /* CRYPT_TESTPLAN */
 
 #ifdef SHA1_SUPPORT
 #define HMAC_SHA1_SUPPORT

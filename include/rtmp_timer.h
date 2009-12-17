@@ -72,9 +72,9 @@ typedef struct  _RALINK_TIMER_STRUCT    {
 	BOOLEAN				Repeat;         // True if periodic timer
 	ULONG				TimerValue;     // Timer value in milliseconds
 	ULONG				cookie;			// os specific object
-	void					*pAd;
 #ifdef RTMP_TIMER_TASK_SUPPORT
 	RTMP_TIMER_TASK_HANDLE	handle;
+	void					*pAd;
 #endif // RTMP_TIMER_TASK_SUPPORT //
 }RALINK_TIMER_STRUCT, *PRALINK_TIMER_STRUCT;
 
@@ -140,14 +140,12 @@ DECLARE_TIMER_FUNCTION(DisassocTimeout);
 DECLARE_TIMER_FUNCTION(LinkDownExec);
 DECLARE_TIMER_FUNCTION(StaQuickResponeForRateUpExec);
 DECLARE_TIMER_FUNCTION(WpaDisassocApAndBlockAssoc);
-#ifdef RTMP_PCI_SUPPORT
 DECLARE_TIMER_FUNCTION(PsPollWakeExec);
 DECLARE_TIMER_FUNCTION(RadioOnExec);
-#endif // RTMP_PCI_SUPPORT //
+
 #ifdef QOS_DLS_SUPPORT
 DECLARE_TIMER_FUNCTION(DlsTimeoutAction);
 #endif // QOS_DLS_SUPPORT //
-
 
 
 #endif // CONFIG_STA_SUPPORT //
@@ -159,12 +157,7 @@ DECLARE_TIMER_FUNCTION(DlsTimeoutAction);
 DECLARE_TIMER_FUNCTION(LedCtrlMain);
 #endif
 
-#ifdef WMM_ACM_SUPPORT
-DECLARE_TIMER_FUNCTION(ACMP_TR_TC_ReqCheck);
-DECLARE_TIMER_FUNCTION(ACMP_TR_STM_Check);
-DECLARE_TIMER_FUNCTION(ACMP_TR_TC_General);
-DECLARE_TIMER_FUNCTION(ACMP_CMD_Timer_Data_Simulation);
-#endif // WMM_ACM_SUPPORT //
+
 
 #endif // __RTMP_TIMER_H__ //
 

@@ -165,9 +165,8 @@
 #ifdef RT30xx
 	// edit by johnli, RF power sequence setup, add BBP R138 for ADC dynamic on/off control
 	#define MAX_BBP_ID	138
-#elif defined(RT2883)
-	#define MAX_BBP_ID	180
-#else
+#endif // RT30xx //
+#ifndef RT30xx
 	#define MAX_BBP_ID	136
 #endif // RT30xx //
 	#define MAX_BBP_MSG_SIZE	2048
@@ -237,96 +236,6 @@
 	_pV: data pointer used to save the value of queried bbp register.
 	_bViaMCU: if we need access the bbp via the MCU.
 */
-#ifdef RELASE_INCLUDE
-/*
-	The RTMP_PCIE_PS_L3_BBP_IO_READ8 is used to support PCIE power-saving solution3.
-	"brc =AsicSendCommandToMcu" is used to avoid any muc command is executed during
-	RF_OFF command.
-*/
-#endif // RELASE_INCLUDE //
-
-	
-#ifdef CONFIG_STA_SUPPORT
-#define IS_SUPPORT_PCIE_PS_L3(_pAd) (((_pAd)->OpMode == OPMODE_STA) &&\
-	(IS_RT3090((_pAd)) || IS_RT3572((_pAd)) || IS_RT3390((_pAd))) && \
-	((_pAd)->StaCfg.PSControl.field.rt30xxPowerMode == 3)&& \
-	((_pAd)->StaCfg.PSControl.field.EnableNewPS == TRUE)) 
-	
-#define RTMP_PCIE_PS_L3_BBP_IO_READ8(_pAd, _bbpID, _pV, _bViaMCU)			\
-	do{															\
-	BBP_CSR_CFG_STRUC	BbpCsr;									\
-	int					_busyCnt, _secCnt, _regID;					\
-	BOOLEAN					brc;									\
-	_regID = ((_bViaMCU) == TRUE ? H2M_BBP_AGENT : BBP_CSR_CFG);	\
-	BbpCsr.field.Busy = IDLE;										\
-	if (((_pAd)->bPCIclkOff == FALSE)								\
-		&& ((_pAd)->brt30xxBanMcuCmd == FALSE))					\
-	{															\
-		for (_busyCnt=0; _busyCnt<MAX_BUSY_COUNT; _busyCnt++)	\
-		{														\
-			RTMP_IO_READ32(_pAd, _regID, &BbpCsr.word);			\
-			if (BbpCsr.field.Busy == BUSY)                 					\
-				continue;                                               				\
-			BbpCsr.word = 0;										\
-			BbpCsr.field.fRead = 1;									\
-			BbpCsr.field.BBP_RW_MODE = 1;							\
-			BbpCsr.field.Busy = 1;									\
-			BbpCsr.field.RegNum = _bbpID;                       			\
-			RTMP_IO_WRITE32(_pAd, _regID, BbpCsr.word);			\
-			if ((_bViaMCU) == TRUE)								\
-			{													\
-				brc =AsicSendCommandToMcu(_pAd, 0x80, 0xff, 0x0, 0x0); \
-				RTMPusecDelay(1000);							\
-			}							\
-	               if (brc == TRUE) 										\
-			{                                                 								\
-				for (_secCnt=0; _secCnt<MAX_BUSY_COUNT; _secCnt++)       	\
-				{														\
-					RTMP_IO_READ32(_pAd, _regID, &BbpCsr.word); 	\
-					if (BbpCsr.field.Busy == IDLE)							\
-						break;											\
-				}														\
-				if ((BbpCsr.field.Busy == IDLE) &&							\
-				(BbpCsr.field.RegNum == _bbpID))                					\
-				{																\
-					*(_pV) = (UCHAR)BbpCsr.field.Value;							\
-					break;														\
-				}																\
-			}																\
-			else 																\
-			{																\
-				BbpCsr.field.Busy = 0;											\
-				RTMP_IO_WRITE32(_pAd, _regID, BbpCsr.word);				\
-			}																\
-		}																	\
-	}	\
-	else 										\
-	{																	\
-			DBGPRINT_ERR(("RTMP_PCIE_PS_L3_BBP_IO_READ8(viaMCU=%d) read R%d fail\n", (_bViaMCU), _bbpID));      \
-			*(_pV) = (_pAd)->BbpWriteLatch[_bbpID];               \
-	              if ((_bViaMCU) == TRUE)				\
-			{									\
-				RTMP_IO_READ32(_pAd, _regID, &BbpCsr.word);				\
-				BbpCsr.field.Busy = 0;                         						 \
-				RTMP_IO_WRITE32(_pAd, _regID, BbpCsr.word);				\
-			}															\
-	}																	\
-	if ((BbpCsr.field.Busy == BUSY) || ((_pAd)->bPCIclkOff == TRUE))				\
-	{																	\
-	                DBGPRINT_ERR(("RTMP_PCIE_PS_L3_BBP_IO_READ8(viaMCU=%d) read R%d fail(reason:clk=%d,busy=%x)\n", (_bViaMCU), _bbpID,(_pAd)->bPCIclkOff ,BbpCsr.field.Busy));      \
-			*(_pV) = (_pAd)->BbpWriteLatch[_bbpID];               \
-			if ((_bViaMCU) == TRUE)				\
-			{									\
-				RTMP_IO_READ32(_pAd, _regID, &BbpCsr.word);				\
-				BbpCsr.field.Busy = 0;                          \
-				RTMP_IO_WRITE32(_pAd, _regID, BbpCsr.word);				\
-			}				\
-	}																	\
-}while(0)
-#else
-#define IS_SUPPORT_PCIE_PS_L3(_pAd) FALSE
-#define RTMP_PCIE_PS_L3_BBP_IO_READ8(_pAd, _bbpID, _pV, _bViaMCU)
-#endif // CONFIG_STA_SUPPORT //
 #define RTMP_BBP_IO_READ8(_pAd, _bbpID, _pV, _bViaMCU)			\
 	do{															\
 		BBP_CSR_CFG_STRUC  BbpCsr;								\
@@ -386,6 +295,7 @@
 	But for some chipset which didn't have mcu (e.g., RBUS based chipset), we
 	will use this function too and didn't access the bbp register via the MCU.
 */
+#ifndef CONFIG_STA_SUPPORT
 #define RTMP_BBP_IO_READ8_BY_REG_ID(_A, _I, _pV)			\
 	do{														\
 		if ((_A)->bPCIclkOff == FALSE)                     				\
@@ -393,13 +303,103 @@
 			if ((_A)->infType == RTMP_DEV_INF_RBUS)			\
 				RTMP_BBP_IO_READ8((_A), (_I), (_pV), FALSE);	\
 			else												\
-				if(IS_SUPPORT_PCIE_PS_L3((_A)))				\
-					RTMP_PCIE_PS_L3_BBP_IO_READ8((_A), (_I), (_pV), TRUE);	\
-				else												\
 				RTMP_BBP_IO_READ8((_A), (_I), (_pV), TRUE);	\
 		}													\
 	}while(0)
-
+#endif // CONFIG_STA_SUPPORT //
+#ifdef CONFIG_STA_SUPPORT
+// Read BBP register by register's ID. Generate PER to test BA
+#define RTMP_BBP_IO_READ8_BY_REG_ID(_A, _I, _pV)						\
+{																		\
+	BBP_CSR_CFG_STRUC	BbpCsr;											\
+	int					i, k;			\
+	BOOLEAN					brc;			\
+	BbpCsr.field.Busy = IDLE;			\
+	if ((IS_RT3090((_A)) || IS_RT3572((_A)) || IS_RT3390((_A))) && ((_A)->StaCfg.PSControl.field.rt30xxPowerMode == 3)	\
+		&& ((_A)->StaCfg.PSControl.field.EnableNewPS == TRUE)	\
+		&& ((_A)->bPCIclkOff == FALSE)	\
+		&& ((_A)->brt30xxBanMcuCmd == FALSE))	\
+	{																	\
+		for (i=0; i<MAX_BUSY_COUNT; i++)									\
+		{																	\
+			RTMP_IO_READ32(_A, H2M_BBP_AGENT, &BbpCsr.word);				\
+			if (BbpCsr.field.Busy == BUSY)									\
+			{																\
+				continue;													\
+			}																\
+			BbpCsr.word = 0;												\
+			BbpCsr.field.fRead = 1;											\
+			BbpCsr.field.BBP_RW_MODE = 1;									\
+			BbpCsr.field.Busy = 1;											\
+			BbpCsr.field.RegNum = _I;										\
+			RTMP_IO_WRITE32(_A, H2M_BBP_AGENT, BbpCsr.word);				\
+			brc = AsicSendCommandToMcu(_A, 0x80, 0xff, 0x0, 0x0);					\
+			if (brc == TRUE) 																\
+			{																\
+				for (k=0; k<MAX_BUSY_COUNT; k++)								\
+				{																\
+					RTMP_IO_READ32(_A, H2M_BBP_AGENT, &BbpCsr.word);			\
+					if (BbpCsr.field.Busy == IDLE)								\
+						break;													\
+				}																\
+				if ((BbpCsr.field.Busy == IDLE) &&								\
+					(BbpCsr.field.RegNum == _I))								\
+				{																\
+					*(_pV) = (UCHAR)BbpCsr.field.Value;							\
+					break;														\
+				}																\
+			}																\
+			else 																\
+			{																\
+				BbpCsr.field.Busy = 0;											\
+				RTMP_IO_WRITE32(_A, H2M_BBP_AGENT, BbpCsr.word);				\
+			}																\
+		}																	\
+	}	\
+	else if (!((IS_RT3090((_A)) || IS_RT3572((_A)) || IS_RT3390((_A))) && ((_A)->StaCfg.PSControl.field.rt30xxPowerMode == 3)	\
+		&& ((_A)->StaCfg.PSControl.field.EnableNewPS == TRUE))	\
+		&& ((_A)->bPCIclkOff == FALSE))	\
+	{																	\
+		for (i=0; i<MAX_BUSY_COUNT; i++)									\
+		{																	\
+			RTMP_IO_READ32(_A, H2M_BBP_AGENT, &BbpCsr.word);				\
+			if (BbpCsr.field.Busy == BUSY)									\
+			{																\
+				continue;													\
+			}																\
+			BbpCsr.word = 0;												\
+			BbpCsr.field.fRead = 1;											\
+			BbpCsr.field.BBP_RW_MODE = 1;									\
+			BbpCsr.field.Busy = 1;											\
+			BbpCsr.field.RegNum = _I;										\
+			RTMP_IO_WRITE32(_A, H2M_BBP_AGENT, BbpCsr.word);				\
+			AsicSendCommandToMcu(_A, 0x80, 0xff, 0x0, 0x0);					\
+			for (k=0; k<MAX_BUSY_COUNT; k++)								\
+			{																\
+				RTMP_IO_READ32(_A, H2M_BBP_AGENT, &BbpCsr.word);			\
+				if (BbpCsr.field.Busy == IDLE)								\
+					break;													\
+			}																\
+			if ((BbpCsr.field.Busy == IDLE) &&								\
+				(BbpCsr.field.RegNum == _I))								\
+			{																\
+				*(_pV) = (UCHAR)BbpCsr.field.Value;							\
+				break;														\
+			}																\
+		}																	\
+	}																	\
+	else 										\
+	{																	\
+		DBGPRINT_ERR((" , brt30xxBanMcuCmd = %d, Read BBP %d \n", (_A)->brt30xxBanMcuCmd, (_I)));	\
+		*(_pV) = (_A)->BbpWriteLatch[_I];								\
+	}																	\
+	if ((BbpCsr.field.Busy == BUSY) || ((_A)->bPCIclkOff == TRUE))										\
+	{																	\
+		DBGPRINT_ERR(("BBP read R%d=0x%x fail\n", _I, BbpCsr.word));	\
+		*(_pV) = (_A)->BbpWriteLatch[_I];								\
+	}																	\
+}
+#endif // CONFIG_STA_SUPPORT //
 
 /*
 	basic marco for BBP write operation. 
@@ -408,75 +408,15 @@
 	_pV: data used to save the value of queried bbp register.
 	_bViaMCU: if we need access the bbp via the MCU.
 */
-#ifdef CONFIG_STA_SUPPORT
-#define RTMP_PCIE_PS_L3_BBP_IO_WRITE8(_pAd, _bbpID, _pV, _bViaMCU)			\
-	do{															\
-		BBP_CSR_CFG_STRUC  BbpCsr;                            			 	\
-		int             _busyCnt=0, _regID;                               				\
-		BOOLEAN					brc;								\
-		_regID = ((_bViaMCU) == TRUE ? H2M_BBP_AGENT : BBP_CSR_CFG);	\
-			if (((_pAd)->bPCIclkOff == FALSE)	\
-			&& ((_pAd)->brt30xxBanMcuCmd == FALSE))	\
-			{																	\
-				if (_pAd->AccessBBPFailCount > 20)									\
-				{																	\
-					AsicResetBBPAgent(_pAd);				\
-					_pAd->AccessBBPFailCount = 0;											\
-				}		\
-				for (_busyCnt=0; _busyCnt<MAX_BUSY_COUNT; _busyCnt++)  \
-				{                                                  						 \
-					RTMP_IO_READ32((_pAd), _regID, &BbpCsr.word);     \
-					if (BbpCsr.field.Busy == BUSY)                  \
-						continue;                                   \
-					BbpCsr.word = 0;                                \
-					BbpCsr.field.fRead = 0;                         \
-					BbpCsr.field.BBP_RW_MODE = 1;                         \
-					BbpCsr.field.Busy = 1;                          \
-					BbpCsr.field.Value = _pV;                        \
-					BbpCsr.field.RegNum = _bbpID;                       \
-					RTMP_IO_WRITE32((_pAd), _regID, BbpCsr.word);     \
-					if ((_bViaMCU) == TRUE)									\
-					{														\
-						brc =AsicSendCommandToMcu(_pAd, 0x80, 0xff, 0x0, 0x0);		\
-						if ((_pAd)->OpMode == OPMODE_AP)						\
-							RTMPusecDelay(1000);							\
-					}														\
-					if (brc == TRUE) 											\
-					{														\
-						(_pAd)->BbpWriteLatch[_bbpID] = _pV;                   		\
-					}														\
-					else 													\
-					{														\
-						BbpCsr.field.Busy = 0;									\
-						RTMP_IO_WRITE32(_pAd, _regID, BbpCsr.word);	\
-					}								\
-					break;													\
-				}  	\
-			}		\
-			else 										\
-			{																	\
-			DBGPRINT_ERR(("  brt30xxBanMcuCmd = %d. Write BBP %d \n",  (_pAd)->brt30xxBanMcuCmd, (_regID)));	\
-			}																	\
-		if ((_busyCnt == MAX_BUSY_COUNT) || ((_pAd)->bPCIclkOff == TRUE))			\
-			{																	\
-				if (_busyCnt == MAX_BUSY_COUNT)					\
-				(_pAd)->AccessBBPFailCount++;					\
-				DBGPRINT_ERR(("BBP write R%d=0x%x fail. BusyCnt= %d.bPCIclkOff = %d. \n", _regID, BbpCsr.word, _busyCnt, (_pAd)->bPCIclkOff ));	\
-			}																	\
-	}while(0)
-#else
-#define RTMP_PCIE_PS_L3_BBP_IO_WRITE8(_pAd, _bbpID, _pV, _bViaMCU)
-#endif // CONFIG_STA_SUPPORT //
-
 #define RTMP_BBP_IO_WRITE8(_pAd, _bbpID, _pV, _bViaMCU)			\
 	do{															\
 		BBP_CSR_CFG_STRUC  BbpCsr;                             \
-		int             _busyCnt=0, _regID;                               			\
+		int             _busyCnt, _regID;                               			\
 																\
 		_regID = ((_bViaMCU) == TRUE ? H2M_BBP_AGENT : BBP_CSR_CFG);	\
 		for (_busyCnt=0; _busyCnt<MAX_BUSY_COUNT; _busyCnt++)  \
 		{                                                   \
-			RTMP_IO_READ32((_pAd), _regID, &BbpCsr.word);     \
+			RTMP_IO_READ32((_pAd), BBP_CSR_CFG, &BbpCsr.word);     \
 			if (BbpCsr.field.Busy == BUSY)                  \
 				continue;                                   \
 			BbpCsr.word = 0;                                \
@@ -485,7 +425,7 @@
 			BbpCsr.field.Busy = 1;                          \
 			BbpCsr.field.Value = _pV;                        \
 			BbpCsr.field.RegNum = _bbpID;                       \
-			RTMP_IO_WRITE32((_pAd), _regID, BbpCsr.word);     \
+			RTMP_IO_WRITE32((_pAd), BBP_CSR_CFG, BbpCsr.word);     \
 			if ((_bViaMCU) == TRUE)									\
 			{														\
 				AsicSendCommandToMcu(_pAd, 0x80, 0xff, 0x0, 0x0);		\
@@ -519,6 +459,7 @@
 	But for some chipset which didn't have mcu (e.g., RBUS based chipset), we
 	will use this function too and didn't access the bbp register via the MCU.
 */
+#ifndef CONFIG_STA_SUPPORT
 #define RTMP_BBP_IO_WRITE8_BY_REG_ID(_A, _I, _pV)			\
 	do{														\
 		if ((_A)->bPCIclkOff == FALSE)                     				\
@@ -526,13 +467,97 @@
 			if ((_A)->infType == RTMP_DEV_INF_RBUS)			\
 				RTMP_BBP_IO_WRITE8((_A), (_I), (_pV), FALSE);	\
 			else												\
-				if(IS_SUPPORT_PCIE_PS_L3((_A)))				\
-					RTMP_PCIE_PS_L3_BBP_IO_WRITE8((_A), (_I), (_pV), TRUE);	\
-				else												\
 				RTMP_BBP_IO_WRITE8((_A), (_I), (_pV), TRUE);	\
 		}													\
 	}while(0)
-	
+#endif // CONFIG_STA_SUPPORT //
+#ifdef CONFIG_STA_SUPPORT
+// Write BBP register by register's ID & value
+#define RTMP_BBP_IO_WRITE8_BY_REG_ID(_A, _I, _V)						\
+{																		\
+	BBP_CSR_CFG_STRUC	BbpCsr;											\
+	INT					BusyCnt = 0;										\
+	BOOLEAN					brc;			\
+	if (_I < MAX_NUM_OF_BBP_LATCH)										\
+	{																	\
+		if ((IS_RT3090((_A)) || IS_RT3572((_A)) || IS_RT3390((_A))) && ((_A)->StaCfg.PSControl.field.rt30xxPowerMode == 3)	\
+			&& ((_A)->StaCfg.PSControl.field.EnableNewPS == TRUE)	\
+			&& ((_A)->bPCIclkOff == FALSE)	\
+			&& ((_A)->brt30xxBanMcuCmd == FALSE))	\
+		{																	\
+			if (_A->AccessBBPFailCount > 20)									\
+			{																	\
+				AsicResetBBPAgent(_A);				\
+				_A->AccessBBPFailCount = 0;											\
+			}																	\
+			for (BusyCnt=0; BusyCnt<MAX_BUSY_COUNT; BusyCnt++)					\
+			{																	\
+				RTMP_IO_READ32(_A, H2M_BBP_AGENT, &BbpCsr.word);				\
+				if (BbpCsr.field.Busy == BUSY)									\
+					continue;													\
+				BbpCsr.word = 0;												\
+				BbpCsr.field.fRead = 0;											\
+				BbpCsr.field.BBP_RW_MODE = 1;									\
+				BbpCsr.field.Busy = 1;											\
+				BbpCsr.field.Value = _V;										\
+				BbpCsr.field.RegNum = _I;										\
+				RTMP_IO_WRITE32(_A, H2M_BBP_AGENT, BbpCsr.word);				\
+				brc = AsicSendCommandToMcu(_A, 0x80, 0xff, 0x0, 0x0);					\
+				if (brc == TRUE) 																\
+				{																\
+					(_A)->BbpWriteLatch[_I] = _V;									\
+				}																\
+				else 																\
+				{																\
+					BbpCsr.field.Busy = 0;											\
+					RTMP_IO_WRITE32(_A, H2M_BBP_AGENT, BbpCsr.word);				\
+				}																\
+				break;															\
+			}																	\
+		}																	\
+		else if (!((IS_RT3090((_A)) || IS_RT3572((_A)) || IS_RT3390((_A))) && ((_A)->StaCfg.PSControl.field.rt30xxPowerMode == 3)	\
+			&& ((_A)->StaCfg.PSControl.field.EnableNewPS == TRUE))	\
+			&& ((_A)->bPCIclkOff == FALSE))	\
+		{																	\
+			if (_A->AccessBBPFailCount > 20)									\
+			{																	\
+				AsicResetBBPAgent(_A);				\
+				_A->AccessBBPFailCount = 0;											\
+			}																	\
+			for (BusyCnt=0; BusyCnt<MAX_BUSY_COUNT; BusyCnt++)					\
+			{																	\
+				RTMP_IO_READ32(_A, H2M_BBP_AGENT, &BbpCsr.word);				\
+				if (BbpCsr.field.Busy == BUSY)									\
+					continue;													\
+				BbpCsr.word = 0;												\
+				BbpCsr.field.fRead = 0;											\
+				BbpCsr.field.BBP_RW_MODE = 1;									\
+				BbpCsr.field.Busy = 1;											\
+				BbpCsr.field.Value = _V;										\
+				BbpCsr.field.RegNum = _I;										\
+				RTMP_IO_WRITE32(_A, H2M_BBP_AGENT, BbpCsr.word);				\
+				AsicSendCommandToMcu(_A, 0x80, 0xff, 0x0, 0x0);					\
+				(_A)->BbpWriteLatch[_I] = _V;									\
+				break;															\
+			}																	\
+		}																	\
+		else 										\
+		{																	\
+			DBGPRINT_ERR(("  brt30xxBanMcuCmd = %d. Write BBP %d \n",  (_A)->brt30xxBanMcuCmd, (_I)));	\
+		}																	\
+		if ((BusyCnt == MAX_BUSY_COUNT) || ((_A)->bPCIclkOff == TRUE))			\
+		{																	\
+			if (BusyCnt == MAX_BUSY_COUNT)					\
+				(_A)->AccessBBPFailCount++;					\
+			DBGPRINT_ERR(("BBP write R%d=0x%x fail. BusyCnt= %d.bPCIclkOff = %d. \n", _I, BbpCsr.word, BusyCnt, (_A)->bPCIclkOff ));	\
+		}																	\
+	}																		\
+	else																		\
+	{																		\
+		DBGPRINT_ERR(("****** BBP_Write_Latch Buffer exceeds max boundry ****** \n"));	\
+	}																		\
+}
+#endif // CONFIG_STA_SUPPORT //
 #endif // RTMP_MAC_PCI //
 
 

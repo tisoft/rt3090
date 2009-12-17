@@ -95,8 +95,4 @@ typedef struct _RTMP_OS_TASK_
 #endif
 }RTMP_OS_TASK;
 
-
-int RtmpOSIRQRequest(IN PNET_DEV pNetDev);
-int RtmpOSIRQRelease(IN PNET_DEV pNetDev);
-
 #endif // __RMTP_OS_H__ //

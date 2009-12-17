@@ -22,23 +22,28 @@
  * Free Software Foundation, Inc.,                                       * 
  * 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             * 
  *                                                                       * 
-***************************************************************************/
-/****************************************************************************
+ *************************************************************************
+
     Module Name:
-    MD5
+    crypt_md5.h
 
     Abstract:
-    RFC1321: The MD5 Message-Digest Algorithm
-    
+    Miniport generic portion header file
+
     Revision History:
-    Who         When            What
-    --------    ----------      ------------------------------------------
+    Who         When          What
+    --------    ----------    ----------------------------------------------
     Eddy        2008/11/24      Create md5
-***************************************************************************/
+*/
+
 #ifndef __CRYPT_MD5_H__
 #define __CRYPT_MD5_H__
 
+#ifdef CRYPT_TESTPLAN
+#include "crypt_testplan.h"
+#else
 #include "rt_config.h"
+#endif /* CRYPT_TESTPLAN */
 
 /* Algorithm options */
 #define MD5_SUPPORT

@@ -24,14 +24,15 @@
  *                                                                       * 
  *************************************************************************
 
-	Module Name:
-	chlist.c
+    Module Name:
+    chlist.h
 
-	Abstract:
+    Abstract:
+    Miniport generic portion header file
 
-	Revision History:
-	Who         When          What
-	--------    ----------    ----------------------------------------------
+    Revision History:
+    Who         When          What
+    --------    ----------    ----------------------------------------------
 	Fonchi Wu   2007-12-19    created
 */
 

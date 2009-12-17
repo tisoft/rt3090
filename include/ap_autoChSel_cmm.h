@@ -22,51 +22,46 @@
  * Free Software Foundation, Inc.,                                       * 
  * 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             * 
  *                                                                       * 
- ***************************************************************************/
+ *************************************************************************
 
-
-/****************************************************************************
     Module Name:
-    RC4
+    ap_autoChSel_cmm.h
 
     Abstract:
-    
+    Miniport generic portion header file
+
     Revision History:
-    Who         When            What
-    --------    ----------      ------------------------------------------
-    Eddy        2009/05/13      ARC4
-***************************************************************************/
+    Who         When          What
+    --------    ----------    ----------------------------------------------
+*/
 
-#ifndef __CRYPT_ARC4_H__
-#define __CRYPT_ARC4_H__
 
-#include "rt_config.h"
+#ifndef __AUTOCHSELECT_CMM_H__
+#define __AUTOCHSELECT_CMM_H__
 
-/* ARC4 definition & structure */
-#define ARC4_KEY_BLOCK_SIZE 256
+#define RSSI_TO_DBM_OFFSET 120 // RSSI-115 = dBm
+
 
 typedef struct {
-    UINT BlockIndex1;
-    UINT BlockIndex2;
-    UINT8 KeyBlock[256];
-} ARC4_CTX_STRUC, *PARC4_CTX_STRUC;
+	ULONG dirtyness[MAX_NUM_OF_CHANNELS+1];
+	ULONG max_rssi[MAX_NUM_OF_CHANNELS+1];
+	ULONG total_rssi[MAX_NUM_OF_CHANNELS+1];
+	UINT32 FalseCCA[MAX_NUM_OF_CHANNELS+1];
+} CHANNELINFO, *PCHANNELINFO;
 
+typedef struct {
+	UCHAR Bssid[MAC_ADDR_LEN];
+	UCHAR SsidLen;
+	CHAR Ssid[MAX_LEN_OF_SSID];
+	UCHAR Channel;
+	UCHAR ExtChOffset;
+	UCHAR Rssi;
+} BSSENTRY, *PBSSENTRY;
 
-/* ARC4 operations */
-VOID ARC4_INIT (
-    IN ARC4_CTX_STRUC *pARC4_CTX,
-    IN PUCHAR pKey,
-	IN UINT KeyLength);
+typedef struct {
+	UCHAR BssNr;
+	BSSENTRY BssEntry[MAX_LEN_OF_BSS_TABLE];	
+} BSSINFO, *PBSSINFO;
 
-VOID ARC4_Compute (
-    IN ARC4_CTX_STRUC *pARC4_CTX,
-    IN UINT8 InputBlock[],
-    IN UINT InputBlockSize,
-    OUT UINT8 OutputBlock[]);
-
-VOID ARC4_Discard_KeyLength (
-    IN ARC4_CTX_STRUC *pARC4_CTX,
-    IN UINT Length);
-
-#endif /* __CRYPT_ARC4_H__ */
+#endif // __AUTOCHSELECT_CMM_H__ //
 

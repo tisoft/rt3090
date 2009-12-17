@@ -386,7 +386,6 @@ VOID RT30xxLoadRFSleepModeSetup(
 	UINT32 MACValue;
 
 
-	if(!IS_RT3572(pAd))
 	{
 		// RF_BLOCK_en. RF R1 register Bit 0 to 0
 		RT30xxReadRFRegister(pAd, RF_R01, &RFValue);
@@ -413,7 +412,6 @@ VOID RT30xxLoadRFSleepModeSetup(
 		IS_RT3572(pAd) ||
 		(IS_RT3070(pAd) && ((pAd->MACVersion & 0xffff) < 0x0201)))
 	{
-		if (!IS_RT3572(pAd))
 		{
 			RT30xxReadRFRegister(pAd, RF_R27, &RFValue);
 			RFValue |= 0x77;
@@ -440,7 +438,6 @@ VOID RT30xxReverseRFSleepModeSetup(
 	UCHAR RFValue;
 	UINT32 MACValue;
 
-	if(!IS_RT3572(pAd))
 	{
 		// RF_BLOCK_en, RF R1 register Bit 0 to 1
 		RT30xxReadRFRegister(pAd, RF_R01, &RFValue);
@@ -468,7 +465,6 @@ VOID RT30xxReverseRFSleepModeSetup(
 		IS_RT3390(pAd) ||
 		(IS_RT3070(pAd) && ((pAd->MACVersion & 0xffff) < 0x0201)))
 	{
-		if (!IS_RT3572(pAd))
 		{
 			RT30xxReadRFRegister(pAd, RF_R27, &RFValue);
 			if ((pAd->MACVersion & 0xffff) < 0x0211)

@@ -1,0 +1,289 @@
+
+include $(RT28xx_DIR)/os/linux/config.mk
+
+ifeq ($(CHIPSET),2860)
+RELEASE_FILE = $(RT28xx_DIR)/build/common/cmm_mac_pci.c\
+	$(RT28xx_DIR)/build/common/cmm_data_pci.c\
+	$(RT28xx_DIR)/build/include/chip/rt2860.h\
+	$(RT28xx_DIR)/build/include/chip/mac_pci.h\
+	$(RT28xx_DIR)/build/include/iface/rtmp_pci.h\
+	$(RT28xx_DIR)/build/os/linux/pci_main_dev.c\
+	$(RT28xx_DIR)/build/os/linux/rt_pci_rbus.c
+BIN_FILE = $(RT28xx_DIR)/build/common/rt2860.bin
+DAT_FILE = $(RT28xx_DIR)/build/RT2860$(RT28xx_MODE).dat
+DAT_FILE2 = $(RT28xx_DIR)/build/RT2860$(RT28xx_MODE)Card.dat
+endif
+
+ifeq ($(CHIPSET),2870)
+RELEASE_FILE = $(RT28xx_DIR)/build/common/cmm_mac_usb.c \
+	$(RT28xx_DIR)/build/common/cmm_data_usb.c \
+	$(RT28xx_DIR)/build/common/rtusb_bulk.c \
+	$(RT28xx_DIR)/build/common/rtusb_data.c \
+	$(RT28xx_DIR)/build/common/rtusb_io.c \
+	$(RT28xx_DIR)/build/include/rtusb_io.h\
+	$(RT28xx_DIR)/build/include/chip/rt2870.h\
+	$(RT28xx_DIR)/build/include/chip/mac_usb.h\
+	$(RT28xx_DIR)/build/include/iface/rtmp_usb.h\
+	$(RT28xx_DIR)/build/os/linux/usb_main_dev.c\
+	$(RT28xx_DIR)/build/os/linux/rt_usb.c
+BIN_FILE = $(RT28xx_DIR)/build/common/rt2870.bin
+DAT_FILE = $(RT28xx_DIR)/build/RT2870$(RT28xx_MODE).dat
+DAT_FILE2 = $(RT28xx_DIR)/build/RT2870$(RT28xx_MODE)Card.dat
+endif
+
+ifeq ($(CHIPSET),2070)
+RELEASE_FILE = $(RT28xx_DIR)/build/common/cmm_mac_usb.c \
+	$(RT28xx_DIR)/build/common/cmm_data_usb.c \
+	$(RT28xx_DIR)/build/common/rtusb_bulk.c \
+	$(RT28xx_DIR)/build/common/rtusb_data.c \
+	$(RT28xx_DIR)/build/common/rt_rf.c \
+	$(RT28xx_DIR)/build/common/ee_efuse.c \
+	$(RT28xx_DIR)/build/chips/rt30xx.c\
+	$(RT28xx_DIR)/build/chips/rt3070.c\
+	$(RT28xx_DIR)/build/common/rtusb_io.c \
+	$(RT28xx_DIR)/build/include/rtusb_io.h\
+	$(RT28xx_DIR)/build/include/chip/rt2870.h\
+	$(RT28xx_DIR)/build/include/chip/rt30xx.h\
+	$(RT28xx_DIR)/build/include/chip/rt3070.h\
+	$(RT28xx_DIR)/build/include/chip/mac_usb.h\
+	$(RT28xx_DIR)/build/include/iface/rtmp_usb.h\
+	$(RT28xx_DIR)/build/os/linux/usb_main_dev.c\
+	$(RT28xx_DIR)/build/os/linux/rt_usb.c
+BIN_FILE = $(RT28xx_DIR)/build/common/rt2870.bin
+DAT_FILE = $(RT28xx_DIR)/build/RT2870$(RT28xx_MODE).dat
+DAT_FILE2 = $(RT28xx_DIR)/build/RT2870$(RT28xx_MODE)Card.dat
+endif
+
+ifeq ($(CHIPSET),3070)
+RELEASE_FILE = $(RT28xx_DIR)/build/common/cmm_mac_usb.c \
+	$(RT28xx_DIR)/build/common/cmm_data_usb.c \
+	$(RT28xx_DIR)/build/common/rtusb_bulk.c \
+	$(RT28xx_DIR)/build/common/rtusb_data.c \
+	$(RT28xx_DIR)/build/common/rtusb_io.c \
+	$(RT28xx_DIR)/build/common/rt_rf.c \
+	$(RT28xx_DIR)/build/common/ee_efuse.c \
+	$(RT28xx_DIR)/build/chips/rt30xx.c\
+	$(RT28xx_DIR)/build/chips/rt3070.c\
+	$(RT28xx_DIR)/build/include/rtusb_io.h\
+	$(RT28xx_DIR)/build/include/chip/rt2870.h\
+	$(RT28xx_DIR)/build/include/chip/rt30xx.h\
+	$(RT28xx_DIR)/build/include/chip/rt3070.h\
+	$(RT28xx_DIR)/build/include/chip/mac_usb.h\
+	$(RT28xx_DIR)/build/include/iface/rtmp_usb.h\
+	$(RT28xx_DIR)/build/os/linux/usb_main_dev.c\
+	$(RT28xx_DIR)/build/os/linux/rt_usb.c
+BIN_FILE = $(RT28xx_DIR)/build/common/rt2870.bin
+DAT_FILE = $(RT28xx_DIR)/build/RT2870$(RT28xx_MODE).dat
+DAT_FILE2 = $(RT28xx_DIR)/build/RT2870$(RT28xx_MODE)Card.dat
+endif
+
+ifeq ($(CHIPSET),3090)
+RELEASE_FILE = $(RT28xx_DIR)/build/common/cmm_mac_pci.c\
+	$(RT28xx_DIR)/build/common/cmm_data_pci.c\
+	$(RT28xx_DIR)/build/common/rt_rf.c \
+	$(RT28xx_DIR)/build/chips/rt30xx.c\
+	$(RT28xx_DIR)/build/chips/rt3090.c\
+	$(RT28xx_DIR)/build/include/chip/rt2860.h\
+	$(RT28xx_DIR)/build/include/chip/rt30xx.h\
+	$(RT28xx_DIR)/build/include/chip/rt3090.h\
+	$(RT28xx_DIR)/build/include/chip/mac_pci.h\
+	$(RT28xx_DIR)/build/include/iface/rtmp_pci.h\
+	$(RT28xx_DIR)/build/os/linux/pci_main_dev.c\
+	$(RT28xx_DIR)/build/os/linux/rt_pci_rbus.c
+BIN_FILE = $(RT28xx_DIR)/build/common/rt2860.bin
+DAT_FILE = $(RT28xx_DIR)/build/RT2860$(RT28xx_MODE).dat
+DAT_FILE2 = $(RT28xx_DIR)/build/RT2860$(RT28xx_MODE)Card.dat
+endif
+
+ifeq ($(CHIPSET),3370)
+RELEASE_FILE = $(RT28xx_DIR)/build/common/cmm_mac_usb.c \
+	$(RT28xx_DIR)/build/common/cmm_data_usb.c \
+	$(RT28xx_DIR)/build/common/rtusb_bulk.c \
+	$(RT28xx_DIR)/build/common/rtusb_data.c \
+	$(RT28xx_DIR)/build/common/rtusb_io.c \
+	$(RT28xx_DIR)/build/common/rt_rf.c \
+	$(RT28xx_DIR)/build/common/ee_efuse.c \
+	$(RT28xx_DIR)/build/chips/rt30xx.c\
+	$(RT28xx_DIR)/build/chips/rt3070.c\
+	$(RT28xx_DIR)/build/include/rtusb_io.h\
+	$(RT28xx_DIR)/build/include/chip/rt2870.h\
+	$(RT28xx_DIR)/build/include/chip/rt33xx.h\
+	$(RT28xx_DIR)/build/include/chip/rt3370.h\
+	$(RT28xx_DIR)/build/include/chip/mac_usb.h\
+	$(RT28xx_DIR)/build/include/iface/rtmp_usb.h\
+	$(RT28xx_DIR)/build/os/linux/usb_main_dev.c\
+	$(RT28xx_DIR)/build/os/linux/rt_usb.c
+BIN_FILE = $(RT28xx_DIR)/build/common/rt2870.bin
+DAT_FILE = $(RT28xx_DIR)/build/RT2870$(RT28xx_MODE).dat
+DAT_FILE2 = $(RT28xx_DIR)/build/RT2870$(RT28xx_MODE)Card.dat
+endif
+
+ifeq ($(CHIPSET),3390)
+RELEASE_FILE = $(RT28xx_DIR)/build/common/cmm_mac_pci.c\
+	$(RT28xx_DIR)/build/common/cmm_data_pci.c\
+	$(RT28xx_DIR)/build/common/rt_rf.c \
+	$(RT28xx_DIR)/build/chips/rt30xx.c\
+	$(RT28xx_DIR)/build/chips/rt3090.c\
+	$(RT28xx_DIR)/build/include/chip/rt2860.h\
+	$(RT28xx_DIR)/build/include/chip/rt33xx.h\
+	$(RT28xx_DIR)/build/include/chip/rt3390.h\
+	$(RT28xx_DIR)/build/include/chip/mac_pci.h\
+	$(RT28xx_DIR)/build/include/iface/rtmp_pci.h\
+	$(RT28xx_DIR)/build/os/linux/pci_main_dev.c\
+	$(RT28xx_DIR)/build/os/linux/rt_pci_rbus.c
+BIN_FILE = $(RT28xx_DIR)/build/common/rt2860.bin
+DAT_FILE = $(RT28xx_DIR)/build/RT2860$(RT28xx_MODE).dat
+DAT_FILE2 = $(RT28xx_DIR)/build/RT2860$(RT28xx_MODE)Card.dat
+endif
+
+
+#
+# Release file for Station Mode
+#
+ifeq ($(RT28xx_MODE),STA)
+RELEASE_FILE += $(RT28xx_DIR)/build/common/mlme.c\
+    $(RT28xx_DIR)/build/common/cmm_wep.c\
+    $(RT28xx_DIR)/build/common/action.c\
+    $(RT28xx_DIR)/build/common/ba_action.c\
+    $(RT28xx_DIR)/build/common/cmm_data.c\
+    $(RT28xx_DIR)/build/common/rtmp_init.c\
+    $(RT28xx_DIR)/build/common/cmm_tkip.c\
+    $(RT28xx_DIR)/build/common/cmm_aes.c\
+    $(RT28xx_DIR)/build/common/cmm_sync.c\
+	$(RT28xx_DIR)/build/common/eeprom.c\
+	$(RT28xx_DIR)/build/common/cmm_sanity.c\
+	$(RT28xx_DIR)/build/common/cmm_info.c\
+	$(RT28xx_DIR)/build/common/cmm_cfg.c\
+	$(RT28xx_DIR)/build/common/cmm_wpa.c\
+	$(RT28xx_DIR)/build/common/netif_block.c\
+	$(RT28xx_DIR)/build/common/dfs.c\
+	$(RT28xx_DIR)/build/common/spectrum.c\
+	$(RT28xx_DIR)/build/common/rt_channel.c\
+	$(RT28xx_DIR)/build/common/crypt_hmac.c\
+	$(RT28xx_DIR)/build/common/crypt_md5.c\
+	$(RT28xx_DIR)/build/common/crypt_sha2.c\
+    $(RT28xx_DIR)/build/sta/assoc.c\
+    $(RT28xx_DIR)/build/sta/auth.c\
+    $(RT28xx_DIR)/build/sta/auth_rsp.c\
+    $(RT28xx_DIR)/build/sta/sync.c\
+    $(RT28xx_DIR)/build/sta/sanity.c\
+    $(RT28xx_DIR)/build/sta/rtmp_data.c\
+    $(RT28xx_DIR)/build/sta/connect.c\
+    $(RT28xx_DIR)/build/sta/wpa.c\
+	$(RT28xx_DIR)/build/sta/dls.c\
+    $(RT28xx_DIR)/build/os/linux/rt_linux.c\
+    $(RT28xx_DIR)/build/os/linux/rt_main_dev.c\
+	$(RT28xx_DIR)/build/os/linux/rt_profile.c\
+	$(RT28xx_DIR)/build/common/cmm_profile.c\
+	$(RT28xx_DIR)/build/common/cmm_asic.c\
+	$(RT28xx_DIR)/build/common/ee_prom.c\
+	$(RT28xx_DIR)/build/common/rtmp_mcu.c\
+	$(RT28xx_DIR)/build/common/rtmp_timer.c\
+	$(RT28xx_DIR)/build/os/linux/sta_ioctl.c\
+	$(RT28xx_DIR)/build/os/linux/rt_ate.c\
+	$(RT28xx_DIR)/build/include/action.h\
+	$(RT28xx_DIR)/build/include/ap.h\
+	$(RT28xx_DIR)/build/include/rt_ate.h\
+	$(RT28xx_DIR)/build/include/firmware.h\
+	$(RT28xx_DIR)/build/include/mlme.h\
+	$(RT28xx_DIR)/build/include/rt_config.h\
+	$(RT28xx_DIR)/build/include/rtmp_def.h\
+	$(RT28xx_DIR)/build/include/rtmp.h\
+	$(RT28xx_DIR)/build/include/oid.h\
+	$(RT28xx_DIR)/build/include/rtmp_chip.h\
+	$(RT28xx_DIR)/build/include/rtmp_dot11.h\
+	$(RT28xx_DIR)/build/include/rtmp_iface.h\
+	$(RT28xx_DIR)/build/include/rtmp_mcu.h\
+	$(RT28xx_DIR)/build/include/rtmp_os.h\
+	$(RT28xx_DIR)/build/include/rtmp_timer.h\
+	$(RT28xx_DIR)/build/include/rtmp_type.h\
+	$(RT28xx_DIR)/build/include/crypt_hmac.h\
+	$(RT28xx_DIR)/build/include/crypt_md5.h\
+	$(RT28xx_DIR)/build/include/crypt_sha2.h\
+	$(RT28xx_DIR)/build/include/wpa.h\
+	$(RT28xx_DIR)/build/include/link_list.h\
+	$(RT28xx_DIR)/build/include/netif_block.h\
+	$(RT28xx_DIR)/build/include/dfs.h\
+	$(RT28xx_DIR)/build/include/chlist.h\
+	$(RT28xx_DIR)/build/include/spectrum.h\
+	$(RT28xx_DIR)/build/include/spectrum_def.h\
+	$(RT28xx_DIR)/build/include/eeprom.h\
+	$(RT28xx_DIR)/build/include/chip/rtmp_mac.h\
+	$(RT28xx_DIR)/build/include/chip/rtmp_phy.h\
+	$(RT28xx_DIR)/build/include/os/rt_linux.h
+
+
+release:
+	echo "MAKE Linux STA Code Release DPO"
+	rm -rf $(RT28xx_DIR)/DPO
+	mkdir $(RT28xx_DIR)/DPO
+	mkdir $(RT28xx_DIR)/DPO/sta
+	mkdir $(RT28xx_DIR)/DPO/common
+	mkdir $(RT28xx_DIR)/DPO/include
+	mkdir $(RT28xx_DIR)/DPO/os
+	mkdir $(RT28xx_DIR)/DPO/os/linux
+
+	for strip_file in $(RELEASE_FILE) ; do	sed '/#ifdef ETH_CONVERT_SUPPORT/,/#endif \/\/ ETH_CONVERT_SUPPORT \/\//d' $$strip_file > $$strip_file.tmp ;\
+											sed '/#ifdef APCLI_SUPPORT/,/#endif \/\/ APCLI_SUPPORT \/\//d'  $$strip_file.tmp > $$strip_file.tmp1 ;\
+											sed '/#ifdef MAT_SUPPORT/,/#endif \/\/ MAT_SUPPORT \/\//d'  $$strip_file.tmp1 > $$strip_file.tmp2 ;\
+											sed '/#ifdef MESH_SUPPORT/,/#endif \/\/ MESH_SUPPORT \/\//d'  $$strip_file.tmp2 > $$strip_file.tmp3 ;\
+											sed '/#ifdef WSC_STA_SUPPORT/,/#endif \/\/ WSC_STA_SUPPORT \/\//d'  $$strip_file.tmp3 > $$strip_file.tmp4 ;\
+											sed '/#ifdef WSC_AP_SUPPORT/,/#endif \/\/ WSC_AP_SUPPORT \/\//d'  $$strip_file.tmp4 > $$strip_file.tmp5 ;\
+											sed '/#ifdef WSC_INCLUDED/,/#endif \/\/ WSC_INCLUDED \/\//d'  $$strip_file.tmp5 > $$strip_file.strip ; done;
+
+	sed '/#ifdef ETH_CONVERT/,/#endif \/\/ ETH_CONVERT \/\//d'  $(RT28xx_DIR)/build/os/linux/Makefile.4 > $(RT28xx_DIR)/build/os/linux/Makefile.4.tmp;
+	sed '/#ifdef APCLI_SUPPORT/,/#endif \/\/ APCLI_SUPPORT \/\//d'  $(RT28xx_DIR)/build/os/linux/Makefile.4.tmp > $(RT28xx_DIR)/build/os/linux/Makefile.4.tmp1;
+	sed '/#ifdef MAT_SUPPORT/,/#endif \/\/ MAT_SUPPORT \/\//d'  $(RT28xx_DIR)/build/os/linux/Makefile.4.tmp1 > $(RT28xx_DIR)/build/os/linux/Makefile.4.tmp2;
+	sed '/#ifdef WSC_INCLUDED/,/#endif \/\/ WSC_INCLUDED \/\//d'  $(RT28xx_DIR)/build/os/linux/Makefile.4.tmp2 > $(RT28xx_DIR)/build/os/linux/Makefile.4.tmp3;
+	sed '/#ifdef MESH_SUPPORT/,/#endif \/\/ MESH_SUPPORT \/\//d'  $(RT28xx_DIR)/build/os/linux/Makefile.4.tmp3 > $(RT28xx_DIR)/build/os/linux/Makefile.4.strip_;
+
+	sed '/#ifdef ETH_CONVERT/,/#endif \/\/ ETH_CONVERT \/\//d'  $(RT28xx_DIR)/build/os/linux/Makefile.6 > $(RT28xx_DIR)/build/os/linux/Makefile.6.tmp;
+	sed '/#ifdef APCLI_SUPPORT/,/#endif \/\/ APCLI_SUPPORT \/\//d'  $(RT28xx_DIR)/build/os/linux/Makefile.6.tmp > $(RT28xx_DIR)/build/os/linux/Makefile.6.tmp1;
+	sed '/#ifdef MAT_SUPPORT/,/#endif \/\/ MAT_SUPPORT \/\//d'  $(RT28xx_DIR)/build/os/linux/Makefile.6.tmp1 > $(RT28xx_DIR)/build/os/linux/Makefile.6.tmp2;
+	sed '/#ifdef WSC_INCLUDED/,/#endif \/\/ WSC_INCLUDED \/\//d'  $(RT28xx_DIR)/build/os/linux/Makefile.6.tmp2 > $(RT28xx_DIR)/build/os/linux/Makefile.6.tmp3;
+	sed '/#ifdef MESH_SUPPORT/,/#endif \/\/ MESH_SUPPORT \/\//d'  $(RT28xx_DIR)/build/os/linux/Makefile.6.tmp3 > $(RT28xx_DIR)/build/os/linux/Makefile.6.strip_;
+
+	sed '/#ifdef ETH_CONVERT/,/#endif \/\/ ETH_CONVERT \/\//d'  $(RT28xx_DIR)/build/os/linux/config.mk > $(RT28xx_DIR)/build/os/linux/config.mk.tmp;
+	sed '/#ifdef APCLI_SUPPORT/,/#endif \/\/ APCLI_SUPPORT \/\//d'  $(RT28xx_DIR)/build/os/linux/config.mk.tmp > $(RT28xx_DIR)/build/os/linux/config.mk.tmp1;
+	sed '/#ifdef MAT_SUPPORT/,/#endif \/\/ MAT_SUPPORT \/\//d'  $(RT28xx_DIR)/build/os/linux/config.mk.tmp1 > $(RT28xx_DIR)/build/os/linux/config.mk.tmp2;
+	sed '/#ifdef WSC_INCLUDED/,/#endif \/\/ WSC_INCLUDED \/\//d'  $(RT28xx_DIR)/build/os/linux/config.mk.tmp2 > $(RT28xx_DIR)/build/os/linux/config.mk.tmp3;
+	sed '/#ifdef MESH_SUPPORT/,/#endif \/\/ MESH_SUPPORT \/\//d'  $(RT28xx_DIR)/build/os/linux/config.mk.tmp3 > $(RT28xx_DIR)/build/os/linux/config.mk.strip_ ;
+
+	cd $(RT28xx_DIR)/build/sta ;mv -f *.strip $(RT28xx_DIR)/DPO/sta/
+	cd $(RT28xx_DIR)/DPO/sta; ls | awk -F. '{print "mv",$$0,$$1".c"}'|sh
+	cd $(RT28xx_DIR)/build/include ;mv -f *.strip $(RT28xx_DIR)/DPO/include/
+	cd $(RT28xx_DIR)/DPO/include; ls | awk -F. '{print "mv",$$0,$$1".h"}'|sh
+	mkdir $(RT28xx_DIR)/DPO/include/chip
+	mkdir $(RT28xx_DIR)/DPO/include/iface
+	mkdir $(RT28xx_DIR)/DPO/include/os
+	cd $(RT28xx_DIR)/build/include/chip ;mv -f *.strip $(RT28xx_DIR)/DPO/include/chip/
+	cd $(RT28xx_DIR)/DPO/include/chip; ls | awk -F. '{print "mv",$$0,$$1".h"}'|sh
+	cd $(RT28xx_DIR)/build/include/iface ;mv -f *.strip $(RT28xx_DIR)/DPO/include/iface/
+	cd $(RT28xx_DIR)/DPO/include/iface; ls | awk -F. '{print "mv",$$0,$$1".h"}'|sh
+	cd $(RT28xx_DIR)/build/include/os ;mv -f *.strip $(RT28xx_DIR)/DPO/include/os/
+	cd $(RT28xx_DIR)/DPO/include/os; ls | awk -F. '{print "mv",$$0,$$1".h"}'|sh
+	cd $(RT28xx_DIR)/build/os/linux ;mv -f *.strip $(RT28xx_DIR)/DPO/os/linux/
+	cd $(RT28xx_DIR)/DPO/os/linux; ls | awk -F. '{print "mv",$$0,$$1".c"}'|sh
+	cd $(RT28xx_DIR)/build/common ;mv -f *.strip $(RT28xx_DIR)/DPO/common/
+	cd $(RT28xx_DIR)/DPO/common; ls | awk -F. '{print "mv",$$0,$$1".c"}'|sh
+ifneq ($(CHIPSET),2860)
+ifneq ($(CHIPSET),2870)
+	mkdir $(RT28xx_DIR)/DPO/chips
+	cd $(RT28xx_DIR)/build/chips; mv -f *.strip $(RT28xx_DIR)/DPO/chips/
+	cd $(RT28xx_DIR)/DPO/chips; ls | awk -F. '{print "mv",$$0,$$1".c"}'|sh
+endif
+endif
+	cp $(RT28xx_DIR)/Makefile $(RT28xx_DIR)/DPO; \
+	cp $(RT28xx_DIR)/iwpriv_usage.txt $(RT28xx_DIR)/DPO; \
+	cp $(RT28xx_DIR)/sta_ate_iwpriv_usage.txt $(RT28xx_DIR)/DPO; \
+	cp $(RT28xx_DIR)/README_STA $(RT28xx_DIR)/DPO;\
+	cp $(BIN_FILE) $(RT28xx_DIR)/DPO/common;\
+	cp $(RT28xx_DIR)/build/os/linux/Makefile.4.strip_ $(RT28xx_DIR)/DPO/os/linux/Makefile.4;\
+	cp $(RT28xx_DIR)/build/os/linux/Makefile.6.strip_ $(RT28xx_DIR)/DPO/os/linux/Makefile.6;\
+	cp $(RT28xx_DIR)/build/os/linux/config.mk.strip_ $(RT28xx_DIR)/DPO/os/linux/config.mk;\
+	cp $(DAT_FILE) $(RT28xx_DIR)/DPO/;\
+	cp $(DAT_FILE2) $(RT28xx_DIR)/DPO/;\
+	cp -rf $(RT28xx_DIR)/tools $(RT28xx_DIR)/DPO
+
+endif
+

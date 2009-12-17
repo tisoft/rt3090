@@ -1,0 +1,1065 @@
+#
+# Release file for AP Mode
+#
+include $(RT28xx_DIR)/os/linux/config.mk
+
+ifeq ($(CHIPSET),2860)
+RELEASE_FILE = $(RT28xx_DIR)/common/cmm_mac_pci.c\
+	$(RT28xx_DIR)/common/cmm_data_pci.c\
+	$(RT28xx_DIR)/include/chip/rt2860.h\
+	$(RT28xx_DIR)/include/chip/mac_pci.h\
+	$(RT28xx_DIR)/include/iface/rtmp_pci.h\
+	$(RT28xx_DIR)/os/linux/pci_main_dev.c \
+	$(RT28xx_DIR)/os/linux/rt_pci_rbus.c
+BIN_FILE = $(RT28xx_DIR)/common/rt2860.bin
+DAT_FILE = $(RT28xx_DIR)/RT2860$(RT28xx_MODE).dat
+DAT_FILE2 = $(RT28xx_DIR)/RT2860$(RT28xx_MODE)Card.dat
+endif
+
+ifeq ($(CHIPSET),2870)
+RELEASE_FILE = $(RT28xx_DIR)/common/cmm_mac_usb.c \
+	$(RT28xx_DIR)/common/cmm_data_usb.c \
+	$(RT28xx_DIR)/common/rtusb_bulk.c \
+	$(RT28xx_DIR)/common/rtusb_data.c \
+	$(RT28xx_DIR)/common/rtusb_io.c \
+	$(RT28xx_DIR)/include/rtusb_io.h\
+	$(RT28xx_DIR)/include/chip/rt2870.h\
+	$(RT28xx_DIR)/include/chip/mac_usb.h\
+	$(RT28xx_DIR)/include/iface/rtmp_usb.h\
+	$(RT28xx_DIR)/os/linux/usb_main_dev.c\
+	$(RT28xx_DIR)/os/linux/rt_usb.c
+BIN_FILE = $(RT28xx_DIR)/common/rt2870.bin
+DAT_FILE = $(RT28xx_DIR)/RT2870$(RT28xx_MODE).dat
+DAT_FILE2 = $(RT28xx_DIR)/RT2870$(RT28xx_MODE)Card.dat
+endif
+
+ifeq ($(CHIPSET),2070)
+RELEASE_FILE = $(RT28xx_DIR)/common/cmm_mac_usb.c \
+	$(RT28xx_DIR)/common/cmm_data_usb.c \
+	$(RT28xx_DIR)/common/rtusb_bulk.c \
+	$(RT28xx_DIR)/common/rtusb_data.c \
+	$(RT28xx_DIR)/common/rtusb_io.c \
+	$(RT28xx_DIR)/common/rt_rf.c \
+	$(RT28xx_DIR)/common/ee_efuse.c \
+	$(RT28xx_DIR)/chips/rt30xx.c\
+	$(RT28xx_DIR)/chips/rt3070.c\
+	$(RT28xx_DIR)/include/rtusb_io.h\
+	$(RT28xx_DIR)/include/chip/rt2870.h\
+	$(RT28xx_DIR)/include/chip/rt30xx.h\
+	$(RT28xx_DIR)/include/chip/rt3070.h\
+	$(RT28xx_DIR)/include/chip/mac_usb.h\
+	$(RT28xx_DIR)/include/iface/rtmp_usb.h\
+	$(RT28xx_DIR)/os/linux/usb_main_dev.c\
+	$(RT28xx_DIR)/os/linux/rt_usb.c
+BIN_FILE = $(RT28xx_DIR)/common/rt2870.bin
+DAT_FILE = $(RT28xx_DIR)/RT2870$(RT28xx_MODE).dat
+DAT_FILE2 = $(RT28xx_DIR)/RT2870$(RT28xx_MODE)Card.dat
+endif
+
+ifeq ($(CHIPSET),3070)
+RELEASE_FILE = $(RT28xx_DIR)/common/cmm_mac_usb.c \
+	$(RT28xx_DIR)/common/cmm_data_usb.c \
+	$(RT28xx_DIR)/common/rtusb_bulk.c \
+	$(RT28xx_DIR)/common/rtusb_data.c \
+	$(RT28xx_DIR)/common/rtusb_io.c \
+	$(RT28xx_DIR)/common/rt_rf.c \
+	$(RT28xx_DIR)/common/ee_efuse.c \
+	$(RT28xx_DIR)/chips/rt30xx.c\
+	$(RT28xx_DIR)/chips/rt3070.c\
+	$(RT28xx_DIR)/include/rtusb_io.h\
+	$(RT28xx_DIR)/include/chip/rt2870.h\
+	$(RT28xx_DIR)/include/chip/rt30xx.h\
+	$(RT28xx_DIR)/include/chip/rt3070.h\
+	$(RT28xx_DIR)/include/chip/mac_usb.h\
+	$(RT28xx_DIR)/include/iface/rtmp_usb.h\
+	$(RT28xx_DIR)/os/linux/usb_main_dev.c \
+	$(RT28xx_DIR)/os/linux/rt_usb.c\
+	$(RT28xx_DIR)/include/br_private.h
+BIN_FILE = $(RT28xx_DIR)/common/rt2870.bin
+DAT_FILE = $(RT28xx_DIR)/RT2870$(RT28xx_MODE).dat
+DAT_FILE2 = $(RT28xx_DIR)/RT2870$(RT28xx_MODE)Card.dat
+endif
+
+ifeq ($(CHIPSET),3090)
+RELEASE_FILE = $(RT28xx_DIR)/common/cmm_mac_pci.c\
+	$(RT28xx_DIR)/common/cmm_data_pci.c\
+	$(RT28xx_DIR)/common/rt_rf.c \
+	$(RT28xx_DIR)/chips/rt30xx.c\
+	$(RT28xx_DIR)/chips/rt3090.c\
+	$(RT28xx_DIR)/include/chip/rt2860.h\
+	$(RT28xx_DIR)/include/chip/rt30xx.h\
+	$(RT28xx_DIR)/include/chip/rt3090.h\
+	$(RT28xx_DIR)/include/chip/mac_pci.h\
+	$(RT28xx_DIR)/include/iface/rtmp_pci.h\
+	$(RT28xx_DIR)/include/chip/mac_pci.h\
+	$(RT28xx_DIR)/os/linux/pci_main_dev.c\
+	$(RT28xx_DIR)/os/linux/rt_pci_rbus.c
+BIN_FILE = $(RT28xx_DIR)/common/rt2860.bin
+DAT_FILE = $(RT28xx_DIR)/RT2860$(RT28xx_MODE).dat
+DAT_FILE2 = $(RT28xx_DIR)/RT2860$(RT28xx_MODE)Card.dat
+endif
+
+ifeq ($(RT28xx_MODE),AP)
+RELEASE_FILE += $(RT28xx_DIR)/common/mlme.c\
+	$(RT28xx_DIR)/common/cmm_wep.c\
+	$(RT28xx_DIR)/common/action.c\
+	$(RT28xx_DIR)/common/ba_action.c\
+	$(RT28xx_DIR)/common/cmm_data.c\
+	$(RT28xx_DIR)/common/rtmp_init.c\
+	$(RT28xx_DIR)/common/cmm_tkip.c\
+	$(RT28xx_DIR)/common/cmm_aes.c\
+	$(RT28xx_DIR)/common/cmm_sync.c\
+	$(RT28xx_DIR)/common/eeprom.c\
+	$(RT28xx_DIR)/common/cmm_sanity.c\
+	$(RT28xx_DIR)/common/cmm_info.c\
+	$(RT28xx_DIR)/common/cmm_cfg.c\
+	$(RT28xx_DIR)/common/cmm_wpa.c\
+	$(RT28xx_DIR)/common/dfs.c\
+	$(RT28xx_DIR)/common/spectrum.c\
+	$(RT28xx_DIR)/common/rt_channel.c\
+	$(RT28xx_DIR)/common/cmm_profile.c\
+	$(RT28xx_DIR)/common/cmm_asic.c\
+	$(RT28xx_DIR)/common/ee_prom.c\
+	$(RT28xx_DIR)/common/rtmp_mcu.c\
+	$(RT28xx_DIR)/common/rtmp_timer.c\
+	$(RT28xx_DIR)/ap/ap.c\
+	$(RT28xx_DIR)/ap/ap_assoc.c\
+	$(RT28xx_DIR)/ap/ap_auth.c\
+	$(RT28xx_DIR)/ap/ap_connect.c\
+	$(RT28xx_DIR)/ap/ap_mlme.c\
+	$(RT28xx_DIR)/ap/ap_sanity.c\
+	$(RT28xx_DIR)/ap/ap_sync.c\
+	$(RT28xx_DIR)/ap/ap_wpa.c\
+	$(RT28xx_DIR)/ap/ap_data.c\
+	$(RT28xx_DIR)/ap/ap_uapsd.c\
+	$(RT28xx_DIR)/ap/ap_mbss.c\
+	$(RT28xx_DIR)/ap/ap_autoChSel.c\
+	$(RT28xx_DIR)/ap/ap_ids.c\
+	$(RT28xx_DIR)/ap/ap_dls.c\
+	$(RT28xx_DIR)/ap/ap_qload.c\
+	$(RT28xx_DIR)/ap/ap_cfg.c\
+	$(RT28xx_DIR)/os/linux/rt_linux.c\
+	$(RT28xx_DIR)/os/linux/rt_profile.c\
+	$(RT28xx_DIR)/os/linux/ap_ioctl.c\
+	$(RT28xx_DIR)/os/linux/rt_main_dev.c\
+	$(RT28xx_DIR)/os/linux/rt_ate.c\
+	$(RT28xx_DIR)/os/linux/vr_ikans.c\
+	$(RT28xx_DIR)/common/wsc.c\
+	$(RT28xx_DIR)/common/wsc_tlv.c\
+	$(RT28xx_DIR)/common/dh_key.c\
+	$(RT28xx_DIR)/common/evp_enc.c\
+	$(RT28xx_DIR)/common/cmm_mat.c\
+	$(RT28xx_DIR)/common/cmm_mat_iparp.c\
+	$(RT28xx_DIR)/common/cmm_mat_pppoe.c\
+	$(RT28xx_DIR)/common/cmm_mat_ipv6.c\
+	$(RT28xx_DIR)/common/crypt_aes.c\
+	$(RT28xx_DIR)/common/crypt_biginteger.c\
+	$(RT28xx_DIR)/common/crypt_dh.c\
+	$(RT28xx_DIR)/common/crypt_hmac.c\
+	$(RT28xx_DIR)/common/crypt_md5.c\
+	$(RT28xx_DIR)/common/crypt_sha2.c\
+	$(RT28xx_DIR)/common/netif_block.c\
+	$(RT28xx_DIR)/common/igmp_snoop.c\
+	$(RT28xx_DIR)/common/mlme_ex.c\
+	$(RT28xx_DIR)/common/mesh_bmpkt.c\
+	$(RT28xx_DIR)/common/mesh_ctrl.c\
+	$(RT28xx_DIR)/common/mesh_link_mng.c\
+	$(RT28xx_DIR)/common/mesh_sanity.c\
+	$(RT28xx_DIR)/common/mesh_tlv.c\
+	$(RT28xx_DIR)/common/mesh.c\
+	$(RT28xx_DIR)/common/mesh_forwarding.c\
+	$(RT28xx_DIR)/common/mesh_path_mng.c\
+	$(RT28xx_DIR)/ap/ap_wds.c\
+	$(RT28xx_DIR)/ap/ap_nintendo.c\
+	$(RT28xx_DIR)/ap/ap_apcli.c\
+	$(RT28xx_DIR)/ap/apcli_assoc.c\
+	$(RT28xx_DIR)/ap/apcli_auth.c\
+	$(RT28xx_DIR)/ap/apcli_ctrl.c\
+	$(RT28xx_DIR)/ap/apcli_sync.c\
+	$(RT28xx_DIR)/include/action.h\
+	$(RT28xx_DIR)/include/ap_autoChSel.h\
+	$(RT28xx_DIR)/include/ap_autoChSel_cmm.h\
+	$(RT28xx_DIR)/include/ap_ids.h\
+	$(RT28xx_DIR)/include/ap.h\
+	$(RT28xx_DIR)/include/ap_mbss.h\
+	$(RT28xx_DIR)/include/ap_uapsd.h\
+	$(RT28xx_DIR)/include/rt_ate.h\
+	$(RT28xx_DIR)/include/dh_key.h\
+	$(RT28xx_DIR)/include/evp_enc.h\
+	$(RT28xx_DIR)/include/firmware.h\
+	$(RT28xx_DIR)/include/crypt_aes.h\
+	$(RT28xx_DIR)/include/crypt_biginteger.h\
+	$(RT28xx_DIR)/include/crypt_dh.h\
+	$(RT28xx_DIR)/include/crypt_hmac.h\
+	$(RT28xx_DIR)/include/crypt_md5.h\
+	$(RT28xx_DIR)/include/crypt_sha2.h\
+	$(RT28xx_DIR)/include/rtmp_dot11.h\
+	$(RT28xx_DIR)/include/rtmp_iface.h\
+	$(RT28xx_DIR)/include/rtmp_mcu.h\
+	$(RT28xx_DIR)/include/rtmp_os.h\
+	$(RT28xx_DIR)/include/rtmp_timer.h\
+	$(RT28xx_DIR)/include/mlme.h\
+	$(RT28xx_DIR)/include/rt_config.h\
+	$(RT28xx_DIR)/include/rtmp_def.h\
+	$(RT28xx_DIR)/include/rtmp.h\
+	$(RT28xx_DIR)/include/oid.h\
+	$(RT28xx_DIR)/include/rtmp_type.h\
+	$(RT28xx_DIR)/include/wpa.h\
+	$(RT28xx_DIR)/include/wsc.h\
+	$(RT28xx_DIR)/include/wsc_tlv.h\
+	$(RT28xx_DIR)/include/ap_wds.h\
+	$(RT28xx_DIR)/include/ap_apcli.h\
+	$(RT28xx_DIR)/include/mat.h\
+	$(RT28xx_DIR)/include/link_list.h\
+	$(RT28xx_DIR)/include/netif_block.h\
+	$(RT28xx_DIR)/include/igmp_snoop.h\
+	$(RT28xx_DIR)/include/dfs.h\
+	$(RT28xx_DIR)/include/rtmp_chip.h\
+	$(RT28xx_DIR)/include/ipv6.h\
+	$(RT28xx_DIR)/include/chlist.h\
+	$(RT28xx_DIR)/include/mlme_ex.h\
+	$(RT28xx_DIR)/include/mlme_ex_def.h\
+	$(RT28xx_DIR)/include/mesh.h\
+	$(RT28xx_DIR)/include/mesh_def.h\
+	$(RT28xx_DIR)/include/mesh_mlme.h\
+	$(RT28xx_DIR)/include/mesh_sanity.h\
+	$(RT28xx_DIR)/include/spectrum.h\
+	$(RT28xx_DIR)/include/spectrum_def.h\
+	$(RT28xx_DIR)/include/vr_ikans.h\
+	$(RT28xx_DIR)/include/ap_cfg.h\
+	$(RT28xx_DIR)/include/eeprom.h\
+	$(RT28xx_DIR)/include/chip/rtmp_mac.h\
+	$(RT28xx_DIR)/include/chip/rtmp_phy.h\
+	$(RT28xx_DIR)/include/os/rt_linux.h
+
+release:
+	echo "MAKE Linux AP Code Release"
+	rm -rf $(RT28xx_DIR)/build
+	mkdir $(RT28xx_DIR)/build
+	mkdir $(RT28xx_DIR)/build/ap
+	mkdir $(RT28xx_DIR)/build/common
+	mkdir $(RT28xx_DIR)/build/include
+	mkdir $(RT28xx_DIR)/build/os
+	mkdir $(RT28xx_DIR)/build/os/linux
+
+	for strip_file in $(RELEASE_FILE) ; do sed '/#ifdef CONFIG_STA_SUPPORT/,/#endif \/\/ CONFIG_STA_SUPPORT \/\//d'  $$strip_file > $$strip_file.tmp ; \
+										   sed '/#ifdef RELASE_EXCLUDE/,/#endif \/\/ RELASE_EXCLUDE \/\//d'  $$strip_file.tmp > $$strip_file.tmp1;\
+										   sed '/#ifdef WAPI_SUPPORT/,/#endif \/\/ WAPI_SUPPORT \/\//d'  $$strip_file.tmp1 > $$strip_file.tmp2;\
+										   sed '/#ifdef WMM_ACM_SUPPORT/,/#endif \/\/ WMM_ACM_SUPPORT \/\//d'  $$strip_file.tmp2 > $$strip_file.tmp3;\
+										   sed '/#ifdef DOT11R_FT_SUPPORT/,/#endif \/\/ DOT11R_FT_SUPPORT \/\//d'  $$strip_file.tmp3 > $$strip_file.tmp4;\
+										   sed '/#ifdef DOT11K_RRM_SUPPORT/,/#endif \/\/ DOT11K_RRM_SUPPORT \/\//d'  $$strip_file.tmp4 > $$strip_file.tmp5;\
+										   sed '/#ifdef BG_FT_SUPPORT/,/#endif \/\/ BG_FT_SUPPORT \/\//d'  $$strip_file.tmp5 > $$strip_file.strip; done;
+
+	# strip Makefile.4
+	sed '/#ifdef CONFIG_STA_SUPPORT/,/#endif \/\/ CONFIG_STA_SUPPORT \/\//d'  $(RT28xx_DIR)/os/linux/Makefile.4 > $(RT28xx_DIR)/os/linux/Makefile.4.tmp ;
+	sed '/#ifdef CONFIG_APSTA_SUPPORT/,/#endif \/\/ CONFIG_APSTA_SUPPORT \/\//d'  $(RT28xx_DIR)/os/linux/Makefile.4.tmp > $(RT28xx_DIR)/os/linux/Makefile.4.tmp1 ;
+	sed '/#ifdef WAPI_SUPPORT/,/#endif \/\/ WAPI_SUPPORT \/\//d'  $(RT28xx_DIR)/os/linux/Makefile.4.tmp1 > $(RT28xx_DIR)/os/linux/Makefile.4.tmp2 ;
+	sed '/#ifdef WMM_ACM_SUPPORT/,/#endif \/\/ WMM_ACM_SUPPORT \/\//d'  $(RT28xx_DIR)/os/linux/Makefile.4.tmp2 > $(RT28xx_DIR)/os/linux/Makefile.4.tmp3 ;
+	sed '/#ifdef DOT11R_FT_SUPPORT/,/#endif \/\/ DOT11R_FT_SUPPORT \/\//d'  $(RT28xx_DIR)/os/linux/Makefile.4.tmp3 > $(RT28xx_DIR)/os/linux/Makefile.4.tmp45 ;
+	sed '/#ifdef DOT11K_RRM_SUPPORT/,/#endif \/\/ DOT11K_RRM_SUPPORT \/\//d'  $(RT28xx_DIR)/os/linux/Makefile.4.tmp4 > $(RT28xx_DIR)/os/linux/Makefile.4.tmp5 ;
+	sed '/#ifdef BG_FT_SUPPORT/,/#endif \/\/ BG_FT_SUPPORT \/\//d'  $(RT28xx_DIR)/os/linux/Makefile.4.tmp5 > $(RT28xx_DIR)/os/linux/Makefile.4.strip_ ;
+	
+	# strip Makefile.6
+	sed '/#ifdef CONFIG_STA_SUPPORT/,/#endif \/\/ CONFIG_STA_SUPPORT \/\//d'  $(RT28xx_DIR)/os/linux/Makefile.6 > $(RT28xx_DIR)/os/linux/Makefile.6.tmp ;
+	sed '/#ifdef CONFIG_APSTA_SUPPORT/,/#endif \/\/ CONFIG_APSTA_SUPPORT \/\//d'  $(RT28xx_DIR)/os/linux/Makefile.6.tmp > $(RT28xx_DIR)/os/linux/Makefile.6.tmp1 ;
+	sed '/#ifdef WAPI_SUPPORT/,/#endif \/\/ WAPI_SUPPORT \/\//d'  $(RT28xx_DIR)/os/linux/Makefile.6.tmp1 > $(RT28xx_DIR)/os/linux/Makefile.6.tmp2 ;
+	sed '/#ifdef WMM_ACM_SUPPORT/,/#endif \/\/ WMM_ACM_SUPPORT \/\//d'  $(RT28xx_DIR)/os/linux/Makefile.6.tmp2 > $(RT28xx_DIR)/os/linux/Makefile.6.tmp3 ;
+	sed '/#ifdef DOT11R_FT_SUPPORT/,/#endif \/\/ DOT11R_FT_SUPPORT \/\//d'  $(RT28xx_DIR)/os/linux/Makefile.6.tmp3 > $(RT28xx_DIR)/os/linux/Makefile.6.tmp4 ;
+	sed '/#ifdef DOT11K_RRM_SUPPORT/,/#endif \/\/ DOT11K_RRM_SUPPORT \/\//d'  $(RT28xx_DIR)/os/linux/Makefile.6.tmp4 > $(RT28xx_DIR)/os/linux/Makefile.6.tmp5 ;
+	sed '/#ifdef BG_FT_SUPPORT/,/#endif \/\/ BG_FT_SUPPORT \/\//d'  $(RT28xx_DIR)/os/linux/Makefile.6.tmp5 > $(RT28xx_DIR)/os/linux/Makefile.6.strip_ ;
+	
+	# strip config.mk
+	sed '/#ifdef RELASE_EXCLUDE/,/#endif \/\/ RELASE_EXCLUDE \/\//d'  $(RT28xx_DIR)/os/linux/config.mk > $(RT28xx_DIR)/os/linux/config.mk.tmp ;
+	sed '/#ifdef CONFIG_STA_SUPPORT/,/#endif \/\/ CONFIG_STA_SUPPORT \/\//d'  $(RT28xx_DIR)/os/linux/config.mk.tmp > $(RT28xx_DIR)/os/linux/config.mk.tmp1 ;
+	sed '/#ifdef CONFIG_APSTA_SUPPORT/,/#endif \/\/ CONFIG_APSTA_SUPPORT \/\//d'  $(RT28xx_DIR)/os/linux/config.mk.tmp1 > $(RT28xx_DIR)/os/linux/config.mk.tmp2 ;
+	sed '/#ifdef WAPI_SUPPORT/,/#endif \/\/ WAPI_SUPPORT \/\//d'  $(RT28xx_DIR)/os/linux/config.mk.tmp2 > $(RT28xx_DIR)/os/linux/config.mk.tmp3 ;
+	sed '/#ifdef WMM_ACM_SUPPORT/,/#endif \/\/ WMM_ACM_SUPPORT \/\//d'  $(RT28xx_DIR)/os/linux/config.mk.tmp3 > $(RT28xx_DIR)/os/linux/config.mk.tmp4 ;
+	sed '/#ifdef DOT11R_FT_SUPPORT/,/#endif \/\/ DOT11R_FT_SUPPORT \/\//d'  $(RT28xx_DIR)/os/linux/config.mk.tmp4 > $(RT28xx_DIR)/os/linux/config.mk.tmp5 ;
+	sed '/#ifdef DOT11K_RRM_SUPPORT/,/#endif \/\/ DOT11K_RRM_SUPPORT \/\//d'  $(RT28xx_DIR)/os/linux/config.mk.tmp5 > $(RT28xx_DIR)/os/linux/config.mk.tmp6 ;
+	sed '/#ifdef BG_FT_SUPPORT/,/#endif \/\/ BG_FT_SUPPORT \/\//d'  $(RT28xx_DIR)/os/linux/config.mk.tmp6 > $(RT28xx_DIR)/os/linux/config.mk.strip_ ;
+	
+ifeq ($(CHIPSET),2070)
+	sed '/#ifdef DOT11_N_SUPPORT/,/#endif \/\/ DOT11_N_SUPPORT \/\//d'  $(RT28xx_DIR)/os/linux/Makefile.4.strip_ > $(RT28xx_DIR)/os/linux/Makefile.4.tmp ;
+	mv -f $(RT28xx_DIR)/os/linux/Makefile.4.tmp $(RT28xx_DIR)/os/linux/Makefile.4.strip_;
+	sed '/#ifdef DOT11_N_SUPPORT/,/#endif \/\/ DOT11_N_SUPPORT \/\//d'  $(RT28xx_DIR)/os/linux/Makefile.6.strip_ > $(RT28xx_DIR)/os/linux/Makefile.6.tmp ;
+	mv -f $(RT28xx_DIR)/os/linux/Makefile.6.tmp $(RT28xx_DIR)/os/linux/Makefile.6.strip_;
+	sed '/#ifdef DOT11N_DRAFT3/,/#endif \/\/ DOT11N_DRAFT3 \/\//d'  $(RT28xx_DIR)/os/linux/config.mk.strip_ > $(RT28xx_DIR)/os/linux/config.mk.tmp ;
+	sed '/#ifdef DOT11_N_SUPPORT/,/#endif \/\/ DOT11_N_SUPPORT \/\//d'  $(RT28xx_DIR)/os/linux/config.mk.tmp > $(RT28xx_DIR)/os/linux/config.mk.tmp1 ;
+	mv -f $(RT28xx_DIR)/os/linux/config.mk.tmp1 $(RT28xx_DIR)/os/linux/config.mk.strip_;
+endif
+		
+	cd $(RT28xx_DIR)/ap ;mv -f *.strip $(RT28xx_DIR)/build/ap/
+	cd $(RT28xx_DIR)/build/ap; ls | awk -F. '{print "mv",$$0,$$1".c"}'|sh
+	cd $(RT28xx_DIR)/include ;mv -f *.strip $(RT28xx_DIR)/build/include/
+	cd $(RT28xx_DIR)/build/include; ls | awk -F. '{print "mv",$$0,$$1".h"}'|sh
+	mkdir $(RT28xx_DIR)/build/include/chip
+	mkdir $(RT28xx_DIR)/build/include/iface
+	mkdir $(RT28xx_DIR)/build/include/os
+	cd $(RT28xx_DIR)/include/chip ;mv -f *.strip $(RT28xx_DIR)/build/include/chip/
+	cd $(RT28xx_DIR)/build/include/chip; ls | awk -F. '{print "mv",$$0,$$1".h"}'|sh
+	cd $(RT28xx_DIR)/include/iface ;mv -f *.strip $(RT28xx_DIR)/build/include/iface/
+	cd $(RT28xx_DIR)/build/include/iface; ls | awk -F. '{print "mv",$$0,$$1".h"}'|sh
+	cd $(RT28xx_DIR)/include/os ;mv -f *.strip $(RT28xx_DIR)/build/include/os/
+	cd $(RT28xx_DIR)/build/include/os; ls | awk -F. '{print "mv",$$0,$$1".h"}'|sh
+	cd $(RT28xx_DIR)/os/linux ;mv -f *.strip $(RT28xx_DIR)/build/os/linux/
+	cd $(RT28xx_DIR)/build/os/linux; ls | awk -F. '{print "mv",$$0,$$1".c"}'|sh
+	cd $(RT28xx_DIR)/common; mv -f *.strip $(RT28xx_DIR)/build/common/
+	cd $(RT28xx_DIR)/build/common; ls | awk -F. '{print "mv",$$0,$$1".c"}'|sh
+ifneq ($(CHIPSET),2860)
+ifneq ($(CHIPSET),2870)
+	mkdir $(RT28xx_DIR)/build/chips
+	cd $(RT28xx_DIR)/chips; mv -f *.strip $(RT28xx_DIR)/build/chips/
+	cd $(RT28xx_DIR)/build/chips; ls | awk -F. '{print "mv",$$0,$$1".c"}'|sh
+endif
+endif
+	cd $(RT28xx_DIR);\
+	cp Makefile $(RT28xx_DIR)/build;\
+	cp $(BIN_FILE) $(RT28xx_DIR)/build/common;\
+	mv -f os/linux/Makefile.4.strip_ $(RT28xx_DIR)/build/os/linux/Makefile.4;\
+	mv -f os/linux/Makefile.6.strip_ $(RT28xx_DIR)/build/os/linux/Makefile.6;\
+	mv -f os/linux/config.mk.strip_ $(RT28xx_DIR)/build/os/linux/config.mk;\
+	cp $(DAT_FILE) $(RT28xx_DIR)/build/;\
+	cp $(DAT_FILE2) $(RT28xx_DIR)/build/;\
+	cp -rf tools $(RT28xx_DIR)/build
+
+
+prerelease:
+	echo "Create RT28xx Code Release Package......"
+	echo "Stage 1: create middle-file for chipset..."
+	rm -rf $(RTMP_SRC_DIR)
+	mkdir $(RTMP_SRC_DIR)
+	mkdir $(RTMP_SRC_DIR)/ap
+	mkdir $(RTMP_SRC_DIR)/common
+	mkdir $(RTMP_SRC_DIR)/include
+	mkdir $(RTMP_SRC_DIR)/os
+	mkdir $(RTMP_SRC_DIR)/os/linux
+	mkdir $(RTMP_SRC_DIR)/os/ucos
+	mkdir $(RTMP_SRC_DIR)/os/win
+	mkdir $(RTMP_SRC_DIR)/tools
+
+ifeq ($(CHIPSET),2860)
+	for strip_file in $(RELEASE_FILE); do sed '/#ifdef RT2870/,/#endif \/\/ RT2870 \/\//d' $$strip_file > $$strip_file.tmp ;\
+										   sed '/#ifdef RT3070/,/#endif \/\/ RT3070 \/\//d' $$strip_file.tmp > $$strip_file.tmp1 ;\
+										   sed '/#ifdef RT3090/,/#endif \/\/ RT3090 \/\//d' $$strip_file.tmp1 > $$strip_file.tmp2 ;\
+										   sed '/#ifdef RT30xx/,/#endif \/\/ RT30xx \/\//d' $$strip_file.tmp2 > $$strip_file.tmp3 ;\
+										   sed '/#ifdef RT35xx/,/#endif \/\/ RT35xx \/\//d' $$strip_file.tmp3 > $$strip_file.tmp4 ;\
+										   sed '/#ifdef RT305x/,/#endif \/\/ RT305x \/\//d' $$strip_file.tmp4 > $$strip_file.tmp5 ;\
+										   sed '/#ifdef RT2880/,/#endif \/\/ RT2880 \/\//d' $$strip_file.tmp5 > $$strip_file.tmp6 ;\
+										   sed '/#ifdef RT2070/,/#endif \/\/ RT2070 \/\//d' $$strip_file.tmp6 > $$strip_file.tmp7 ;\
+										   sed '/#ifdef RTMP_USB_SUPPORT/,/#endif \/\/ RTMP_USB_SUPPORT \/\//d' $$strip_file.tmp7 > $$strip_file.tmp8 ;\
+										   sed '/#ifdef RTMP_MAC_USB/,/#endif \/\/ RTMP_MAC_USB \/\//d' $$strip_file.tmp8 > $$strip_file.tmp9 ;\
+										   sed '/#ifdef RTMP_RBUS_SUPPORT/,/#endif \/\/ RTMP_RBUS_SUPPORT \/\//d'  $$strip_file.tmp9 > $$strip_file.strip; done;
+endif
+ifeq ($(CHIPSET),2870)
+	for strip_file in $(RELEASE_FILE); do sed '/#ifdef RT2860/,/#endif \/\/ RT2860 \/\//d' $$strip_file > $$strip_file.tmp ;\
+										   sed '/#ifdef RT3070/,/#endif \/\/ RT3070 \/\//d' $$strip_file.tmp > $$strip_file.tmp1 ;\
+										   sed '/#ifdef RT3090/,/#endif \/\/ RT3090 \/\//d' $$strip_file.tmp1 > $$strip_file.tmp2 ;\
+										   sed '/#ifdef RT30xx/,/#endif \/\/ RT30xx \/\//d' $$strip_file.tmp2 > $$strip_file.tmp3 ;\
+										   sed '/#ifdef RT35xx/,/#endif \/\/ RT35xx \/\//d' $$strip_file.tmp3 > $$strip_file.tmp4 ;\
+										   sed '/#ifdef RT305x/,/#endif \/\/ RT305x \/\//d' $$strip_file.tmp4 > $$strip_file.tmp5 ;\
+										   sed '/#ifdef RT2880/,/#endif \/\/ RT2880 \/\//d' $$strip_file.tmp5 > $$strip_file.tmp6 ;\
+										   sed '/#ifdef RT2070/,/#endif \/\/ RT2070 \/\//d' $$strip_file.tmp6 > $$strip_file.tmp7 ;\
+										   sed '/#ifdef RTMP_PCI_SUPPORT/,/#endif \/\/ RTMP_PCI_SUPPORT \/\//d' $$strip_file.tmp7 > $$strip_file.tmp8 ;\
+										   sed '/#ifdef RTMP_MAC_PCI/,/#endif \/\/ RTMP_MAC_PCI \/\//d' $$strip_file.tmp8 > $$strip_file.tmp9 ;\
+										   sed '/#ifdef RTMP_RBUS_SUPPORT/,/#endif \/\/ RTMP_RBUS_SUPPORT \/\//d'  $$strip_file.tmp9 > $$strip_file.strip; done;
+endif
+ifeq ($(CHIPSET),2070)
+	for strip_file in $(RELEASE_FILE); do sed '/#ifdef RT2860/,/#endif \/\/ RT2860 \/\//d' $$strip_file > $$strip_file.tmp ;\
+										   sed '/#ifdef RT3090/,/#endif \/\/ RT3090 \/\//d' $$strip_file.tmp > $$strip_file.tmp1 ;\
+										   sed '/#ifdef RT35xx/,/#endif \/\/ RT35xx \/\//d' $$strip_file.tmp1 > $$strip_file.tmp2 ;\
+										   sed '/#ifdef RT305x/,/#endif \/\/ RT305x \/\//d' $$strip_file.tmp2 > $$strip_file.tmp3 ;\
+										   sed '/#ifdef RT2880/,/#endif \/\/ RT2880 \/\//d' $$strip_file.tmp3 > $$strip_file.tmp4 ;\
+										   sed '/#ifdef DOT11_N_SUPPORT/,/#endif \/\/ DOT11_N_SUPPORT \/\//d' $$strip_file.tmp4 > $$strip_file.tmp5 ;\
+										   sed '/#ifdef DOT11N_DRAFT3/,/#endif \/\/ DOT11N_DRAFT3 \/\//d' $$strip_file.tmp5 > $$strip_file.tmp6 ;\
+										   sed '/#ifdef RTMP_PCI_SUPPORT/,/#endif \/\/ RTMP_PCI_SUPPORT \/\//d' $$strip_file.tmp6 > $$strip_file.tmp7 ;\
+										   sed '/#ifdef RTMP_MAC_PCI/,/#endif \/\/ RTMP_MAC_PCI \/\//d' $$strip_file.tmp7 > $$strip_file.tmp8 ;\
+										   sed '/#ifdef RTMP_RBUS_SUPPORT/,/#endif \/\/ RTMP_RBUS_SUPPORT \/\//d'  $$strip_file.tmp8 > $$strip_file.strip; done;
+endif
+ifeq ($(CHIPSET),3070)
+	for strip_file in $(RELEASE_FILE); do sed '/#ifdef RT2860/,/#endif \/\/ RT2860 \/\//d' $$strip_file > $$strip_file.tmp ;\
+										   sed '/#ifdef RT3090/,/#endif \/\/ RT3090 \/\//d' $$strip_file.tmp > $$strip_file.tmp1 ;\
+										   sed '/#ifdef RT35xx/,/#endif \/\/ RT35xx \/\//d' $$strip_file.tmp1 > $$strip_file.tmp2 ;\
+										   sed '/#ifdef RT305x/,/#endif \/\/ RT305x \/\//d' $$strip_file.tmp2 > $$strip_file.tmp3 ;\
+										   sed '/#ifdef RT2880/,/#endif \/\/ RT2880 \/\//d' $$strip_file.tmp3 > $$strip_file.tmp4 ;\
+										   sed '/#ifdef RT2070/,/#endif \/\/ RT2070 \/\//d' $$strip_file.tmp4 > $$strip_file.tmp5 ;\
+										   sed '/#ifdef RTMP_PCI_SUPPORT/,/#endif \/\/ RTMP_PCI_SUPPORT \/\//d' $$strip_file.tmp5 > $$strip_file.tmp6 ;\
+										   sed '/#ifdef RTMP_MAC_PCI/,/#endif \/\/ RTMP_MAC_PCI \/\//d' $$strip_file.tmp6 > $$strip_file.tmp7 ;\
+										   sed '/#ifdef RTMP_RBUS_SUPPORT/,/#endif \/\/ RTMP_RBUS_SUPPORT \/\//d'  $$strip_file.tmp7 > $$strip_file.strip; done;
+endif
+ifeq ($(CHIPSET),3090)
+	for strip_file in $(RELEASE_FILE); do sed '/#ifdef RT2870/,/#endif \/\/ RT2870 \/\//d' $$strip_file > $$strip_file.tmp ;\
+										   sed '/#ifdef RT3070/,/#endif \/\/ RT3070 \/\//d' $$strip_file.tmp > $$strip_file.tmp1 ;\
+										   sed '/#ifdef RT35xx/,/#endif \/\/ RT35xx \/\//d' $$strip_file.tmp1 > $$strip_file.tmp2 ;\
+										   sed '/#ifdef RT305x/,/#endif \/\/ RT305x \/\//d' $$strip_file.tmp2 > $$strip_file.tmp3 ;\
+										   sed '/#ifdef RT2880/,/#endif \/\/ RT2880 \/\//d' $$strip_file.tmp3 > $$strip_file.tmp4 ;\
+										   sed '/#ifdef RT2070/,/#endif \/\/ RT2070 \/\//d' $$strip_file.tmp4 > $$strip_file.tmp5 ;\
+										   sed '/#ifdef RTMP_USB_SUPPORT/,/#endif \/\/ RTMP_USB_SUPPORT \/\//d' $$strip_file.tmp5 > $$strip_file.tmp6 ;\
+										   sed '/#ifdef RTMP_MAC_USB/,/#endif \/\/ RTMP_MAC_USB \/\//d' $$strip_file.tmp6 > $$strip_file.tmp7 ;\
+										   sed '/#ifdef RTMP_RBUS_SUPPORT/,/#endif \/\/ RTMP_RBUS_SUPPORT \/\//d'  $$strip_file.tmp7 > $$strip_file.strip; done;
+endif
+	cd $(RT28xx_DIR)/ap ;mv -f *.strip $(RTMP_SRC_DIR)/ap/
+	cd $(RTMP_SRC_DIR)/ap; ls | awk -F. '{print "mv",$$0,$$1".c"}'|sh
+	cd $(RT28xx_DIR)/include ;mv -f *.strip $(RTMP_SRC_DIR)/include/
+	cd $(RTMP_SRC_DIR)/include; ls | awk -F. '{print "mv",$$0,$$1".h"}'|sh
+	mkdir $(RTMP_SRC_DIR)/include/chip
+	mkdir $(RTMP_SRC_DIR)/include/iface
+	mkdir $(RTMP_SRC_DIR)/include/os
+	cd $(RT28xx_DIR)/include/chip ;mv -f *.strip $(RTMP_SRC_DIR)/include/chip/
+	cd $(RTMP_SRC_DIR)/include/chip; ls | awk -F. '{print "mv",$$0,$$1".h"}'|sh
+	cd $(RT28xx_DIR)/include/iface ;mv -f *.strip $(RTMP_SRC_DIR)/include/iface/
+	cd $(RTMP_SRC_DIR)/include/iface; ls | awk -F. '{print "mv",$$0,$$1".h"}'|sh
+	cd $(RT28xx_DIR)/include/os ;mv -f *.strip $(RTMP_SRC_DIR)/include/os/
+	cd $(RTMP_SRC_DIR)/include/os; ls | awk -F. '{print "mv",$$0,$$1".h"}'|sh
+	cd $(RT28xx_DIR)/os/linux ;mv -f *.strip $(RTMP_SRC_DIR)/os/linux/
+	cd $(RTMP_SRC_DIR)/os/linux; ls | awk -F. '{print "mv",$$0,$$1".c"}'|sh
+	cd $(RT28xx_DIR)/common; mv -f *.strip $(RTMP_SRC_DIR)/common/
+	cd $(RTMP_SRC_DIR)/common; ls | awk -F. '{print "mv",$$0,$$1".c"}'|sh
+ifneq ($(CHIPSET),2860)
+ifneq ($(CHIPSET),2870)
+	mkdir $(RTMP_SRC_DIR)/chips
+	cd $(RT28xx_DIR)/chips; mv -f *.strip $(RTMP_SRC_DIR)/chips/
+	cd $(RTMP_SRC_DIR)/chips; ls | awk -F. '{print "mv",$$0,$$1".c"}'|sh
+endif
+endif
+	cd $(RT28xx_DIR);\
+	cp Makefile $(RTMP_SRC_DIR); \
+	cp $(BIN_FILE) $(RTMP_SRC_DIR)/common;\
+	cp os/linux/Makefile.4 $(RTMP_SRC_DIR)/os/linux;\
+	cp os/linux/Makefile.6 $(RTMP_SRC_DIR)/os/linux;\
+	cp os/linux/Makefile.release $(RTMP_SRC_DIR)/os/linux;\
+	cp os/linux/Makefile.DPA $(RTMP_SRC_DIR)/os/linux;\
+	cp os/linux/Makefile.DPB $(RTMP_SRC_DIR)/os/linux;\
+	cp os/linux/Makefile.DPC $(RTMP_SRC_DIR)/os/linux;\
+	cp os/linux/config.mk $(RTMP_SRC_DIR)/os/linux;\
+	cp $(DAT_FILE) $(RTMP_SRC_DIR)/;\
+	cp $(DAT_FILE2) $(RTMP_SRC_DIR)/;\
+	cp -rf tools $(RTMP_SRC_DIR)
+
+endif
+
+
+#
+# Release file for Station Mode
+#
+ifeq ($(RT28xx_MODE),STA)
+RELEASE_FILE += $(RT28xx_DIR)/common/mlme.c\
+	$(RT28xx_DIR)/common/cmm_wep.c\
+	$(RT28xx_DIR)/common/action.c\
+	$(RT28xx_DIR)/common/ba_action.c\
+	$(RT28xx_DIR)/common/cmm_data.c\
+	$(RT28xx_DIR)/common/rtmp_init.c\
+	$(RT28xx_DIR)/common/cmm_tkip.c\
+	$(RT28xx_DIR)/common/cmm_aes.c\
+	$(RT28xx_DIR)/common/cmm_sync.c\
+	$(RT28xx_DIR)/common/eeprom.c\
+	$(RT28xx_DIR)/common/cmm_sanity.c\
+	$(RT28xx_DIR)/common/cmm_info.c\
+	$(RT28xx_DIR)/common/cmm_cfg.c\
+	$(RT28xx_DIR)/common/cmm_wpa.c\
+	$(RT28xx_DIR)/common/netif_block.c\
+	$(RT28xx_DIR)/common/wsc.c\
+	$(RT28xx_DIR)/common/wsc_tlv.c\
+	$(RT28xx_DIR)/common/dh_key.c\
+	$(RT28xx_DIR)/common/evp_enc.c\
+	$(RT28xx_DIR)/common/dfs.c\
+	$(RT28xx_DIR)/common/cmm_mat.c\
+	$(RT28xx_DIR)/common/cmm_mat_iparp.c\
+	$(RT28xx_DIR)/common/cmm_mat_pppoe.c\
+	$(RT28xx_DIR)/common/cmm_mat_ipv6.c\
+	$(RT28xx_DIR)/common/crypt_aes.c\
+	$(RT28xx_DIR)/common/crypt_biginteger.c\
+	$(RT28xx_DIR)/common/crypt_dh.c\
+	$(RT28xx_DIR)/common/crypt_hmac.c\
+	$(RT28xx_DIR)/common/crypt_md5.c\
+	$(RT28xx_DIR)/common/crypt_sha2.c\
+	$(RT28xx_DIR)/common/mlme_ex.c\
+	$(RT28xx_DIR)/common/mesh_bmpkt.c\
+	$(RT28xx_DIR)/common/mesh_ctrl.c\
+	$(RT28xx_DIR)/common/mesh_link_mng.c\
+	$(RT28xx_DIR)/common/mesh_sanity.c\
+	$(RT28xx_DIR)/common/mesh_tlv.c\
+	$(RT28xx_DIR)/common/mesh.c\
+	$(RT28xx_DIR)/common/mesh_forwarding.c\
+	$(RT28xx_DIR)/common/mesh_path_mng.c\
+	$(RT28xx_DIR)/common/spectrum.c\
+	$(RT28xx_DIR)/common/rt_channel.c\
+	$(RT28xx_DIR)/common/cmm_profile.c\
+	$(RT28xx_DIR)/common/cmm_asic.c\
+	$(RT28xx_DIR)/common/ee_prom.c\
+	$(RT28xx_DIR)/common/rtmp_mcu.c\
+	$(RT28xx_DIR)/common/rtmp_timer.c\
+	$(RT28xx_DIR)/sta/assoc.c\
+	$(RT28xx_DIR)/sta/auth.c\
+	$(RT28xx_DIR)/sta/auth_rsp.c\
+	$(RT28xx_DIR)/sta/sync.c\
+	$(RT28xx_DIR)/sta/sanity.c\
+	$(RT28xx_DIR)/sta/rtmp_data.c\
+	$(RT28xx_DIR)/sta/connect.c\
+	$(RT28xx_DIR)/sta/wpa.c\
+	$(RT28xx_DIR)/sta/dls.c\
+	$(RT28xx_DIR)/os/linux/rt_linux.c\
+	$(RT28xx_DIR)/os/linux/rt_main_dev.c\
+	$(RT28xx_DIR)/os/linux/rt_profile.c\
+	$(RT28xx_DIR)/os/linux/sta_ioctl.c\
+	$(RT28xx_DIR)/os/linux/rt_ate.c\
+	$(RT28xx_DIR)/include/action.h\
+	$(RT28xx_DIR)/include/ap_autoChSel.h\
+	$(RT28xx_DIR)/include/ap_autoChSel_cmm.h\
+	$(RT28xx_DIR)/include/ap.h\
+	$(RT28xx_DIR)/include/ap_mbss.h\
+	$(RT28xx_DIR)/include/ap_uapsd.h\
+	$(RT28xx_DIR)/include/rt_ate.h\
+	$(RT28xx_DIR)/include/dh_key.h\
+	$(RT28xx_DIR)/include/evp_enc.h\
+	$(RT28xx_DIR)/include/firmware.h\
+	$(RT28xx_DIR)/include/crypt_aes.h\
+	$(RT28xx_DIR)/include/crypt_biginteger.h\
+	$(RT28xx_DIR)/include/crypt_dh.h\
+	$(RT28xx_DIR)/include/crypt_hmac.h\
+	$(RT28xx_DIR)/include/crypt_md5.h\
+	$(RT28xx_DIR)/include/crypt_sha2.h\
+	$(RT28xx_DIR)/include/rtmp_dot11.h\
+	$(RT28xx_DIR)/include/rtmp_iface.h\
+	$(RT28xx_DIR)/include/rtmp_mcu.h\
+	$(RT28xx_DIR)/include/rtmp_os.h\
+	$(RT28xx_DIR)/include/rtmp_timer.h\
+	$(RT28xx_DIR)/include/mlme.h\
+	$(RT28xx_DIR)/include/rt_config.h\
+	$(RT28xx_DIR)/include/rtmp_def.h\
+	$(RT28xx_DIR)/include/rtmp.h\
+	$(RT28xx_DIR)/include/oid.h\
+	$(RT28xx_DIR)/include/rtmp_type.h\
+	$(RT28xx_DIR)/include/wpa.h\
+	$(RT28xx_DIR)/include/wsc.h\
+	$(RT28xx_DIR)/include/wsc_tlv.h\
+	$(RT28xx_DIR)/include/link_list.h\
+	$(RT28xx_DIR)/include/netif_block.h\
+	$(RT28xx_DIR)/include/dfs.h\
+	$(RT28xx_DIR)/include/mat.h\
+	$(RT28xx_DIR)/include/rtmp_chip.h\
+	$(RT28xx_DIR)/include/ipv6.h\
+	$(RT28xx_DIR)/include/chlist.h\
+	$(RT28xx_DIR)/include/mlme_ex.h\
+	$(RT28xx_DIR)/include/mlme_ex_def.h\
+	$(RT28xx_DIR)/include/mesh.h\
+	$(RT28xx_DIR)/include/mesh_def.h\
+	$(RT28xx_DIR)/include/mesh_mlme.h\
+	$(RT28xx_DIR)/include/mesh_sanity.h\
+	$(RT28xx_DIR)/include/spectrum.h\
+	$(RT28xx_DIR)/include/spectrum_def.h\
+	$(RT28xx_DIR)/include/ap_cfg.h\
+	$(RT28xx_DIR)/include/eeprom.h\
+	$(RT28xx_DIR)/include/chip/rtmp_mac.h\
+	$(RT28xx_DIR)/include/chip/rtmp_phy.h\
+	$(RT28xx_DIR)/include/os/rt_linux.h
+
+release:
+	echo "MAKE Linux Station Code Release"
+	rm -rf $(RT28xx_DIR)/build
+	mkdir $(RT28xx_DIR)/build
+	mkdir $(RT28xx_DIR)/build/sta
+	mkdir $(RT28xx_DIR)/build/common
+	mkdir $(RT28xx_DIR)/build/include
+	mkdir $(RT28xx_DIR)/build/os
+	mkdir $(RT28xx_DIR)/build/os/linux
+
+	for strip_file in $(RELEASE_FILE) ; do sed '/#ifdef CONFIG_AP_SUPPORT/,/#endif \/\/ CONFIG_AP_SUPPORT \/\//d'  $$strip_file > $$strip_file.tmp ;\
+										   sed '/#ifdef RELASE_EXCLUDE/,/#endif \/\/ RELASE_EXCLUDE \/\//d'  $$strip_file.tmp > $$strip_file.tmp1;\
+										   sed '/#ifdef WAPI_SUPPORT/,/#endif \/\/ WAPI_SUPPORT \/\//d'  $$strip_file.tmp1 > $$strip_file.tmp2;\
+										   sed '/#ifdef WMM_ACM_SUPPORT/,/#endif \/\/ WMM_ACM_SUPPORT \/\//d'  $$strip_file.tmp2 > $$strip_file.tmp3;\
+										   sed '/#ifdef DOT11R_FT_SUPPORT/,/#endif \/\/ DOT11R_FT_SUPPORT \/\//d'  $$strip_file.tmp3 > $$strip_file.tmp4;\
+										   sed '/#ifdef DOT11K_RRM_SUPPORT/,/#endif \/\/ DOT11K_RRM_SUPPORT \/\//d'  $$strip_file.tmp4 > $$strip_file.tmp5;\
+										   sed '/#ifdef INF_AMAZON_PPA/,/#endif \/\/ INF_AMAZON_PPA \/\//d'  $$strip_file.tmp5 > $$strip_file.tmp6;\
+										   sed '/#ifdef INF_AMAZON_SE/,/#endif \/\/ INF_AMAZON_SE \/\//d'  $$strip_file.tmp6 > $$strip_file.tmp7;\
+										   sed '/#ifdef BG_FT_SUPPORT/,/#endif \/\/ BG_FT_SUPPORT \/\//d'  $$strip_file.tmp7 > $$strip_file.strip; done;
+
+	# strip Makefile.4
+	sed '/#ifdef CONFIG_AP_SUPPORT/,/#endif \/\/ CONFIG_AP_SUPPORT \/\//d'  $(RT28xx_DIR)/os/linux/Makefile.4 > $(RT28xx_DIR)/os/linux/Makefile.4.tmp ;
+	sed '/#ifdef CONFIG_APSTA_SUPPORT/,/#endif \/\/ CONFIG_APSTA_SUPPORT \/\//d'  $(RT28xx_DIR)/os/linux/Makefile.4.tmp > $(RT28xx_DIR)/os/linux/Makefile.4.tmp1 ;
+	sed '/#ifdef WAPI_SUPPORT/,/#endif \/\/ WAPI_SUPPORT \/\//d'  $(RT28xx_DIR)/os/linux/Makefile.4.tmp1 > $(RT28xx_DIR)/os/linux/Makefile.4.tmp2 ;
+	sed '/#ifdef WMM_ACM_SUPPORT/,/#endif \/\/ WMM_ACM_SUPPORT \/\//d'  $(RT28xx_DIR)/os/linux/Makefile.4.tmp2 > $(RT28xx_DIR)/os/linux/Makefile.4.tmp3 ;
+	sed '/#ifdef DOT11R_FT_SUPPORT/,/#endif \/\/ DOT11R_FT_SUPPORT \/\//d'  $(RT28xx_DIR)/os/linux/Makefile.4.tmp3 > $(RT28xx_DIR)/os/linux/Makefile.4.tmp4 ;
+	sed '/#ifdef DOT11K_RRM_SUPPORT/,/#endif \/\/ DOT11K_RRM_SUPPORT \/\//d'  $(RT28xx_DIR)/os/linux/Makefile.4.tmp4 > $(RT28xx_DIR)/os/linux/Makefile.4.tmp5 ;
+	sed '/#ifdef BG_FT_SUPPORT/,/#endif \/\/ BG_FT_SUPPORT \/\//d'  $(RT28xx_DIR)/os/linux/Makefile.4.tmp5 > $(RT28xx_DIR)/os/linux/Makefile.4.strip_ ;
+	
+	# strip Makefile.6
+	sed '/#ifdef CONFIG_AP_SUPPORT/,/#endif \/\/ CONFIG_AP_SUPPORT \/\//d'  $(RT28xx_DIR)/os/linux/Makefile.6 > $(RT28xx_DIR)/os/linux/Makefile.6.tmp ;
+	sed '/#ifdef CONFIG_APSTA_SUPPORT/,/#endif \/\/ CONFIG_APSTA_SUPPORT \/\//d'  $(RT28xx_DIR)/os/linux/Makefile.6.tmp > $(RT28xx_DIR)/os/linux/Makefile.6.tmp1 ;
+	sed '/#ifdef WAPI_SUPPORT/,/#endif \/\/ WAPI_SUPPORT \/\//d'  $(RT28xx_DIR)/os/linux/Makefile.6.tmp1 > $(RT28xx_DIR)/os/linux/Makefile.6.tmp2 ;
+	sed '/#ifdef WMM_ACM_SUPPORT/,/#endif \/\/ WMM_ACM_SUPPORT \/\//d'  $(RT28xx_DIR)/os/linux/Makefile.6.tmp2 > $(RT28xx_DIR)/os/linux/Makefile.6.tmp3 ;
+	sed '/#ifdef DOT11R_FT_SUPPORT/,/#endif \/\/ DOT11R_FT_SUPPORT \/\//d'  $(RT28xx_DIR)/os/linux/Makefile.6.tmp3 > $(RT28xx_DIR)/os/linux/Makefile.6.tmp4 ;
+	sed '/#ifdef DOT11K_RRM_SUPPORT/,/#endif \/\/ DOT11K_RRM_SUPPORT \/\//d'  $(RT28xx_DIR)/os/linux/Makefile.6.tmp4 > $(RT28xx_DIR)/os/linux/Makefile.6.tmp5 ;
+	sed '/#ifdef BG_FT_SUPPORT/,/#endif \/\/ BG_FT_SUPPORT \/\//d'  $(RT28xx_DIR)/os/linux/Makefile.6.tmp5 > $(RT28xx_DIR)/os/linux/Makefile.6.strip_ ;
+	
+	# strip config.mk
+	sed '/#ifdef RELASE_EXCLUDE/,/#endif \/\/ RELASE_EXCLUDE \/\//d'  $(RT28xx_DIR)/os/linux/config.mk > $(RT28xx_DIR)/os/linux/config.mk.tmp ;
+	sed '/#ifdef CONFIG_AP_SUPPORT/,/#endif \/\/ CONFIG_AP_SUPPORT \/\//d'  $(RT28xx_DIR)/os/linux/config.mk.tmp > $(RT28xx_DIR)/os/linux/config.mk.tmp1 ;
+	sed '/#ifdef CONFIG_APSTA_SUPPORT/,/#endif \/\/ CONFIG_APSTA_SUPPORT \/\//d'  $(RT28xx_DIR)/os/linux/config.mk.tmp1 > $(RT28xx_DIR)/os/linux/config.mk.tmp2 ;	
+	sed '/#ifdef WAPI_SUPPORT/,/#endif \/\/ WAPI_SUPPORT \/\//d'  $(RT28xx_DIR)/os/linux/config.mk.tmp2 > $(RT28xx_DIR)/os/linux/config.mk.tmp3 ;	
+	sed '/#ifdef WMM_ACM_SUPPORT/,/#endif \/\/ WMM_ACM_SUPPORT \/\//d'  $(RT28xx_DIR)/os/linux/config.mk.tmp3 > $(RT28xx_DIR)/os/linux/config.mk.tmp4 ;	
+	sed '/#ifdef DOT11R_FT_SUPPORT/,/#endif \/\/ DOT11R_FT_SUPPORT \/\//d'  $(RT28xx_DIR)/os/linux/config.mk.tmp4 > $(RT28xx_DIR)/os/linux/config.mk.tmp5 ;	
+	sed '/#ifdef DOT11K_RRM_SUPPORT/,/#endif \/\/ DOT11K_RRM_SUPPORT \/\//d'  $(RT28xx_DIR)/os/linux/config.mk.tmp5 > $(RT28xx_DIR)/os/linux/config.mk.tmp6 ;	
+	sed '/#ifdef BG_FT_SUPPORT/,/#endif \/\/ BG_FT_SUPPORT \/\//d'  $(RT28xx_DIR)/os/linux/config.mk.tmp6 > $(RT28xx_DIR)/os/linux/config.mk.strip_ ;
+
+ifeq ($(CHIPSET),2070)
+	sed '/#ifdef DOT11_N_SUPPORT/,/#endif \/\/ DOT11_N_SUPPORT \/\//d'  $(RT28xx_DIR)/os/linux/Makefile.4.strip_ > $(RT28xx_DIR)/os/linux/Makefile.4.tmp ;
+	mv -f $(RT28xx_DIR)/os/linux/Makefile.4.tmp $(RT28xx_DIR)/os/linux/Makefile.4.strip_;
+	sed '/#ifdef DOT11_N_SUPPORT/,/#endif \/\/ DOT11_N_SUPPORT \/\//d'  $(RT28xx_DIR)/os/linux/Makefile.6.strip_ > $(RT28xx_DIR)/os/linux/Makefile.6.tmp ;
+	mv -f $(RT28xx_DIR)/os/linux/Makefile.6.tmp $(RT28xx_DIR)/os/linux/Makefile.6.strip_;
+	sed '/#ifdef DOT11N_DRAFT3/,/#endif \/\/ DOT11N_DRAFT3 \/\//d'  $(RT28xx_DIR)/os/linux/config.mk.strip_ > $(RT28xx_DIR)/os/linux/config.mk.tmp ;
+	sed '/#ifdef DOT11_N_SUPPORT/,/#endif \/\/ DOT11_N_SUPPORT \/\//d'  $(RT28xx_DIR)/os/linux/config.mk.tmp > $(RT28xx_DIR)/os/linux/config.mk.tmp1 ;
+	mv -f $(RT28xx_DIR)/os/linux/config.mk.tmp1 $(RT28xx_DIR)/os/linux/config.mk.strip_;
+endif
+
+	cd $(RT28xx_DIR)/sta ;mv -f *.strip $(RT28xx_DIR)/build/sta/
+	cd $(RT28xx_DIR)/build/sta; ls | awk -F. '{print "mv",$$0,$$1".c"}'|sh
+	cd $(RT28xx_DIR)/include ;mv -f *.strip $(RT28xx_DIR)/build/include/
+	cd $(RT28xx_DIR)/build/include; ls | awk -F. '{print "mv",$$0,$$1".h"}'|sh
+	mkdir $(RT28xx_DIR)/build/include/chip
+	mkdir $(RT28xx_DIR)/build/include/iface
+	mkdir $(RT28xx_DIR)/build/include/os
+	cd $(RT28xx_DIR)/include/chip ;mv -f *.strip $(RT28xx_DIR)/build/include/chip/
+	cd $(RT28xx_DIR)/build/include/chip; ls | awk -F. '{print "mv",$$0,$$1".h"}'|sh
+	cd $(RT28xx_DIR)/include/iface ;mv -f *.strip $(RT28xx_DIR)/build/include/iface/
+	cd $(RT28xx_DIR)/build/include/iface; ls | awk -F. '{print "mv",$$0,$$1".h"}'|sh
+	cd $(RT28xx_DIR)/include/os ;mv -f *.strip $(RT28xx_DIR)/build/include/os/
+	cd $(RT28xx_DIR)/build/include/os; ls | awk -F. '{print "mv",$$0,$$1".h"}'|sh
+	cd $(RT28xx_DIR)/os/linux ;mv -f *.strip $(RT28xx_DIR)/build/os/linux/
+	cd $(RT28xx_DIR)/build/os/linux; ls | awk -F. '{print "mv",$$0,$$1".c"}'|sh
+	cd $(RT28xx_DIR)/common; mv -f *.strip $(RT28xx_DIR)/build/common/
+	cd $(RT28xx_DIR)/build/common; ls | awk -F. '{print "mv",$$0,$$1".c"}'|sh
+ifneq ($(CHIPSET),2860)
+ifneq ($(CHIPSET),2870)
+	mkdir $(RT28xx_DIR)/build/chips
+	cd $(RT28xx_DIR)/chips; mv -f *.strip $(RT28xx_DIR)/build/chips/
+	cd $(RT28xx_DIR)/build/chips; ls | awk -F. '{print "mv",$$0,$$1".c"}'|sh
+endif
+endif
+	cd $(RT28xx_DIR);\
+	cp Makefile $(RT28xx_DIR)/build; \
+	cp $(BIN_FILE) $(RT28xx_DIR)/build/common; \
+	mv -f os/linux/Makefile.4.strip_ $(RT28xx_DIR)/build/os/linux/Makefile.4;\
+	mv -f os/linux/Makefile.6.strip_ $(RT28xx_DIR)/build/os/linux/Makefile.6;\
+	mv -f os/linux/config.mk.strip_ $(RT28xx_DIR)/build/os/linux/config.mk;\
+	cp $(DAT_FILE) $(RT28xx_DIR)/build/;\
+	cp $(DAT_FILE2) $(RT28xx_DIR)/build/;\
+	cp -rf tools $(RT28xx_DIR)/build
+
+prerelease:
+	echo "Create RT28xx Code Release Package......"
+	echo "Stage 1: create middle-file for different chipset..."
+	rm -rf $(RTMP_SRC_DIR)
+	mkdir $(RTMP_SRC_DIR)
+	mkdir $(RTMP_SRC_DIR)/common
+	mkdir $(RTMP_SRC_DIR)/include
+	mkdir $(RTMP_SRC_DIR)/os
+	mkdir $(RTMP_SRC_DIR)/os/linux
+	mkdir $(RTMP_SRC_DIR)/os/ucos
+	mkdir $(RTMP_SRC_DIR)/os/win
+	mkdir $(RTMP_SRC_DIR)/sta
+	mkdir $(RTMP_SRC_DIR)/tools
+
+ifeq ($(CHIPSET), 2860)
+	for strip_file in $(RELEASE_FILE); do sed '/#ifdef RT2870/,/#endif \/\/ RT2870 \/\//d' $$strip_file > $$strip_file.tmp ;\
+										   sed '/#ifdef RT3070/,/#endif \/\/ RT3070 \/\//d' $$strip_file.tmp > $$strip_file.tmp1 ;\
+										   sed '/#ifdef RT3090/,/#endif \/\/ RT3090 \/\//d' $$strip_file.tmp1 > $$strip_file.tmp2 ;\
+										   sed '/#ifdef RT30xx/,/#endif \/\/ RT30xx \/\//d' $$strip_file.tmp2 > $$strip_file.tmp3 ;\
+										   sed '/#ifdef RT35xx/,/#endif \/\/ RT35xx \/\//d' $$strip_file.tmp3 > $$strip_file.tmp4 ;\
+										   sed '/#ifdef RT305x/,/#endif \/\/ RT305x \/\//d' $$strip_file.tmp4 > $$strip_file.tmp5 ;\
+										   sed '/#ifdef RT2880/,/#endif \/\/ RT2880 \/\//d' $$strip_file.tmp5 > $$strip_file.tmp6 ;\
+										   sed '/#ifdef RT2070/,/#endif \/\/ RT2070 \/\//d' $$strip_file.tmp6 > $$strip_file.tmp7 ;\
+										   sed '/#ifdef RTMP_USB_SUPPORT/,/#endif \/\/ RTMP_USB_SUPPORT \/\//d' $$strip_file.tmp7 > $$strip_file.tmp8 ;\
+										   sed '/#ifdef RTMP_MAC_USB/,/#endif \/\/ RTMP_MAC_USB \/\//d' $$strip_file.tmp8 > $$strip_file.tmp9 ;\
+										   sed '/#ifdef RTMP_RBUS_SUPPORT/,/#endif \/\/ RTMP_RBUS_SUPPORT \/\//d'  $$strip_file.tmp9 > $$strip_file.strip; done;
+	cp $(RT28xx_DIR)/README_STA_pci $(RTMP_SRC_DIR)/README_STA
+endif
+ifeq ($(CHIPSET), 2870)
+	for strip_file in $(RELEASE_FILE); do sed '/#ifdef RT2860/,/#endif \/\/ RT2860 \/\//d' $$strip_file > $$strip_file.tmp ;\
+										   sed '/#ifdef RT3070/,/#endif \/\/ RT3070 \/\//d' $$strip_file.tmp > $$strip_file.tmp1 ;\
+										   sed '/#ifdef RT3090/,/#endif \/\/ RT3090 \/\//d' $$strip_file.tmp1 > $$strip_file.tmp2 ;\
+										   sed '/#ifdef RT30xx/,/#endif \/\/ RT30xx \/\//d' $$strip_file.tmp2 > $$strip_file.tmp3 ;\
+										   sed '/#ifdef RT35xx/,/#endif \/\/ RT35xx \/\//d' $$strip_file.tmp3 > $$strip_file.tmp4 ;\
+										   sed '/#ifdef RT305x/,/#endif \/\/ RT305x \/\//d' $$strip_file.tmp4 > $$strip_file.tmp5 ;\
+										   sed '/#ifdef RT2880/,/#endif \/\/ RT2880 \/\//d' $$strip_file.tmp5 > $$strip_file.tmp6 ;\
+										   sed '/#ifdef RT2070/,/#endif \/\/ RT2070 \/\//d' $$strip_file.tmp6 > $$strip_file.tmp7 ;\
+										   sed '/#ifdef RTMP_PCI_SUPPORT/,/#endif \/\/ RTMP_PCI_SUPPORT \/\//d' $$strip_file.tmp7 > $$strip_file.tmp8 ;\
+										   sed '/#ifdef RTMP_MAC_PCI/,/#endif \/\/ RTMP_MAC_PCI \/\//d' $$strip_file.tmp8 > $$strip_file.tmp9 ;\
+										   sed '/#ifdef RTMP_RBUS_SUPPORT/,/#endif \/\/ RTMP_RBUS_SUPPORT \/\//d'  $$strip_file.tmp9 > $$strip_file.strip; done;
+	cp $(RT28xx_DIR)/README_STA_usb $(RTMP_SRC_DIR)/README_STA
+endif
+ifeq ($(CHIPSET),2070)
+	for strip_file in $(RELEASE_FILE); do sed '/#ifdef RT2860/,/#endif \/\/ RT2860 \/\//d' $$strip_file > $$strip_file.tmp ;\
+										   sed '/#ifdef RT3090/,/#endif \/\/ RT3090 \/\//d' $$strip_file.tmp > $$strip_file.tmp1 ;\
+										   sed '/#ifdef RT35xx/,/#endif \/\/ RT35xx \/\//d' $$strip_file.tmp1 > $$strip_file.tmp2 ;\
+										   sed '/#ifdef RT305x/,/#endif \/\/ RT305x \/\//d' $$strip_file.tmp2 > $$strip_file.tmp3 ;\
+										   sed '/#ifdef RT2880/,/#endif \/\/ RT2880 \/\//d' $$strip_file.tmp3 > $$strip_file.tmp4 ;\
+										   sed '/#ifdef DOT11_N_SUPPORT/,/#endif \/\/ DOT11_N_SUPPORT \/\//d' $$strip_file.tmp4 > $$strip_file.tmp5 ;\
+										   sed '/#ifdef DOT11N_DRAFT3/,/#endif \/\/ DOT11N_DRAFT3 \/\//d' $$strip_file.tmp5 > $$strip_file.tmp6 ;\
+										   sed '/#ifdef RTMP_PCI_SUPPORT/,/#endif \/\/ RTMP_PCI_SUPPORT \/\//d' $$strip_file.tmp6 > $$strip_file.tmp7 ;\
+										   sed '/#ifdef RTMP_MAC_PCI/,/#endif \/\/ RTMP_MAC_PCI \/\//d' $$strip_file.tmp7 > $$strip_file.tmp8 ;\
+										   sed '/#ifdef RTMP_RBUS_SUPPORT/,/#endif \/\/ RTMP_RBUS_SUPPORT \/\//d'  $$strip_file.tmp8 > $$strip_file.strip; done;
+	cp $(RT28xx_DIR)/README_STA_usb $(RTMP_SRC_DIR)/README_STA
+endif
+ifeq ($(CHIPSET),3070)
+	for strip_file in $(RELEASE_FILE); do sed '/#ifdef RT2860/,/#endif \/\/ RT2860 \/\//d' $$strip_file > $$strip_file.tmp ;\
+										   sed '/#ifdef RT3090/,/#endif \/\/ RT3090 \/\//d' $$strip_file.tmp > $$strip_file.tmp1 ;\
+										   sed '/#ifdef RT35xx/,/#endif \/\/ RT35xx \/\//d' $$strip_file.tmp1 > $$strip_file.tmp2 ;\
+										   sed '/#ifdef RT305x/,/#endif \/\/ RT305x \/\//d' $$strip_file.tmp2 > $$strip_file.tmp3 ;\
+										   sed '/#ifdef RT2880/,/#endif \/\/ RT2880 \/\//d' $$strip_file.tmp3 > $$strip_file.tmp4 ;\
+										   sed '/#ifdef RT2070/,/#endif \/\/ RT2070 \/\//d' $$strip_file.tmp4 > $$strip_file.tmp5 ;\
+										   sed '/#ifdef RTMP_PCI_SUPPORT/,/#endif \/\/ RTMP_PCI_SUPPORT \/\//d' $$strip_file.tmp5 > $$strip_file.tmp6 ;\
+										   sed '/#ifdef RTMP_MAC_PCI/,/#endif \/\/ RTMP_MAC_PCI \/\//d' $$strip_file.tmp6 > $$strip_file.tmp7 ;\
+										   sed '/#ifdef RTMP_RBUS_SUPPORT/,/#endif \/\/ RTMP_RBUS_SUPPORT \/\//d'  $$strip_file.tmp7 > $$strip_file.strip; done;
+	cp $(RT28xx_DIR)/README_STA_usb $(RTMP_SRC_DIR)/README_STA
+endif
+ifeq ($(CHIPSET),3090)
+	for strip_file in $(RELEASE_FILE); do sed '/#ifdef RT2870/,/#endif \/\/ RT2870 \/\//d' $$strip_file > $$strip_file.tmp ;\
+										   sed '/#ifdef RT3070/,/#endif \/\/ RT3070 \/\//d' $$strip_file.tmp > $$strip_file.tmp1 ;\
+										   sed '/#ifdef RT35xx/,/#endif \/\/ RT35xx \/\//d' $$strip_file.tmp1 > $$strip_file.tmp2 ;\
+										   sed '/#ifdef RT305x/,/#endif \/\/ RT305x \/\//d' $$strip_file.tmp2 > $$strip_file.tmp3 ;\
+										   sed '/#ifdef RT2880/,/#endif \/\/ RT2880 \/\//d' $$strip_file.tmp3 > $$strip_file.tmp4 ;\
+										   sed '/#ifdef RT2070/,/#endif \/\/ RT2070 \/\//d' $$strip_file.tmp4 > $$strip_file.tmp5 ;\
+										   sed '/#ifdef RTMP_USB_SUPPORT/,/#endif \/\/ RTMP_USB_SUPPORT \/\//d' $$strip_file.tmp5 > $$strip_file.tmp6 ;\
+										   sed '/#ifdef RTMP_MAC_USB/,/#endif \/\/ RTMP_MAC_USB \/\//d' $$strip_file.tmp6 > $$strip_file.tmp7 ;\
+										   sed '/#ifdef RTMP_RBUS_SUPPORT/,/#endif \/\/ RTMP_RBUS_SUPPORT \/\//d'  $$strip_file.tmp7 > $$strip_file.strip; done;
+	cp $(RT28xx_DIR)/README_STA_pci $(RTMP_SRC_DIR)/README_STA
+endif
+	cd $(RT28xx_DIR)/sta ;mv -f *.strip $(RTMP_SRC_DIR)/sta/
+	cd $(RTMP_SRC_DIR)/sta; ls | awk -F. '{print "mv",$$0,$$1".c"}'|sh
+	cd $(RT28xx_DIR)/include ;mv -f *.strip $(RTMP_SRC_DIR)/include/
+	cd $(RTMP_SRC_DIR)/include; ls | awk -F. '{print "mv",$$0,$$1".h"}'|sh
+	mkdir $(RTMP_SRC_DIR)/include/chip
+	mkdir $(RTMP_SRC_DIR)/include/iface
+	mkdir $(RTMP_SRC_DIR)/include/os
+	cd $(RT28xx_DIR)/include/chip ;mv -f *.strip $(RTMP_SRC_DIR)/include/chip/
+	cd $(RTMP_SRC_DIR)/include/chip; ls | awk -F. '{print "mv",$$0,$$1".h"}'|sh
+	cd $(RT28xx_DIR)/include/iface ;mv -f *.strip $(RTMP_SRC_DIR)/include/iface/
+	cd $(RTMP_SRC_DIR)/include/iface; ls | awk -F. '{print "mv",$$0,$$1".h"}'|sh
+	cd $(RT28xx_DIR)/include/os ;mv -f *.strip $(RTMP_SRC_DIR)/include/os/
+	cd $(RTMP_SRC_DIR)/include/os; ls | awk -F. '{print "mv",$$0,$$1".h"}'|sh
+	cd $(RT28xx_DIR)/os/linux ;mv -f *.strip $(RTMP_SRC_DIR)/os/linux/
+	cd $(RTMP_SRC_DIR)/os/linux; ls | awk -F. '{print "mv",$$0,$$1".c"}'|sh
+	cd $(RT28xx_DIR)/common; mv -f *.strip $(RTMP_SRC_DIR)/common/
+	cd $(RTMP_SRC_DIR)/common; ls | awk -F. '{print "mv",$$0,$$1".c"}'|sh
+ifneq ($(CHIPSET),2860)
+ifneq ($(CHIPSET),2870)
+	mkdir $(RTMP_SRC_DIR)/chips
+	cd $(RT28xx_DIR)/chips; mv -f *.strip $(RTMP_SRC_DIR)/chips/
+	cd $(RTMP_SRC_DIR)/chips; ls | awk -F. '{print "mv",$$0,$$1".c"}'|sh
+endif
+endif
+	cd $(RT28xx_DIR);\
+	cp Makefile $(RTMP_SRC_DIR); \
+	cp iwpriv_usage.txt $(RTMP_SRC_DIR); \
+	cp wps_iwpriv_usage.txt $(RTMP_SRC_DIR); \
+	cp sta_ate_iwpriv_usage.txt $(RTMP_SRC_DIR); \
+	cp $(BIN_FILE) $(RTMP_SRC_DIR)/common;\
+	cp os/linux/Makefile.4 $(RTMP_SRC_DIR)/os/linux;\
+	cp os/linux/Makefile.6 $(RTMP_SRC_DIR)/os/linux;\
+	cp os/linux/Makefile.release $(RTMP_SRC_DIR)/os/linux;\
+	cp os/linux/config.mk $(RTMP_SRC_DIR)/os/linux;\
+	cp $(DAT_FILE) $(RTMP_SRC_DIR)/;\
+	cp $(DAT_FILE2) $(RTMP_SRC_DIR)/;\
+	cp -rf tools $(RTMP_SRC_DIR)
+
+endif
+
+#
+# Release file for APSTA Mode
+#
+ifeq ($(RT28xx_MODE),APSTA)
+RELEASE_FILE += $(RT28xx_DIR)/common/mlme.c\
+	$(RT28xx_DIR)/common/cmm_wep.c\
+	$(RT28xx_DIR)/common/action.c\
+	$(RT28xx_DIR)/common/ba_action.c\
+	$(RT28xx_DIR)/common/cmm_data.c\
+	$(RT28xx_DIR)/common/rtmp_init.c\
+	$(RT28xx_DIR)/common/cmm_tkip.c\
+	$(RT28xx_DIR)/common/cmm_aes.c\
+	$(RT28xx_DIR)/common/cmm_sync.c\
+	$(RT28xx_DIR)/common/eeprom.c\
+	$(RT28xx_DIR)/common/cmm_sanity.c\
+	$(RT28xx_DIR)/common/cmm_info.c\
+	$(RT28xx_DIR)/common/cmm_cfg.c\
+	$(RT28xx_DIR)/common/cmm_wpa.c\
+	$(RT28xx_DIR)/common/dfs.c\
+	$(RT28xx_DIR)/common/spectrum.c\
+	$(RT28xx_DIR)/common/rt_channel.c\
+	$(RT28xx_DIR)/common/cmm_profile.c\
+	$(RT28xx_DIR)/common/cmm_asic.c\
+	$(RT28xx_DIR)/common/ee_prom.c\
+	$(RT28xx_DIR)/common/rtmp_mcu.c\
+	$(RT28xx_DIR)/common/rtmp_timer.c\
+	$(RT28xx_DIR)/ap/ap.c\
+	$(RT28xx_DIR)/ap/ap_assoc.c\
+	$(RT28xx_DIR)/ap/ap_auth.c\
+	$(RT28xx_DIR)/ap/ap_connect.c\
+	$(RT28xx_DIR)/ap/ap_mlme.c\
+	$(RT28xx_DIR)/ap/ap_sanity.c\
+	$(RT28xx_DIR)/ap/ap_sync.c\
+	$(RT28xx_DIR)/ap/ap_wpa.c\
+	$(RT28xx_DIR)/ap/ap_data.c\
+	$(RT28xx_DIR)/ap/ap_uapsd.c\
+	$(RT28xx_DIR)/ap/ap_mbss.c\
+	$(RT28xx_DIR)/ap/ap_autoChSel.c\
+	$(RT28xx_DIR)/ap/ap_ids.c\
+	$(RT28xx_DIR)/ap/ap_dls.c\
+	$(RT28xx_DIR)/ap/ap_qload.c\
+	$(RT28xx_DIR)/ap/ap_cfg.c\
+	$(RT28xx_DIR)/sta/assoc.c\
+	$(RT28xx_DIR)/sta/auth.c\
+	$(RT28xx_DIR)/sta/auth_rsp.c\
+	$(RT28xx_DIR)/sta/sync.c\
+	$(RT28xx_DIR)/sta/sanity.c\
+	$(RT28xx_DIR)/sta/rtmp_data.c\
+	$(RT28xx_DIR)/sta/connect.c\
+	$(RT28xx_DIR)/sta/wpa.c\
+	$(RT28xx_DIR)/os/linux/rt_linux.c\
+	$(RT28xx_DIR)/os/linux/rt_profile.c\
+	$(RT28xx_DIR)/os/linux/ap_ioctl.c\
+	$(RT28xx_DIR)/os/linux/sta_ioctl.c\
+	$(RT28xx_DIR)/os/linux/rt_main_dev.c\
+	$(RT28xx_DIR)/os/linux/rt_ate.c\
+	$(RT28xx_DIR)/os/linux/vr_ikans.c\
+	$(RT28xx_DIR)/common/wsc.c\
+	$(RT28xx_DIR)/common/wsc_tlv.c\
+	$(RT28xx_DIR)/common/dh_key.c\
+	$(RT28xx_DIR)/common/evp_enc.c\
+	$(RT28xx_DIR)/common/cmm_mat.c\
+	$(RT28xx_DIR)/common/cmm_mat_iparp.c\
+	$(RT28xx_DIR)/common/cmm_mat_pppoe.c\
+	$(RT28xx_DIR)/common/cmm_mat_ipv6.c\
+	$(RT28xx_DIR)/common/crypt_aes.c\
+	$(RT28xx_DIR)/common/crypt_biginteger.c\
+	$(RT28xx_DIR)/common/crypt_dh.c\
+	$(RT28xx_DIR)/common/crypt_hmac.c\
+	$(RT28xx_DIR)/common/crypt_md5.c\
+	$(RT28xx_DIR)/common/crypt_sha2.c\
+	$(RT28xx_DIR)/common/netif_block.c\
+	$(RT28xx_DIR)/common/igmp_snoop.c\
+	$(RT28xx_DIR)/common/mlme_ex.c\
+	$(RT28xx_DIR)/common/mesh_bmpkt.c\
+	$(RT28xx_DIR)/common/mesh_ctrl.c\
+	$(RT28xx_DIR)/common/mesh_link_mng.c\
+	$(RT28xx_DIR)/common/mesh_sanity.c\
+	$(RT28xx_DIR)/common/mesh_tlv.c\
+	$(RT28xx_DIR)/common/mesh.c\
+	$(RT28xx_DIR)/common/mesh_forwarding.c\
+	$(RT28xx_DIR)/common/mesh_path_mng.c\
+	$(RT28xx_DIR)/ap/ap_wds.c\
+	$(RT28xx_DIR)/ap/ap_nintendo.c\
+	$(RT28xx_DIR)/ap/ap_apcli.c\
+	$(RT28xx_DIR)/ap/apcli_assoc.c\
+	$(RT28xx_DIR)/ap/apcli_auth.c\
+	$(RT28xx_DIR)/ap/apcli_ctrl.c\
+	$(RT28xx_DIR)/ap/apcli_sync.c\
+	$(RT28xx_DIR)/include/action.h\
+	$(RT28xx_DIR)/include/ap_autoChSel.h\
+	$(RT28xx_DIR)/include/ap_autoChSel_cmm.h\
+	$(RT28xx_DIR)/include/ap_ids.h\
+	$(RT28xx_DIR)/include/ap.h\
+	$(RT28xx_DIR)/include/ap_mbss.h\
+	$(RT28xx_DIR)/include/ap_uapsd.h\
+	$(RT28xx_DIR)/include/rt_ate.h\
+	$(RT28xx_DIR)/include/dh_key.h\
+	$(RT28xx_DIR)/include/evp_enc.h\
+	$(RT28xx_DIR)/include/firmware.h\
+	$(RT28xx_DIR)/include/crypt_aes.h\
+	$(RT28xx_DIR)/include/crypt_biginteger.h\
+	$(RT28xx_DIR)/include/crypt_dh.h\
+	$(RT28xx_DIR)/include/crypt_hmac.h\
+	$(RT28xx_DIR)/include/crypt_md5.h\
+	$(RT28xx_DIR)/include/crypt_sha2.h\
+	$(RT28xx_DIR)/include/rtmp_dot11.h\
+	$(RT28xx_DIR)/include/rtmp_iface.h\
+	$(RT28xx_DIR)/include/rtmp_mcu.h\
+	$(RT28xx_DIR)/include/rtmp_os.h\
+	$(RT28xx_DIR)/include/rtmp_timer.h\
+	$(RT28xx_DIR)/include/mlme.h\
+	$(RT28xx_DIR)/include/rt_config.h\
+	$(RT28xx_DIR)/include/rtmp_def.h\
+	$(RT28xx_DIR)/include/rtmp.h\
+	$(RT28xx_DIR)/include/oid.h\
+	$(RT28xx_DIR)/include/rtmp_type.h\
+	$(RT28xx_DIR)/include/wpa.h\
+	$(RT28xx_DIR)/include/wsc.h\
+	$(RT28xx_DIR)/include/wsc_tlv.h\
+	$(RT28xx_DIR)/include/ap_wds.h\
+	$(RT28xx_DIR)/include/ap_apcli.h\
+	$(RT28xx_DIR)/include/mat.h\
+	$(RT28xx_DIR)/include/link_list.h\
+	$(RT28xx_DIR)/include/netif_block.h\
+	$(RT28xx_DIR)/include/igmp_snoop.h\
+	$(RT28xx_DIR)/include/dfs.h\
+	$(RT28xx_DIR)/include/rtmp_chip.h\
+	$(RT28xx_DIR)/include/ipv6.h\
+	$(RT28xx_DIR)/include/chlist.h\
+	$(RT28xx_DIR)/include/mlme_ex.h\
+	$(RT28xx_DIR)/include/mlme_ex_def.h\
+	$(RT28xx_DIR)/include/mesh.h\
+	$(RT28xx_DIR)/include/mesh_def.h\
+	$(RT28xx_DIR)/include/mesh_mlme.h\
+	$(RT28xx_DIR)/include/mesh_sanity.h\
+	$(RT28xx_DIR)/include/spectrum.h\
+	$(RT28xx_DIR)/include/spectrum_def.h\
+	$(RT28xx_DIR)/include/ap_cfg.h\
+	$(RT28xx_DIR)/include/eeprom.h\
+	$(RT28xx_DIR)/include/chip/rtmp_mac.h\
+	$(RT28xx_DIR)/include/chip/rtmp_phy.h\
+	$(RT28xx_DIR)/include/os/rt_linux.h
+
+release:
+	echo "MAKE Linux APSTA Code Release"
+	rm -rf $(RT28xx_DIR)/build
+	mkdir $(RT28xx_DIR)/build
+	mkdir $(RT28xx_DIR)/build/ap
+	mkdir $(RT28xx_DIR)/build/common
+	mkdir $(RT28xx_DIR)/build/include
+	mkdir $(RT28xx_DIR)/build/os
+	mkdir $(RT28xx_DIR)/build/os/linux
+	mkdir $(RT28xx_DIR)/build/sta
+
+	#for strip_file in $(RELEASE_FILE) ;  do $$strip_file > $$strip_file.strip ;done;
+	#for strip_file in $(RELEASE_FILE) ;  do sed '/#ifdef AAAA/,/#endif \/\/ AAAA \/\//d' $$strip_file > $$strip_file.strip ;done;
+	for strip_file in $(RELEASE_FILE) ; do sed '/#ifdef RELASE_EXCLUDE/,/#endif \/\/ RELASE_EXCLUDE \/\//d'  $$strip_file > $$strip_file.tmp;\
+										   sed '/#ifdef WAPI_SUPPORT/,/#endif \/\/ WAPI_SUPPORT \/\//d'  $$strip_file.tmp > $$strip_file.tmp1;\
+										   sed '/#ifdef WMM_ACM_SUPPORT/,/#endif \/\/ WMM_ACM_SUPPORT \/\//d'  $$strip_file.tmp1 > $$strip_file.tmp2;\
+										   sed '/#ifdef DOT11R_FT_SUPPORT/,/#endif \/\/ DOT11R_FT_SUPPORT \/\//d'  $$strip_file.tmp2 > $$strip_file.tmp3;\
+										   sed '/#ifdef DOT11K_RRM_SUPPORT/,/#endif \/\/ DOT11K_RRM_SUPPORT \/\//d'  $$strip_file.tmp3 > $$strip_file.tmp4;\
+										   sed '/#ifdef INF_AMAZON_PPA/,/#endif \/\/ INF_AMAZON_PPA \/\//d'  $$strip_file.tmp4 > $$strip_file.tmp5;\
+										   sed '/#ifdef INF_AMAZON_SE/,/#endif \/\/ INF_AMAZON_SE \/\//d'  $$strip_file.tmp5 > $$strip_file.tmp6;\
+										   sed '/#ifdef BG_FT_SUPPORT/,/#endif \/\/ BG_FT_SUPPORT \/\//d'  $$strip_file.tmp6 > $$strip_file.strip; done;
+	
+	# strip Makefile.4
+	sed '/#ifdef CONFIG_AP_SUPPORT/,/#endif \/\/ CONFIG_AP_SUPPORT \/\//d'  $(RT28xx_DIR)/os/linux/Makefile.4 > $(RT28xx_DIR)/os/linux/Makefile.4.tmp ;
+	sed '/#ifdef CONFIG_STA_SUPPORT/,/#endif \/\/ CONFIG_STA_SUPPORT \/\//d'  $(RT28xx_DIR)/os/linux/Makefile.4.tmp > $(RT28xx_DIR)/os/linux/Makefile.4.tmp1 ;
+	sed '/#ifdef WAPI_SUPPORT/,/#endif \/\/ WAPI_SUPPORT \/\//d'  $(RT28xx_DIR)/os/linux/Makefile.4.tmp1 > $(RT28xx_DIR)/os/linux/Makefile.4.tmp2 ;
+	sed '/#ifdef WMM_ACM_SUPPORT/,/#endif \/\/ WMM_ACM_SUPPORT \/\//d'  $(RT28xx_DIR)/os/linux/Makefile.4.tmp2 > $(RT28xx_DIR)/os/linux/Makefile.4.tmp3 ;
+	sed '/#ifdef DOT11R_FT_SUPPORT/,/#endif \/\/ DOT11R_FT_SUPPORT \/\//d'  $(RT28xx_DIR)/os/linux/Makefile.4.tmp3 > $(RT28xx_DIR)/os/linux/Makefile.4.tmp4 ;
+	sed '/#ifdef DOT11K_RRM_SUPPORT/,/#endif \/\/ DOT11K_RRM_SUPPORT \/\//d'  $(RT28xx_DIR)/os/linux/Makefile.4.tmp4 > $(RT28xx_DIR)/os/linux/Makefile.4.tmp5 ;
+	sed '/#ifdef BG_FT_SUPPORT/,/#endif \/\/ BG_FT_SUPPORT \/\//d'  $(RT28xx_DIR)/os/linux/Makefile.4.tmp5 > $(RT28xx_DIR)/os/linux/Makefile.4.strip_ ;
+	
+	# strip Makefile.6
+	sed '/#ifdef CONFIG_AP_SUPPORT/,/#endif \/\/ CONFIG_AP_SUPPORT \/\//d'  $(RT28xx_DIR)/os/linux/Makefile.6 > $(RT28xx_DIR)/os/linux/Makefile.6.tmp ;
+	sed '/#ifdef CONFIG_STA_SUPPORT/,/#endif \/\/ CONFIG_STA_SUPPORT \/\//d'  $(RT28xx_DIR)/os/linux/Makefile.6.tmp > $(RT28xx_DIR)/os/linux/Makefile.6.tmp1 ;
+	sed '/#ifdef WAPI_SUPPORT/,/#endif \/\/ WAPI_SUPPORT \/\//d'  $(RT28xx_DIR)/os/linux/Makefile.6.tmp1 > $(RT28xx_DIR)/os/linux/Makefile.6.tmp2 ;
+	sed '/#ifdef WMM_ACM_SUPPORT/,/#endif \/\/ WMM_ACM_SUPPORT \/\//d'  $(RT28xx_DIR)/os/linux/Makefile.6.tmp2 > $(RT28xx_DIR)/os/linux/Makefile.6.tmp3 ;
+	sed '/#ifdef DOT11R_FT_SUPPORT/,/#endif \/\/ DOT11R_FT_SUPPORT \/\//d'  $(RT28xx_DIR)/os/linux/Makefile.6.tmp3 > $(RT28xx_DIR)/os/linux/Makefile.6.tmp4 ;
+	sed '/#ifdef DOT11K_RRM_SUPPORT/,/#endif \/\/ DOT11K_RRM_SUPPORT \/\//d'  $(RT28xx_DIR)/os/linux/Makefile.6.tmp4 > $(RT28xx_DIR)/os/linux/Makefile.6.tmp5 ;
+	sed '/#ifdef BG_FT_SUPPORT/,/#endif \/\/ BG_FT_SUPPORT \/\//d'  $(RT28xx_DIR)/os/linux/Makefile.6.tmp5 > $(RT28xx_DIR)/os/linux/Makefile.6.strip_ ;
+		
+	# strip config.mk	
+	sed '/#ifdef RELASE_EXCLUDE/,/#endif \/\/ RELASE_EXCLUDE \/\//d'  $(RT28xx_DIR)/os/linux/config.mk > $(RT28xx_DIR)/os/linux/config.mk.tmp ;
+	sed '/#ifdef CONFIG_STA_SUPPORT/,/#endif \/\/ CONFIG_STA_SUPPORT \/\//d'  $(RT28xx_DIR)/os/linux/config.mk.tmp > $(RT28xx_DIR)/os/linux/config.mk.tmp1 ;
+	sed '/#ifdef CONFIG_AP_SUPPORT/,/#endif \/\/ CONFIG_AP_SUPPORT \/\//d'  $(RT28xx_DIR)/os/linux/config.mk.tmp1 > $(RT28xx_DIR)/os/linux/config.mk.tmp2 ;
+	sed '/#ifdef WAPI_SUPPORT/,/#endif \/\/ WAPI_SUPPORT \/\//d'  $(RT28xx_DIR)/os/linux/config.mk.tmp2 > $(RT28xx_DIR)/os/linux/config.mk.tmp3 ;
+	sed '/#ifdef WMM_ACM_SUPPORT/,/#endif \/\/ WMM_ACM_SUPPORT \/\//d'  $(RT28xx_DIR)/os/linux/config.mk.tmp3 > $(RT28xx_DIR)/os/linux/config.mk.tmp4 ;
+	sed '/#ifdef DOT11R_FT_SUPPORT/,/#endif \/\/ DOT11R_FT_SUPPORT \/\//d'  $(RT28xx_DIR)/os/linux/config.mk.tmp4 > $(RT28xx_DIR)/os/linux/config.mk.tmp5 ;
+	sed '/#ifdef DOT11K_RRM_SUPPORT/,/#endif \/\/ DOT11K_RRM_SUPPORT \/\//d'  $(RT28xx_DIR)/os/linux/config.mk.tmp5 > $(RT28xx_DIR)/os/linux/config.mk.tmp6 ;
+	sed '/#ifdef BG_FT_SUPPORT/,/#endif \/\/ BG_FT_SUPPORT \/\//d'  $(RT28xx_DIR)/os/linux/config.mk.tmp6 > $(RT28xx_DIR)/os/linux/config.mk.strip_ ;
+		
+	cd $(RT28xx_DIR)/ap ;mv -f *.strip $(RT28xx_DIR)/build/ap/
+	cd $(RT28xx_DIR)/build/ap; ls | awk -F. '{print "mv",$$0,$$1".c"}'|sh
+	cd $(RT28xx_DIR)/include ;mv -f *.strip $(RT28xx_DIR)/build/include/
+	cd $(RT28xx_DIR)/build/include; ls | awk -F. '{print "mv",$$0,$$1".h"}'|sh
+	mkdir $(RT28xx_DIR)/build/include/chip
+	mkdir $(RT28xx_DIR)/build/include/iface
+	mkdir $(RT28xx_DIR)/build/include/os
+	cd $(RT28xx_DIR)/include/chip ;mv -f *.strip $(RT28xx_DIR)/build/include/chip/
+	cd $(RT28xx_DIR)/build/include/chip; ls | awk -F. '{print "mv",$$0,$$1".h"}'|sh
+	cd $(RT28xx_DIR)/include/iface ;mv -f *.strip $(RT28xx_DIR)/build/include/iface/
+	cd $(RT28xx_DIR)/build/include/iface; ls | awk -F. '{print "mv",$$0,$$1".h"}'|sh
+	cd $(RT28xx_DIR)/include/os ;mv -f *.strip $(RT28xx_DIR)/build/include/os/
+	cd $(RT28xx_DIR)/build/include/os; ls | awk -F. '{print "mv",$$0,$$1".h"}'|sh
+	cd $(RT28xx_DIR)/os/linux ;mv -f *.strip $(RT28xx_DIR)/build/os/linux/
+	cd $(RT28xx_DIR)/build/os/linux; ls | awk -F. '{print "mv",$$0,$$1".c"}'|sh
+	cd $(RT28xx_DIR)/common; mv -f *.strip $(RT28xx_DIR)/build/common/
+	cd $(RT28xx_DIR)/build/common; ls | awk -F. '{print "mv",$$0,$$1".c"}'|sh
+	cd $(RT28xx_DIR)/sta ;mv -f *.strip $(RT28xx_DIR)/build/sta/
+	cd $(RT28xx_DIR)/build/sta; ls | awk -F. '{print "mv",$$0,$$1".c"}'|sh
+	cd $(RT28xx_DIR);\
+	cp Makefile $(RT28xx_DIR)/build;\
+	cp $(BIN_FILE) $(RT28xx_DIR)/build/common;\
+	mv -f os/linux/Makefile.4.strip_ $(RT28xx_DIR)/build/os/linux/Makefile.4;\
+	mv -f os/linux/Makefile.6.strip_ $(RT28xx_DIR)/build/os/linux/Makefile.6;\
+	mv -f os/linux/config.mk.strip_ $(RT28xx_DIR)/build/os/linux/config.mk;\
+	cp RT$(CHIPSET)AP.dat $(RT28xx_DIR)/build/;\
+	cp RT$(CHIPSET)STA.dat $(RT28xx_DIR)/build/;\
+	cp -rf tools $(RT28xx_DIR)/build
+
+
+prerelease:
+	echo "Create RT28xx Code Release Package......"
+	echo "Stage 1: create middle-file for chipset..."
+	rm -rf $(RTMP_SRC_DIR)
+	mkdir $(RTMP_SRC_DIR)
+	mkdir $(RTMP_SRC_DIR)/ap
+	mkdir $(RTMP_SRC_DIR)/common
+	mkdir $(RTMP_SRC_DIR)/include
+	mkdir $(RTMP_SRC_DIR)/os
+	mkdir $(RTMP_SRC_DIR)/os/linux
+	mkdir $(RTMP_SRC_DIR)/os/ucos
+	mkdir $(RTMP_SRC_DIR)/os/win
+	mkdir $(RTMP_SRC_DIR)/sta
+	mkdir $(RTMP_SRC_DIR)/tools
+
+ifeq ($(CHIPSET),2860)
+	for strip_file in $(RELEASE_FILE); do sed '/#ifdef RT2870/,/#endif \/\/ RT2870 \/\//d' $$strip_file > $$strip_file.tmp ;\
+										   sed '/#ifdef RT3070/,/#endif \/\/ RT3070 \/\//d' $$strip_file.tmp > $$strip_file.tmp1 ;\
+										   sed '/#ifdef RT3090/,/#endif \/\/ RT3090 \/\//d' $$strip_file.tmp1 > $$strip_file.tmp2 ;\
+										   sed '/#ifdef RT30xx/,/#endif \/\/ RT30xx \/\//d' $$strip_file.tmp2 > $$strip_file.tmp3 ;\
+										   sed '/#ifdef RT35xx/,/#endif \/\/ RT35xx \/\//d' $$strip_file.tmp3 > $$strip_file.tmp4 ;\
+										   sed '/#ifdef RT305x/,/#endif \/\/ RT305x \/\//d' $$strip_file.tmp4 > $$strip_file.tmp5 ;\
+										   sed '/#ifdef RT2880/,/#endif \/\/ RT2880 \/\//d' $$strip_file.tmp5 > $$strip_file.tmp6 ;\
+										   sed '/#ifdef RT2070/,/#endif \/\/ RT2070 \/\//d' $$strip_file.tmp6 > $$strip_file.tmp7 ;\
+										   sed '/#ifdef RTMP_USB_SUPPORT/,/#endif \/\/ RTMP_USB_SUPPORT \/\//d' $$strip_file.tmp7 > $$strip_file.tmp8 ;\
+										   sed '/#ifdef RTMP_MAC_USB/,/#endif \/\/ RTMP_MAC_USB \/\//d' $$strip_file.tmp8 > $$strip_file.tmp9 ;\
+										   sed '/#ifdef RTMP_RBUS_SUPPORT/,/#endif \/\/ RTMP_RBUS_SUPPORT \/\//d'  $$strip_file.tmp9 > $$strip_file.strip; done;
+endif
+ifeq ($(CHIPSET),2870)
+	for strip_file in $(RELEASE_FILE); do sed '/#ifdef RT2860/,/#endif \/\/ RT2860 \/\//d' $$strip_file > $$strip_file.tmp ;\
+										   sed '/#ifdef RT3070/,/#endif \/\/ RT3070 \/\//d' $$strip_file.tmp > $$strip_file.tmp1 ;\
+										   sed '/#ifdef RT3090/,/#endif \/\/ RT3090 \/\//d' $$strip_file.tmp1 > $$strip_file.tmp2 ;\
+										   sed '/#ifdef RT30xx/,/#endif \/\/ RT30xx \/\//d' $$strip_file.tmp2 > $$strip_file.tmp3 ;\
+										   sed '/#ifdef RT35xx/,/#endif \/\/ RT35xx \/\//d' $$strip_file.tmp3 > $$strip_file.tmp4 ;\
+										   sed '/#ifdef RT305x/,/#endif \/\/ RT305x \/\//d' $$strip_file.tmp4 > $$strip_file.tmp5 ;\
+										   sed '/#ifdef RT2880/,/#endif \/\/ RT2880 \/\//d' $$strip_file.tmp5 > $$strip_file.tmp6 ;\
+										   sed '/#ifdef RT2070/,/#endif \/\/ RT2070 \/\//d' $$strip_file.tmp6 > $$strip_file.tmp7 ;\
+										   sed '/#ifdef RTMP_PCI_SUPPORT/,/#endif \/\/ RTMP_PCI_SUPPORT \/\//d' $$strip_file.tmp7 > $$strip_file.tmp8 ;\
+										   sed '/#ifdef RTMP_MAC_PCI/,/#endif \/\/ RTMP_MAC_PCI \/\//d' $$strip_file.tmp8 > $$strip_file.tmp9 ;\
+										   sed '/#ifdef RTMP_RBUS_SUPPORT/,/#endif \/\/ RTMP_RBUS_SUPPORT \/\//d'  $$strip_file.tmp9 > $$strip_file.strip; done;
+endif
+	cd $(RT28xx_DIR)/ap ;mv -f *.strip $(RTMP_SRC_DIR)/ap/
+	cd $(RTMP_SRC_DIR)/ap; ls | awk -F. '{print "mv",$$0,$$1".c"}'|sh
+	cd $(RT28xx_DIR)/include ;mv -f *.strip $(RTMP_SRC_DIR)/include/
+	cd $(RTMP_SRC_DIR)/include; ls | awk -F. '{print "mv",$$0,$$1".h"}'|sh
+	mkdir $(RTMP_SRC_DIR)/include/chip
+	mkdir $(RTMP_SRC_DIR)/include/iface
+	mkdir $(RTMP_SRC_DIR)/include/os
+	cd $(RT28xx_DIR)/include/chip ;mv -f *.strip $(RTMP_SRC_DIR)/include/chip/
+	cd $(RTMP_SRC_DIR)/include/chip; ls | awk -F. '{print "mv",$$0,$$1".h"}'|sh
+	cd $(RT28xx_DIR)/include/iface ;mv -f *.strip $(RTMP_SRC_DIR)/include/iface/
+	cd $(RTMP_SRC_DIR)/include/iface; ls | awk -F. '{print "mv",$$0,$$1".h"}'|sh
+	cd $(RT28xx_DIR)/include/os ;mv -f *.strip $(RTMP_SRC_DIR)/include/os/
+	cd $(RTMP_SRC_DIR)/include/os; ls | awk -F. '{print "mv",$$0,$$1".h"}'|sh
+	cd $(RT28xx_DIR)/os/linux ;mv -f *.strip $(RTMP_SRC_DIR)/os/linux/
+	cd $(RTMP_SRC_DIR)/os/linux; ls | awk -F. '{print "mv",$$0,$$1".c"}'|sh
+	cd $(RT28xx_DIR)/common; mv -f *.strip $(RTMP_SRC_DIR)/common/
+	cd $(RTMP_SRC_DIR)/common; ls | awk -F. '{print "mv",$$0,$$1".c"}'|sh
+	cd $(RT28xx_DIR)/sta ;mv -f *.strip $(RTMP_SRC_DIR)/sta/
+	cd $(RTMP_SRC_DIR)/sta; ls | awk -F. '{print "mv",$$0,$$1".c"}'|sh
+	cd $(RT28xx_DIR);\
+	cp Makefile $(RTMP_SRC_DIR); \
+	cp common/rt$(CHIPSET).bin $(RTMP_SRC_DIR)/common;\
+	cp os/linux/Makefile.4 $(RTMP_SRC_DIR)/os/linux;\
+	cp os/linux/Makefile.6 $(RTMP_SRC_DIR)/os/linux;\
+	cp os/linux/Makefile.release $(RTMP_SRC_DIR)/os/linux;\
+	cp os/linux/Makefile.DPA $(RTMP_SRC_DIR)/os/linux;\
+	cp os/linux/Makefile.DPB $(RTMP_SRC_DIR)/os/linux;\
+	cp os/linux/Makefile.DPC $(RTMP_SRC_DIR)/os/linux;\
+	cp os/linux/config.mk $(RTMP_SRC_DIR)/os/linux;\
+	cp RT$(CHIPSET)AP.dat $(RTMP_SRC_DIR)/;\
+	cp RT$(CHIPSET)STA.dat $(RTMP_SRC_DIR)/;\
+	cp -rf tools $(RTMP_SRC_DIR)
+
+endif

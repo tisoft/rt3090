@@ -191,6 +191,12 @@ int rtmp_ee_prom_read16(
 	USHORT		data;
 
 #ifdef RT30xx
+#ifdef ANT_DIVERSITY_SUPPORT
+	if (pAd->NicConfig2.field.AntDiversity)
+	{
+		pAd->EepromAccess = TRUE;
+	}
+#endif // ANT_DIVERSITY_SUPPORT //
 #endif // RT30xx //
 
 	Offset /= 2;
@@ -218,6 +224,16 @@ int rtmp_ee_prom_read16(
 	EEpromCleanup(pAd);
 
 #ifdef RT30xx
+#ifdef ANT_DIVERSITY_SUPPORT
+	// Antenna and EEPROM access are both using EESK pin,
+	// Therefor we should avoid accessing EESK at the same time
+	// Then restore antenna after EEPROM access
+	if ((pAd->NicConfig2.field.AntDiversity)/* || (pAd->RfIcType == RFIC_3020)*/)
+	{
+		pAd->EepromAccess = FALSE;
+		AsicSetRxAnt(pAd, pAd->RxAnt.Pair1PrimaryRxAnt);
+	}
+#endif // ANT_DIVERSITY_SUPPORT //
 #endif // RT30xx //
 
 	*pValue = data;
@@ -234,6 +250,12 @@ int rtmp_ee_prom_write16(
 	UINT32 x;
 
 #ifdef RT30xx
+#ifdef ANT_DIVERSITY_SUPPORT
+	if (pAd->NicConfig2.field.AntDiversity)
+	{
+		pAd->EepromAccess = TRUE;
+	}
+#endif // ANT_DIVERSITY_SUPPORT //
 #endif // RT30xx //
 
 	Offset /= 2;
@@ -271,6 +293,16 @@ int rtmp_ee_prom_write16(
 	EEpromCleanup(pAd);
 
 #ifdef RT30xx
+#ifdef ANT_DIVERSITY_SUPPORT
+	// Antenna and EEPROM access are both using EESK pin,
+	// Therefor we should avoid accessing EESK at the same time
+	// Then restore antenna after EEPROM access
+	if ((pAd->NicConfig2.field.AntDiversity) /*|| (pAd->RfIcType == RFIC_3020)*/)
+	{
+		pAd->EepromAccess = FALSE;
+		AsicSetRxAnt(pAd, pAd->RxAnt.Pair1PrimaryRxAnt);
+	}
+#endif // ANT_DIVERSITY_SUPPORT //
 #endif // RT30xx //
 
 	return NDIS_STATUS_SUCCESS;

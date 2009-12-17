@@ -22,17 +22,17 @@
  * Free Software Foundation, Inc.,                                       * 
  * 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             * 
  *                                                                       * 
- ***************************************************************************
+ *************************************************************************
 
-	Module Name:
-	eeprom.h
+    Module Name:
+    eeprom.h
 
-	Abstract:
-	Miniport header file for eeprom related information
+    Abstract:
+    Miniport generic portion header file
 
-	Revision History:
-	Who         When          What
-	--------    ----------    ----------------------------------------------
+    Revision History:
+    Who         When          What
+    --------    ----------    ----------------------------------------------
 */
 #ifndef __EEPROM_H__
 #define __EEPROM_H__

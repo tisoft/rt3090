@@ -23,32 +23,43 @@
  * 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             * 
  *                                                                       * 
  *************************************************************************
-	Module Name:
-	client_wds_cmm.h
 
-	Abstract:
-*/
+    Module Name:
+    rt3370.h
 
-#ifndef __CLIENT_WDS_CMM_H__
-#define __CLIENT_WDS_CMM_H__
+    Abstract:
 
-#include "rtmp_def.h"
+    Revision History:
+    Who          When          What
+    ---------    ----------    ----------------------------------------------
+ */
 
-#ifdef CLIENT_WDS
+#ifndef __RT3370_H__
+#define __RT3370_H__
+
+#ifdef RT3370
 
 
-#define CLI_WDS_ENTRY_AGEOUT 5000  /* seconds */
+#error "For RT3070, you should define the compile flag -DRTMP_USB_SUPPORT"
 
-#define CLIWDS_POOL_SIZE 128
-#define CLIWDS_HASH_TAB_SIZE 64  /* the legth of hash table must be power of 2. */
-typedef struct _CLIWDS_PROXY_ENTRY {
-	struct _CLIWDS_PROXY_ENTRY * pNext;
-	ULONG LastRefTime;
-	SHORT Aid;
-	UCHAR Addr[MAC_ADDR_LEN];
-} CLIWDS_PROXY_ENTRY, *PCLIWDS_PROXY_ENTRY;
+#error "For RT3070, you should define the compile flag -DRTMP_MAC_USB"
 
-#endif // CLIENT_WDS //
+#ifndef RTMP_RF_RW_SUPPORT
+#error "For RT3070, you should define the compile flag -DRTMP_RF_RW_SUPPORT"
+#endif
 
-#endif // __CLIENT_WDS_CMM_H__ //
+#ifndef RT33xx
+#error "For RT3070, you should define the compile flag -DRT30xx"
+#endif
+
+#include "chip/mac_usb.h"
+#include "chip/rt33xx.h"
+
+//
+// Device ID & Vendor ID, these values should match EEPROM value
+//
+
+#endif // RT3370 //
+
+#endif //__RT3370_H__ //
 

@@ -93,9 +93,7 @@ Note:
 */
 int MainVirtualIF_close(IN struct net_device *net_dev)
 {
-    RTMP_ADAPTER *pAd = NULL;
-
-	GET_PAD_FROM_NET_DEV(pAd, net_dev);	
+    RTMP_ADAPTER *pAd = RTMP_OS_NETDEV_GET_PRIV(net_dev);
 
 	// Sanity check for pAd
 	if (pAd == NULL)
@@ -213,9 +211,7 @@ Note:
 */
 int MainVirtualIF_open(IN struct net_device *net_dev)
 {
-    RTMP_ADAPTER *pAd = NULL;
-
-	GET_PAD_FROM_NET_DEV(pAd, net_dev);	
+    RTMP_ADAPTER *pAd = RTMP_OS_NETDEV_GET_PRIV(net_dev);
 
 	// Sanity check for pAd
 	if (pAd == NULL)
@@ -257,24 +253,18 @@ Note:
 int rt28xx_close(IN PNET_DEV dev)
 {
 	struct net_device * net_dev = (struct net_device *)dev;
-    RTMP_ADAPTER	*pAd = NULL;
+    RTMP_ADAPTER	*pAd = RTMP_OS_NETDEV_GET_PRIV(net_dev);
 	BOOLEAN 		Cancelled;
 	UINT32			i = 0;
 
-	GET_PAD_FROM_NET_DEV(pAd, net_dev);	
 
 	DBGPRINT(RT_DEBUG_TRACE, ("===> rt28xx_close\n"));
-
 
 	Cancelled = FALSE;
 	// Sanity check for pAd
 	if (pAd == NULL)
 		return 0; // close ok
 
-#ifdef WMM_ACM_SUPPORT
-	/* must call first */
-	ACMP_Release(pAd);
-#endif // WMM_ACM_SUPPORT //
 
 
 #ifdef WDS_SUPPORT
@@ -284,9 +274,9 @@ int rt28xx_close(IN PNET_DEV dev)
 #ifdef CONFIG_STA_SUPPORT
 	IF_DEV_CONFIG_OPMODE_ON_STA(pAd)
 	{
-#ifdef PCIE_PS_SUPPORT
+#ifdef RTMP_MAC_PCI	
 		RTMPPCIeLinkCtrlValueRestore(pAd, RESTORE_CLOSE);
-#endif // PCIE_PS_SUPPORT //
+#endif // RTMP_MAC_PCI //
 
 		// If dirver doesn't wake up firmware here,
 		// NICLoadFirmware will hang forever when interface is up again.
@@ -336,7 +326,7 @@ int rt28xx_close(IN PNET_DEV dev)
 
 
 	// Close kernel threads
-//	RtmpMgmtTaskExit(pAd);
+	RtmpMgmtTaskExit(pAd);
 
 #ifdef RTMP_MAC_PCI
 	{
@@ -357,9 +347,7 @@ int rt28xx_close(IN PNET_DEV dev)
 			brc=RT28xxPciAsicRadioOff(pAd, RTMP_HALT, 0);
 
 //In  solution 3 of 3090F, the bPCIclkOff will be set to TRUE after calling RT28xxPciAsicRadioOff
-#ifdef PCIE_PS_SUPPORT
 			pAd->bPCIclkOff = FALSE;    
-#endif // PCIE_PS_SUPPORT //
 
 			if (brc==FALSE)
 			{
@@ -384,7 +372,7 @@ int rt28xx_close(IN PNET_DEV dev)
 	{
 #ifdef RTMP_MAC_PCI
 		// Deregister interrupt function
-		RtmpOSIRQRelease(net_dev);
+		RTMP_IRQ_RELEASE(net_dev)
 #endif // RTMP_MAC_PCI //
 		RTMP_CLEAR_FLAG(pAd, fRTMP_ADAPTER_INTERRUPT_IN_USE);
 	}
@@ -434,11 +422,10 @@ Note:
 int rt28xx_open(IN PNET_DEV dev)
 {				 
 	struct net_device * net_dev = (struct net_device *)dev;
-	PRTMP_ADAPTER pAd = NULL;
+	PRTMP_ADAPTER pAd = RTMP_OS_NETDEV_GET_PRIV(net_dev);
 	int retval = 0;
  	//POS_COOKIE pObj;
 
-	GET_PAD_FROM_NET_DEV(pAd, net_dev);	
 
 	// Sanity check for pAd
 	if (pAd == NULL)
@@ -475,8 +462,7 @@ int rt28xx_open(IN PNET_DEV dev)
 
 	// Request interrupt service routine for PCI device
 	// register the interrupt routine with the os
-	RtmpOSIRQRequest(net_dev);
-
+	RTMP_IRQ_REQUEST(net_dev);
 
 	// Init IRQ parameters stored in pAd
 	RTMP_IRQ_INIT(pAd);
@@ -516,18 +502,17 @@ int rt28xx_open(IN PNET_DEV dev)
 
 
 #ifdef CONFIG_STA_SUPPORT
-#ifdef PCIE_PS_SUPPORT
+#ifdef RTMP_MAC_PCI
 	IF_DEV_CONFIG_OPMODE_ON_STA(pAd)
         RTMPInitPCIeLinkCtrlValue(pAd);
-#endif // PCIE_PS_SUPPORT //
+#endif // RTMP_MAC_PCI //
 #endif // CONFIG_STA_SUPPORT //
-
 
 	return (retval);
 
 err:
 //+++Add by shiang, move from rt28xx_init() to here.
-	RtmpOSIRQRelease(net_dev);
+	RTMP_IRQ_RELEASE(net_dev);
 //---Add by shiang, move from rt28xx_init() to here.
 	return (-1);
 } /* End of rt28xx_open */
@@ -561,6 +546,7 @@ PNET_DEV RtmpPhyNetDevInit(
 	pNetDevHook->needProtcted = FALSE;
 
 	RTMP_OS_NETDEV_SET_PRIV(net_dev, pAd);
+	//net_dev->priv = (PVOID)pAd;
 	pAd->net_dev = net_dev;
 	
 
@@ -596,11 +582,9 @@ Note:
 int rt28xx_packet_xmit(struct sk_buff *skb)
 {
 	struct net_device *net_dev = skb->dev;
-	PRTMP_ADAPTER pAd = NULL;
+	PRTMP_ADAPTER pAd = RTMP_OS_NETDEV_GET_PRIV(net_dev);
 	int status = 0;
 	PNDIS_PACKET pPacket = (PNDIS_PACKET) skb;
-
-	GET_PAD_FROM_NET_DEV(pAd, net_dev);	
 
 	/* RT2870STA does this in RTMPSendPackets() */
 #ifdef RALINK_ATE
@@ -680,9 +664,7 @@ static int rt28xx_send_packets(
 	IN struct sk_buff 		*skb_p, 
 	IN struct net_device 	*net_dev)
 {
-	RTMP_ADAPTER *pAd = NULL;
-
-	GET_PAD_FROM_NET_DEV(pAd, net_dev);	
+	RTMP_ADAPTER *pAd = RTMP_OS_NETDEV_GET_PRIV(net_dev);
 
 	if (!(net_dev->flags & IFF_UP))
 	{
@@ -702,23 +684,18 @@ static int rt28xx_send_packets(
 struct iw_statistics *rt28xx_get_wireless_stats(
     IN struct net_device *net_dev)
 {
-	PRTMP_ADAPTER pAd = NULL;
+	PRTMP_ADAPTER pAd = RTMP_OS_NETDEV_GET_PRIV(net_dev);
 
-	GET_PAD_FROM_NET_DEV(pAd, net_dev);	
 
 
 	DBGPRINT(RT_DEBUG_TRACE, ("rt28xx_get_wireless_stats --->\n"));
-
-	//check if the interface is down
-	if(!RTMP_TEST_FLAG(pAd, fRTMP_ADAPTER_INTERRUPT_IN_USE))
-		return NULL;	
 	
 	pAd->iw_stats.status = 0; // Status - device dependent for now
 
 	// link quality
 #ifdef CONFIG_STA_SUPPORT
 	if (pAd->OpMode == OPMODE_STA)
-		pAd->iw_stats.qual.qual = ((pAd->Mlme.ChannelQuality * 12)/10 + 10);
+	pAd->iw_stats.qual.qual = ((pAd->Mlme.ChannelQuality * 12)/10 + 10);
 #endif // CONFIG_STA_SUPPORT //
 
 	if(pAd->iw_stats.qual.qual > 100)
@@ -765,8 +742,7 @@ INT rt28xx_ioctl(
 	RTMP_ADAPTER	*pAd = NULL;
 	INT				ret = 0;
 
-	GET_PAD_FROM_NET_DEV(pAd, net_dev);	
-
+	pAd = RTMP_OS_NETDEV_GET_PRIV(net_dev);
 	if (pAd == NULL)
 	{
 		/* if 1st open fail, pAd will be free;
@@ -808,7 +784,7 @@ static struct net_device_stats *RT28xx_get_ether_stats(
     RTMP_ADAPTER *pAd = NULL;
 
 	if (net_dev)
-		GET_PAD_FROM_NET_DEV(pAd, net_dev);	
+		pAd = RTMP_OS_NETDEV_GET_PRIV(net_dev);
 
 	if (pAd)
 	{

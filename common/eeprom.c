@@ -67,7 +67,6 @@ INT RtmpChipOpsEepromHook(
 		pChipOps->eeinit = eFuse_init;
 		pChipOps->eeread = rtmp_ee_efuse_read16;
 		pChipOps->eewrite = rtmp_ee_efuse_write16;
-		DBGPRINT(RT_DEBUG_TRACE, ("NVM is EFUSE\n"));
 		return 0 ;	
 	}
 	else
@@ -82,8 +81,6 @@ INT RtmpChipOpsEepromHook(
 	{
 #ifdef RTMP_PCI_SUPPORT
 		case RTMP_DEV_INF_PCI:
-		case RTMP_DEV_INF_PCIE:
-
 			pChipOps->eeinit = NULL;
 			pChipOps->eeread = rtmp_ee_prom_read16;
 			pChipOps->eewrite = rtmp_ee_prom_write16;

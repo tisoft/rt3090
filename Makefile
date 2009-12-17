@@ -20,14 +20,11 @@ PLATFORM = PC
 #PLATFORM = IXP
 #PLATFORM = INF_TWINPASS
 #PLATFORM = INF_DANUBE
-#PLATFORM = INF_AR9
 #PLATFORM = BRCM_6358
 #PLATFORM = INF_AMAZON_SE
 #PLATFORM = CAVM_OCTEON
 #PLATFORM = CMPC
 #PLATFORM = RALINK_2880
-#PLATFORM = RALINK_3052
-#PLATFORM = SMDK
 
 #RELEASE Package
 RELEASE = DPO
@@ -74,11 +71,6 @@ LINUX_SRC = /project/stable/RT288x/RT288x_SDK/source/linux-2.4.x
 CROSS_COMPILE = /opt/buildroot-gdb/bin/mipsel-linux-
 endif
 
-ifeq ($(PLATFORM),RALINK_3052)
-LINUX_SRC = /home/peter/ap_soc/SDK_3_3_0_0/RT288x_SDK/source/linux-2.6.21.x
-CROSS_COMPILE = /opt/buildroot-gcc342/bin/mipsel-linux-uclibc-
-endif
-
 ifeq ($(PLATFORM),PC)
 # Linux 2.6
 LINUX_SRC = /lib/modules/$(shell uname -r)/build
@@ -106,11 +98,6 @@ LINUX_SRC = /opt/danube/sdk/linux-2.6.16.x
 CROSS_COMPILE = mips-linux-
 ROOTDIR = /opt/danube/sdk
 export ROOTDIR
-endif
-
-ifeq ($(PLATFORM),INF_AR9)
-LINUX_SRC = /root/ar9/xR9_BSP1.2.2.0/source/kernel/opensource/linux-2.6.20/
-CROSS_COMPILE = /root/ar9/ifx-lxdb26-1.0.2/gcc-3.4.4/toolchain-mips/bin/
 endif
 
 ifeq ($(PLATFORM),BRCM_6358)
@@ -144,11 +131,6 @@ endif
 ifeq ($(PLATFORM),CMPC)
 LINUX_SRC = /opt/fvt_11N_SDK_0807/fvt131x_SDK_11n/linux-2.6.17
 CROSS_COMPILE =
-endif
-
-ifeq ($(PLATFORM),SMDK)
-LINUX_SRC = /home/bhushan/itcenter/may28/linux-2.6-samsung
-CROSS_COMPILE = /usr/local/arm/4.2.2-eabi/usr/bin/arm-linux-
 endif
 
 export RT28xx_DIR RT28xx_MODE LINUX_SRC CROSS_COMPILE CROSS_COMPILE_INCLUDE PLATFORM RELEASE CHIPSET RTMP_SRC_DIR LINUX_SRC_MODULE TARGET
@@ -252,11 +234,5 @@ endif
 endif
 
 libwapi:
-ifneq (,$(findstring 2.4,$(LINUX_SRC)))
-	cp -f os/linux/Makefile.libwapi.4 $(RT28xx_DIR)/os/linux/Makefile
-	make -C $(RT28xx_DIR)/os/linux/
-else
-	cp -f os/linux/Makefile.libwapi.6 $(RT28xx_DIR)/os/linux/Makefile	
-	make -C  $(LINUX_SRC) SUBDIRS=$(RT28xx_DIR)/os/linux modules	
-endif	
-	
+	make -C $(RT28xx_DIR)/os/linux -f Makefile.libwapi
+

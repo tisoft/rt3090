@@ -44,11 +44,7 @@
 #define ATE_ON(_p)              (((_p)->ate.Mode) != ATE_STOP)
 
 #ifdef RTMP_MAC_PCI
-NTSTATUS	ATE_RT3562WriteBBPR66(
-	IN	PRTMP_ADAPTER	pAd,
-	IN	UCHAR			Value);
-
-#define ATEPCIReadBBPRegister(_A, _I, _pV)        \
+#define ATE_BBP_IO_READ8_BY_REG_ID(_A, _I, _pV)        \
 {                                                       \
     BBP_CSR_CFG_STRUC  BbpCsr;                             \
     int             j, k;                               \
@@ -85,7 +81,7 @@ NTSTATUS	ATE_RT3562WriteBBPR66(
     }                                                   \
 }
 
-#define ATEPCIWriteBBPRegister(_A, _I, _V)        \
+#define ATE_BBP_IO_WRITE8_BY_REG_ID(_A, _I, _V)        \
 {                                                       \
     BBP_CSR_CFG_STRUC  BbpCsr;                             \
     int             BusyCnt;                            \
@@ -109,16 +105,14 @@ NTSTATUS	ATE_RT3562WriteBBPR66(
         ATEDBGPRINT(RT_DEBUG_ERROR, ("BBP write R%d fail\n", _I));     \
     }                                                   \
 }
-
-#define ATE_BBP_IO_READ8_BY_REG_ID(_A, _I, _pV)		ATEPCIReadBBPRegister(_A, _I, _pV)
-#define ATE_BBP_IO_WRITE8_BY_REG_ID(_A, _I, _V)		ATEPCIWriteBBPRegister(_A, _I, _V)
 #endif // RTMP_MAC_PCI //
 
 
-#ifdef RTMP_RF_RW_SUPPORT
-#define ATE_RF_IO_READ8_BY_REG_ID(_A, _I, _pV)     RT30xxReadRFRegister(_A, _I, _pV)
-#define ATE_RF_IO_WRITE8_BY_REG_ID(_A, _I, _V)     RT30xxWriteRFRegister(_A, _I, _V)
-#endif // RTMP_RF_RW_SUPPORT //
+#ifdef RT30xx
+#define ATE_RF_IO_READ8_BY_REG_ID(_A, _I, _pV)     RTMP_RF_IO_READ8_BY_REG_ID(_A, _I, _pV)
+#define ATE_RF_IO_WRITE8_BY_REG_ID(_A, _I, _V)     RTMP_RF_IO_WRITE8_BY_REG_ID(_A, _I, _V)
+#endif // RT30xx //
+
 
 VOID rt_ee_read_all(
 	IN  PRTMP_ADAPTER   pAd,

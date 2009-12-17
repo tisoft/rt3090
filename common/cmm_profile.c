@@ -858,7 +858,6 @@ static void HTParametersHook(
 			pAd->CommonCfg.BACapability.field.Policy = IMMED_BA;
         }
         pAd->CommonCfg.REGBACapability.field.AutoBA = pAd->CommonCfg.BACapability.field.AutoBA;
-		pAd->CommonCfg.REGBACapability.field.Policy = pAd->CommonCfg.BACapability.field.Policy;
         DBGPRINT(RT_DEBUG_TRACE, ("HT: Auto BA  = %s\n", (Value==0) ? "Disable" : "Enable"));
     }
 
@@ -1001,13 +1000,40 @@ static void HTParametersHook(
 	// Fixed Tx mode : CCK, OFDM
 	if (RTMPGetKeyParameter("FixedTxMode", pValueStr, 25, pInput, TRUE))
 	{
+		UCHAR	fix_tx_mode;
+	
 #ifdef CONFIG_STA_SUPPORT
 		IF_DEV_CONFIG_OPMODE_ON_STA(pAd)
 		{
-			pAd->StaCfg.DesiredTransmitSetting.field.FixedTxMode = 
-										RT_CfgSetFixedTxPhyMode(pValueStr);
-			DBGPRINT(RT_DEBUG_TRACE, ("Fixed Tx Mode = %d\n", 
-											pAd->StaCfg.DesiredTransmitSetting.field.FixedTxMode));			
+			fix_tx_mode = FIXED_TXMODE_HT;
+
+			if (strcmp(pValueStr, "OFDM") == 0 || strcmp(pValueStr, "ofdm") == 0)
+			{
+				fix_tx_mode = FIXED_TXMODE_OFDM;
+			}	
+			else if (strcmp(pValueStr, "CCK") == 0 || strcmp(pValueStr, "cck") == 0)
+			{
+		        fix_tx_mode = FIXED_TXMODE_CCK;
+			}
+			else if (strcmp(pValueStr, "HT") == 0 || strcmp(pValueStr, "ht") == 0)
+			{
+		        fix_tx_mode = FIXED_TXMODE_HT;
+		}	
+		else 
+		{
+				Value = simple_strtol(pValueStr, 0, 10);
+				// 1 : CCK
+				// 2 : OFDM
+				// otherwise : HT
+				if (Value == FIXED_TXMODE_CCK || Value == FIXED_TXMODE_OFDM)
+					fix_tx_mode = Value;	
+				else
+					fix_tx_mode = FIXED_TXMODE_HT;
+		}
+
+			pAd->StaCfg.DesiredTransmitSetting.field.FixedTxMode = fix_tx_mode;
+			DBGPRINT(RT_DEBUG_TRACE, ("Fixed Tx Mode = %d\n", fix_tx_mode));
+			
 		}
 #endif // CONFIG_STA_SUPPORT //
 	}
@@ -1204,13 +1230,6 @@ NDIS_STATUS	RTMPSetProfileParameters(
 	{
 		// set file parameter to portcfg
 		//CountryRegion
-		if (RTMPGetKeyParameter("MacAddress", tmpbuf, 25, pBuffer, TRUE))
-		{					
-			retval = RT_CfgSetMacAddress(pAd, tmpbuf);
-			if (retval)
-				DBGPRINT(RT_DEBUG_TRACE, ("MacAddress = %02x:%02x:%02x:%02x:%02x:%02x\n", 
-											PRINT_MAC(pAd->CurrentAddress)));
-		}
 		if(RTMPGetKeyParameter("CountryRegion", tmpbuf, 25, pBuffer, TRUE))
 		{
 			retval = RT_CfgSetCountryRegion(pAd, tmpbuf, BAND_24G);
@@ -1224,14 +1243,12 @@ NDIS_STATUS	RTMPSetProfileParameters(
 		}
 #ifdef RTMP_EFUSE_SUPPORT
 #ifdef RT30xx
-#ifdef RALINK_ATE
 		//EfuseBufferMode
 		if(RTMPGetKeyParameter("EfuseBufferMode", tmpbuf, 25, pBuffer, TRUE))
 		{
 			pAd->bEEPROMFile = (UCHAR) simple_strtol(tmpbuf, 0, 10);
 			DBGPRINT(RT_DEBUG_TRACE, ("EfuseBufferMode=%d\n", pAd->bUseEfuse));
 		}
-#endif // RALINK_ATE //
 #endif // RT30xx //
 #endif // RTMP_EFUSE_SUPPORT //
 		//CountryCode
@@ -1314,6 +1331,49 @@ NDIS_STATUS	RTMPSetProfileParameters(
 				DBGPRINT(RT_DEBUG_TRACE, ("%s::(NetworkType=%d)\n", __FUNCTION__, pAd->StaCfg.BssType));
 			}
 		}
+#ifdef RTMP_MAC_PCI
+		//NewPCIePS
+		if(RTMPGetKeyParameter("NewPCIePS", tmpbuf, 10, pBuffer, TRUE))
+		{
+			UCHAR temp_buffer = (UCHAR) simple_strtol(tmpbuf, 0, 10);
+			if(temp_buffer>0)
+				pAd->StaCfg.PSControl.field.EnableNewPS=TRUE;
+				else
+					pAd->StaCfg.PSControl.field.EnableNewPS=FALSE;
+			DBGPRINT(RT_DEBUG_TRACE, ("NewPCIePS=%d\n", pAd->StaCfg.PSControl.field.EnableNewPS));
+		}
+#endif // RTMP_MAC_PCI //
+#ifdef RT3090
+		//PCIePowerLevel
+
+		if(RTMPGetKeyParameter("PCIePowerLevel", tmpbuf, 10, pBuffer, TRUE))
+		{
+			pAd->StaCfg.PSControl.field.rt30xxPowerMode = (UCHAR) simple_strtol(tmpbuf, 0, 10);
+			DBGPRINT(RT_DEBUG_TRACE, ("PCIePowerLevel=%d\n", pAd->StaCfg.PSControl.field.rt30xxPowerMode));
+		}
+		//FollowHostASPM
+		if(RTMPGetKeyParameter("FollowHostASPM", tmpbuf, 10, pBuffer, TRUE))
+		{
+			UCHAR temp_buffer = (UCHAR) simple_strtol(tmpbuf, 0, 10);
+			
+			if(temp_buffer>0)
+				pAd->StaCfg.PSControl.field.rt30xxFollowHostASPM=TRUE;
+				else
+					pAd->StaCfg.PSControl.field.rt30xxFollowHostASPM=FALSE;
+			DBGPRINT(RT_DEBUG_TRACE, ("rt30xxFollowHostASPM=%d\n", pAd->StaCfg.PSControl.field.rt30xxFollowHostASPM));
+		}
+		//ForceTestASPM
+		if(RTMPGetKeyParameter("ForceTestASPM", tmpbuf, 10, pBuffer, TRUE))
+		{
+			UCHAR temp_buffer = (UCHAR) simple_strtol(tmpbuf, 0, 10);
+			
+			if(temp_buffer>0)
+				pAd->StaCfg.PSControl.field.rt30xxForceASPMTest=TRUE;
+				else
+					pAd->StaCfg.PSControl.field.rt30xxForceASPMTest=FALSE;
+			DBGPRINT(RT_DEBUG_TRACE, ("rt30xxForceASPM=%d\n", pAd->StaCfg.PSControl.field.rt30xxForceASPMTest));
+		}
+#endif // RT3090 //
 #endif // CONFIG_STA_SUPPORT //				
 		//Channel
 		if(RTMPGetKeyParameter("Channel", tmpbuf, 10, pBuffer, TRUE))
@@ -1652,7 +1712,7 @@ NDIS_STATUS	RTMPSetProfileParameters(
 
 	                        pAd->StaCfg.PortSecured = WPA_802_1X_PORT_NOT_SECURED;
 
-				DBGPRINT(RT_DEBUG_TRACE, ("%s::(AuthMode=%d)\n", __FUNCTION__, pAd->StaCfg.AuthMode));
+				DBGPRINT(RT_DEBUG_TRACE, ("%s::(EncrypType=%d)\n", __FUNCTION__, pAd->StaCfg.WepStatus));
 			}
 #endif // CONFIG_STA_SUPPORT //
 		}
@@ -1867,12 +1927,31 @@ NDIS_STATUS	RTMPSetProfileParameters(
 				DBGPRINT(RT_DEBUG_TRACE, ("BeaconLostTime=%ld \n", pAd->StaCfg.BeaconLostTime));
 			}
 
+			
 		}
 #endif // CONFIG_STA_SUPPORT //
 
 
 
 #ifdef RT30xx
+#ifdef ANT_DIVERSITY_SUPPORT
+		IF_DEV_CONFIG_OPMODE_ON_STA(pAd)
+		{
+			if(RTMPGetKeyParameter("AntDiversity", tmpbuf, 10, pBuffer, TRUE))
+			{
+				for (i = 0, macptr = rstrtok(tmpbuf,";"); macptr; macptr = rstrtok(NULL,";"), i++)
+				{
+					UCHAR Ant = simple_strtol(tmpbuf, 0, 10);
+					if(Ant < 3)
+						pAd->CommonCfg.bRxAntDiversity = Ant;
+					else
+						pAd->CommonCfg.bRxAntDiversity = ANT_DIVERSITY_DISABLE;
+
+					DBGPRINT(RT_DEBUG_ERROR, ("AntDiversity=%d\n", pAd->CommonCfg.bRxAntDiversity));
+				}
+			}
+		}
+#endif // ANT_DIVERSITY_SUPPORT //
 #endif // RT30xx //
 
 	}while(0);

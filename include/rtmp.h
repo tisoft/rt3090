@@ -44,7 +44,10 @@
 #include "spectrum_def.h"
 
 #include "rtmp_dot11.h"
-#include "wpa_cmm.h"
+
+#ifdef MLME_EX
+#include "mlme_ex_def.h"
+#endif // MLME_EX //
 
 #ifdef CONFIG_STA_SUPPORT
 #endif // CONFIG_STA_SUPPORT //
@@ -69,11 +72,6 @@
 
 
 
-
-#ifdef CLIENT_WDS
-#include "client_wds_cmm.h"
-#endif // CLIENT_WDS //
-
 typedef struct _RTMP_ADAPTER		RTMP_ADAPTER;
 typedef struct _RTMP_ADAPTER		*PRTMP_ADAPTER;
 
@@ -92,7 +90,6 @@ typedef struct _RTMP_CHIP_OP_ RTMP_CHIP_OP;
 
 #define	MAXSEQ		(0xFFF)
 
-#define MAX_MCS_SET 16 /* From MCS 0 ~ MCS 15 */
 
 #if defined(CONFIG_AP_SUPPORT) && defined(CONFIG_STA_SUPPORT)
 #define IF_DEV_CONFIG_OPMODE_ON_AP(_pAd)	if(_pAd->OpMode == OPMODE_AP)
@@ -101,8 +98,6 @@ typedef struct _RTMP_CHIP_OP_ RTMP_CHIP_OP;
 #define IF_DEV_CONFIG_OPMODE_ON_AP(_pAd)
 #define IF_DEV_CONFIG_OPMODE_ON_STA(_pAd)
 #endif
-
-#define MAX_TXPOWER_ARRAY_SIZE	5
 
 extern  unsigned char   SNAP_AIRONET[];
 extern  unsigned char   CISCO_OUI[];
@@ -157,12 +152,10 @@ extern UCHAR  ExtRateIe;
 extern UCHAR  HtCapIe;
 extern UCHAR  AddHtInfoIe;
 extern UCHAR  NewExtChanIe;
-extern UCHAR  BssCoexistIe;
 #ifdef DOT11N_DRAFT3
 extern UCHAR  ExtHtCapIe;
 #endif // DOT11N_DRAFT3 //
 #endif // DOT11_N_SUPPORT //
-extern UCHAR  ExtCapIe;
 
 extern UCHAR  ErpIe;
 extern UCHAR  DsIe;
@@ -263,7 +256,7 @@ typedef	struct _ATE_INFO {
 	UINT32		TxAc1;
 	UINT32		TxAc2;
 	UINT32		TxAc3;
-	UINT32		TxHCCA;
+	/*UINT32		TxHCCA;*/
 	UINT32		TxMgmt;
 	UINT32		RSSI0;
 	UINT32		RSSI1;
@@ -273,7 +266,6 @@ typedef	struct _ATE_INFO {
 	// TxStatus : 0 --> task is idle, 1 --> task is running
 	UCHAR		TxStatus;
 #endif // RALINK_28xx_QA //
-
 }	ATE_INFO, *PATE_INFO;
 
 #ifdef RALINK_28xx_QA
@@ -368,67 +360,6 @@ typedef struct  _QUEUE_HEADER   {
 	(QueueHeader)->Number++;											\
 }
 
-#ifdef WMM_ACM_SUPPORT
-
-#undef InsertTailQueueAc
-
-
-/* we need to check if the packet can be put to the queue based on ACM */
-#define InsertTailQueueAc(pAd, pEntry, QueueHeader, QueueEntry)				\
-{																			\
-	PQUEUE_HEADER __QueueHeaderNew;											\
-	ACM_FUNC_STATUS __Status = ACM_RTN_NO_ACM;								\
-	UINT32 __QueueType;														\
-	BOOLEAN __FlgIsPktFreed = FALSE;										\
-																			\
-	ACMR_PKT_MARK_MIN_PHY_MODE(QUEUE_ENTRY_TO_PACKET(QueueEntry), ACMR_PHY_NONE);\
-	RTMP_SET_PACKET_TX_TIME(QUEUE_ENTRY_TO_PACKET(QueueEntry), 0);			\
-		if (ACMP_IsNeedToDoAcm(pAd, pEntry, RTMP_GET_PACKET_UP(				\
-								QUEUE_ENTRY_TO_PACKET(QueueEntry))) == TRUE)\
-		{																	\
-			ACMR_PKT_QOS_TYPE_SET(QUEUE_ENTRY_TO_PACKET(QueueEntry), 0);	\
-			__Status = ACMP_DataPacketQueue(pAd, pEntry, 					\
-					QUEUE_ENTRY_TO_PACKET(QueueEntry), 0, &__QueueType);	\
-																			\
-			if ((__Status == ACM_RTN_FAIL) ||									\
-				((__Status == ACM_RTN_OK) &&									\
-				(pAd->TxSwQueue[__QueueType].Number >= MAX_PACKETS_IN_QUEUE)))	\
-			{																	\
-				__FlgIsPktFreed = TRUE;										\
-																			\
-				if ((__Status == ACM_RTN_OK) &&								\
-					(__QueueType == ACMR_QID_AC_BE)	&&						\
-					(ACMP_BE_QueueFullHandle(pAd,							\
-											pEntry,							\
-						QUEUE_ENTRY_TO_PACKET(QueueEntry)) == ACM_RTN_OK))	\
-				{															\
-					__FlgIsPktFreed = FALSE;								\
-				}															\
-																			\
-				if (__FlgIsPktFreed == TRUE)								\
-				{															\
-					RELEASE_NDIS_PACKET(pAd,								\
-										QUEUE_ENTRY_TO_PACKET(QueueEntry),	\
-										NDIS_STATUS_FAILURE);				\
-				}															\
-			}																\
-		}																	\
-	if (__FlgIsPktFreed == FALSE)											\
-	{																		\
-		if (__Status == ACM_RTN_NO_ACM)										\
-			__QueueHeaderNew = QueueHeader;									\
-		else																\
-			__QueueHeaderNew = &pAd->TxSwQueue[__QueueType];				\
-		((PQUEUE_ENTRY)QueueEntry)->Next = NULL;							\
-		if ((__QueueHeaderNew)->Tail)										\
-			(__QueueHeaderNew)->Tail->Next = (PQUEUE_ENTRY)(QueueEntry);	\
-		else																\
-			(__QueueHeaderNew)->Head = (PQUEUE_ENTRY)(QueueEntry);			\
-		(__QueueHeaderNew)->Tail = (PQUEUE_ENTRY)(QueueEntry);				\
-		(__QueueHeaderNew)->Number++;										\
-	}																		\
-}
-#endif // WMM_ACM_SUPPORT //
 
 
 //
@@ -627,8 +558,8 @@ typedef struct _RTMP_SCATTER_GATHER_LIST {
         if ((NdisEqualMemory(IPX, pProto, 2) || NdisEqualMemory(APPLE_TALK, pProto, 2)) &&  \
             NdisEqualMemory(SNAP_802_1H, _pData, 6))                    \
         {                                                               \
-            LLC_Len[0] = (UCHAR)(_DataSize >> 8);                       \
-            LLC_Len[1] = (UCHAR)(_DataSize & (256 - 1));                \
+            LLC_Len[0] = (UCHAR)(_DataSize / 256);                      \
+            LLC_Len[1] = (UCHAR)(_DataSize % 256);                      \
             MAKE_802_3_HEADER(_p8023hdr, _pDA, _pSA, LLC_Len);          \
         }                                                               \
         else                                                            \
@@ -641,8 +572,8 @@ typedef struct _RTMP_SCATTER_GATHER_LIST {
     }                                                                   \
     else                                                                \
     {                                                                   \
-        LLC_Len[0] = (UCHAR)(_DataSize >> 8);                           \
-        LLC_Len[1] = (UCHAR)(_DataSize & (256 - 1));                    \
+        LLC_Len[0] = (UCHAR)(_DataSize / 256);                          \
+        LLC_Len[1] = (UCHAR)(_DataSize % 256);                          \
         MAKE_802_3_HEADER(_p8023hdr, _pDA, _pSA, LLC_Len);              \
     }                                                                   \
 }
@@ -781,28 +712,6 @@ typedef struct _COUNTER_802_11 {
 } COUNTER_802_11, *PCOUNTER_802_11;
 
 typedef struct _COUNTER_RALINK {
-
-	UINT32			OneSecStart; /* for one sec count clear use */
-	UINT32          OneSecBeaconSentCnt;
-	UINT32          OneSecFalseCCACnt;      // CCA error count, for debug purpose, might move to global counter
-	UINT32          OneSecRxFcsErrCnt;      // CRC error
-	UINT32          OneSecRxOkCnt;          // RX without error
-	UINT32          OneSecTxFailCount;
-	UINT32          OneSecTxNoRetryOkCount;
-	UINT32          OneSecTxRetryOkCount;
-	UINT32          OneSecRxOkDataCnt;      // unicast-to-me DATA frame count
-	UINT32          OneSecTransmittedByteCount;   // both successful and failure, used to calculate TX throughput
-
-	ULONG           OneSecOsTxCount[NUM_OF_TX_RING];
-	ULONG           OneSecDmaDoneCount[NUM_OF_TX_RING];
-	UINT32          OneSecTxDoneCount;
-	ULONG           OneSecRxCount;
-	UINT32          OneSecReceivedByteCount;
-	UINT32          OneSecTxAggregationCount;
-	UINT32          OneSecRxAggregationCount;
-	UINT32   		OneSecFrameDuplicateCount;
-	UINT32			OneSecEnd; /* for one sec count clear use */
-
 	ULONG           TransmittedByteCount;   // both successful and failure, used to calculate TX throughput
 	ULONG           ReceivedByteCount;      // both CRC okay and CRC error, used to calculate RX throughput
 	ULONG           BeenDisassociatedCount;
@@ -817,25 +726,24 @@ typedef struct _COUNTER_RALINK {
 	LARGE_INTEGER   RealFcsErrCount;
 	ULONG           PendingNdisPacketCount;
 
-//	ULONG           OneSecOsTxCount[NUM_OF_TX_RING];
-//	ULONG           OneSecDmaDoneCount[NUM_OF_TX_RING];
-//	UINT32          OneSecTxDoneCount;
-//	ULONG           OneSecRxCount;
-//	UINT32          OneSecTxAggregationCount;
-//	UINT32          OneSecRxAggregationCount;
-//	UINT32          OneSecReceivedByteCount;
-//	UINT32   		OneSecFrameDuplicateCount;
+	ULONG           OneSecOsTxCount[NUM_OF_TX_RING];
+	ULONG           OneSecDmaDoneCount[NUM_OF_TX_RING];
+	UINT32          OneSecTxDoneCount;
+	ULONG           OneSecRxCount;
+	UINT32          OneSecTxAggregationCount;
+	UINT32          OneSecRxAggregationCount;
+	UINT32          OneSecReceivedByteCount;
+	UINT32   		OneSecFrameDuplicateCount;
 
-//	UINT32          OneSecTransmittedByteCount;   // both successful and failure, used to calculate TX throughput
-//	UINT32          OneSecTxNoRetryOkCount;
-//	UINT32          OneSecTxRetryOkCount;
-//	UINT32          OneSecTxFailCount;
-//	UINT32          OneSecFalseCCACnt;      // CCA error count, for debug purpose, might move to global counter
-//	UINT32          OneSecRxOkCnt;          // RX without error
-//	UINT32          OneSecRxOkDataCnt;      // unicast-to-me DATA frame count
-//	UINT32          OneSecRxFcsErrCnt;      // CRC error
-//	UINT32          OneSecBeaconSentCnt;
-
+	UINT32          OneSecTransmittedByteCount;   // both successful and failure, used to calculate TX throughput
+	UINT32          OneSecTxNoRetryOkCount;
+	UINT32          OneSecTxRetryOkCount;
+	UINT32          OneSecTxFailCount;
+	UINT32          OneSecFalseCCACnt;      // CCA error count, for debug purpose, might move to global counter
+	UINT32          OneSecRxOkCnt;          // RX without error
+	UINT32          OneSecRxOkDataCnt;      // unicast-to-me DATA frame count
+	UINT32          OneSecRxFcsErrCnt;      // CRC error
+	UINT32          OneSecBeaconSentCnt;
 	UINT32          LastOneSecTotalTxCount; // OneSecTxNoRetryOkCount + OneSecTxRetryOkCount + OneSecTxFailCount
 	UINT32          LastOneSecRxOkDataCnt;  // OneSecRxOkDataCnt
 	ULONG		DuplicateRcv;
@@ -888,6 +796,21 @@ typedef struct _COUNTER_DRS {
 /***************************************************************************
   *	security key related data structure
   **************************************************************************/
+typedef struct _CIPHER_KEY {
+	UCHAR   Key[16];            // right now we implement 4 keys, 128 bits max
+	UCHAR   RxMic[8];			// make alignment 
+	UCHAR   TxMic[8];
+	UCHAR   TxTsc[6];           // 48bit TSC value
+	UCHAR   RxTsc[6];           // 48bit TSC value
+	UCHAR   CipherAlg;          // 0-none, 1:WEP64, 2:WEP128, 3:TKIP, 4:AES, 5:CKIP64, 6:CKIP128
+	UCHAR   KeyLen; 
+#ifdef CONFIG_STA_SUPPORT
+	UCHAR   BssId[6];
+#endif // CONFIG_STA_SUPPORT //
+            // Key length for each key, 0: entry is invalid
+	UCHAR   Type;               // Indicate Pairwise/Group when reporting MIC error
+} CIPHER_KEY, *PCIPHER_KEY;
+
 
 // structure to define WPA Group Key Rekey Interval
 typedef struct PACKED _RT_802_11_WPA_REKEY {
@@ -954,6 +877,18 @@ typedef struct  _PACKET_INFO    {
 	PNDIS_BUFFER    pFirstBuffer;           // Pointer to first buffer descriptor
 } PACKET_INFO, *PPACKET_INFO;
 
+
+//
+//  Arcfour Structure Added by PaulWu
+//
+typedef struct  _ARCFOUR
+{
+	UINT            X;
+	UINT            Y;
+	UCHAR           STATE[256];
+} ARCFOURCONTEXT, *PARCFOURCONTEXT;
+
+
 //
 // Tkip Key structure which RC4 key & MIC calculation
 //
@@ -979,6 +914,8 @@ typedef struct  __PRIVATE_STRUC {
 	UINT       TxRingFullCnt;          // Tx ring full occurrance number
 	UINT       PhyRxErrCnt;            // PHY Rx error count, for debug purpose, might move to global counter
 	// Variables for WEP encryption / decryption in rtmp_wep.c
+	UINT       FCSCRC32;
+	ARCFOURCONTEXT  WEPCONTEXT;
 	// Tkip stuff
 	TKIP_KEY_INFO   Tx;
 	TKIP_KEY_INFO   Rx;
@@ -1083,13 +1020,28 @@ typedef enum CD_STATE_n
 
 #ifdef TONE_RADAR_DETECT_SUPPORT
 #define CARRIER_DETECT_RECHECK_TIME			3
-#define CARRIER_DETECT_CRITIRIA				280
-#define CARRIER_DETECT_STOP_RATIO				2
+
+
+#ifdef CARRIER_SENSE_NEW_ALGO
+#define CARRIER_DETECT_CRITIRIA				400
+#define CARRIER_DETECT_STOP_RATIO				0x11
+#define	CARRIER_DETECT_STOP_RATIO_OLD_3090			2
+#endif // CARRIER_SENSE_NEW_ALGO // 
+
+
 #define CARRIER_DETECT_STOP_RECHECK_TIME		4
 #define CARRIER_DETECT_CRITIRIA_A				230
 #define CARRIER_DETECT_DELTA					7
 #define CARRIER_DETECT_DIV_FLAG				0
+#ifdef RT3090
+#define CARRIER_DETECT_THRESHOLD_3090A			0x1fffffff
+#endif // RT3090 //
+#ifdef RT3390
 #define CARRIER_DETECT_THRESHOLD			0x0fffffff
+#endif // RT3390 //
+#ifndef RT3390 
+#define CARRIER_DETECT_THRESHOLD			0x0fffffff
+#endif // RT3390 //
 #endif // TONE_RADAR_DETECT_SUPPORT //
 
 typedef struct CARRIER_DETECTION_s
@@ -1175,8 +1127,8 @@ typedef enum _ABGBAND_STATE_ {
 	A_BAND,
 } ABGBAND_STATE;
 
-#ifdef CONFIG_STA_SUPPORT
 #ifdef RTMP_MAC_PCI
+#ifdef CONFIG_STA_SUPPORT
 // Power save method control
 typedef	union	_PS_CONTROL	{
 	struct	{
@@ -1189,8 +1141,8 @@ typedef	union	_PS_CONTROL	{
 	}	field;
 	ULONG			word;
 }	PS_CONTROL, *PPS_CONTROL;
-#endif // RTMP_MAC_PCI //
 #endif // CONFIG_STA_SUPPORT //
+#endif // RTMP_MAC_PCI //
 /***************************************************************************
   *	structure for MLME state machine
   **************************************************************************/
@@ -1218,7 +1170,6 @@ typedef struct _MLME_STRUCT {
 	STATE_MACHINE			DlsMachine;
 	STATE_MACHINE_FUNC      DlsFunc[DLS_FUNC_SIZE];
 #endif // QOS_DLS_SUPPORT //
-
 
 	
 	// common WPA state machine
@@ -1424,13 +1375,6 @@ typedef enum _BSS2040COEXIST_FLAG{
 	BSS_2040_COEXIST_INFO_SYNC = 2,
 	BSS_2040_COEXIST_INFO_NOTIFY = 4,
 }BSS2040COEXIST_FLAG;
-
-typedef struct _BssCoexChRange_{
-	UCHAR primaryCh;
-	UCHAR secondaryCh;
-	UCHAR effectChStart;
-	UCHAR effectChEnd;
-}BSS_COEX_CH_RANGE;
 #endif // DOT11N_DRAFT3 //
 
 #define IS_HT_STA(_pMacEntry)	\
@@ -1653,7 +1597,6 @@ typedef struct _COMMON_CONFIG {
 	UCHAR               AckPolicy[4];       // ACK policy of the specified AC. see ACK_xxx
 #ifdef CONFIG_STA_SUPPORT
 	BOOLEAN				bDLSCapable;		// 0:disable DLS, 1:enable DLS
-	EXT_CAP_INFO_ELEMENT	ExtCapIE;	// this is the extened capibility IE appreed in MGMT frames. Doesn't need to update once set in Init.
 #endif // CONFIG_STA_SUPPORT //
 	// a bitmap of BOOLEAN flags. each bit represent an operation status of a particular 
 	// BOOLEAN control, either ON or OFF. These flags should always be accessed via
@@ -1663,6 +1606,9 @@ typedef struct _COMMON_CONFIG {
 
 	BOOLEAN				NdisRadioStateOff; //For HCT 12.0, set this flag to TRUE instead of called MlmeRadioOff.       
 	ABGBAND_STATE		BandState;		// For setting BBP used on B/G or A mode.
+#ifdef ANT_DIVERSITY_SUPPORT
+	UCHAR				bRxAntDiversity; // 0:disable, 1:enable Software Rx Antenna Diversity.
+#endif // ANT_DIVERSITY_SUPPORT //
 
 	// IEEE802.11H--DFS.
 	RADAR_DETECT_STRUCT	RadarDetect;
@@ -1768,9 +1714,6 @@ typedef struct _COMMON_CONFIG {
 #endif
 
 	BOOLEAN		HT_DisallowTKIP;		/* Restrict the encryption type in 11n HT mode */
-#ifdef RT3090
-	BOOLEAN DisableNmode;
-#endif // RT3090 //
 } COMMON_CONFIG, *PCOMMON_CONFIG;
 
 
@@ -1825,9 +1768,9 @@ typedef struct _STA_ADMIN_CONFIG {
 
 	UCHAR		WpaPassPhrase[64];		// WPA PSK pass phrase
 	UINT		WpaPassPhraseLen;		// the length of WPA PSK pass phrase
-	UCHAR		PMK[LEN_PMK];                // WPA PSK mode PMK
-	UCHAR       PTK[LEN_PTK];                // WPA PSK mode PTK
-	UCHAR		GTK[MAX_LEN_GTK];				// GTK from authenticator
+	UCHAR		PMK[32];                // WPA PSK mode PMK
+	UCHAR       PTK[64];                // WPA PSK mode PTK
+	UCHAR		GTK[32];				// GTK from authenticator
 	BSSID_INFO	SavedPMK[PMKID_NO];
 	UINT		SavedPMKNum;			// Saved PMKID number
 
@@ -1842,7 +1785,7 @@ typedef struct _STA_ADMIN_CONFIG {
 	ULONG       MicErrCnt;          // Should be 0, 1, 2, then reset to zero (after disassoiciation).
 	BOOLEAN     bBlockAssoc;        // Block associate attempt for 60 seconds after counter measure occurred.
 	// For WPA-PSK supplicant state
-	UINT8   	WpaState;           // Default is SS_NOTUSE and handled by microsoft 802.1x
+	WPA_STATE   WpaState;           // Default is SS_NOTUSE and handled by microsoft 802.1x
 	UCHAR       ReplayCounter[8];
 	UCHAR       ANonce[32];         // ANonce for WPA-PSK from aurhenticator
 	UCHAR       SNonce[32];         // SNonce for WPA-PSK
@@ -1900,8 +1843,6 @@ typedef struct _STA_ADMIN_CONFIG {
 	RT_802_11_DLS		DLSEntry[MAX_NUM_OF_DLS_ENTRY];
 	UCHAR				DlsReplayCounter[8];
 #endif // QOS_DLS_SUPPORT //
-
-	BOOLEAN				bTDLSCapable;		// 0:disable TDLS, 1:enable TDLS
 	////////////////////////////////////////////////////////////////////////////////////////
 	// This is only for WHQL test.
 	BOOLEAN				WhqlTest;
@@ -1924,7 +1865,6 @@ typedef struct _STA_ADMIN_CONFIG {
     UCHAR               WpaSupplicantUP;
 	UCHAR				WpaSupplicantScanCount;
 	BOOLEAN				bRSN_IE_FromWpaSupplicant;
-	BOOLEAN				bLostAp;
 #endif // WPA_SUPPLICANT_SUPPORT //
 
     CHAR                dev_name[16];
@@ -1990,12 +1930,12 @@ typedef struct _STA_ACTIVE_CONFIG {
 
 
 typedef struct _MAC_TABLE_ENTRY {
-	/*
-		0:Invalid,
-		Bit 0: AsCli, Bit 1: AsWds, Bit 2: AsAPCLI,
-		Bit 3: AsMesh, Bit 4: AsDls, Bit 5: AsTDls
-	*/
-	UINT32		EntryType;
+	//Choose 1 from ValidAsWDS and ValidAsCLI  to validize.
+	BOOLEAN		ValidAsCLI;		// Sta mode, set this TRUE after Linkup,too.
+	BOOLEAN		ValidAsWDS;	// This is WDS Entry. only for AP mode.
+	BOOLEAN		ValidAsApCli;   //This is a AP-Client entry, only for AP mode which enable AP-Client functions.
+	BOOLEAN		ValidAsMesh;
+	BOOLEAN		ValidAsDls;	// This is DLS Entry. only for STA mode.
 	BOOLEAN		isCached;
 	BOOLEAN		bIAmBadAtheros;	// Flag if this is Atheros chip that has IOT problem.  We need to turn on RTS/CTS protection.
 
@@ -2016,8 +1956,8 @@ typedef struct _MAC_TABLE_ENTRY {
 	NDIS_802_11_AUTHENTICATION_MODE     AuthMode;   // This should match to whatever microsoft defined
 	NDIS_802_11_WEP_STATUS              WepStatus;
 	NDIS_802_11_WEP_STATUS              GroupKeyWepStatus;
-	UINT8    		WpaState;
-	UINT8       	GTKState;
+	AP_WPA_STATE    WpaState;
+	GTK_STATE       GTKState;
 	USHORT          PortSecured;
 	NDIS_802_11_PRIVACY_FILTER  PrivacyFilter;      // PrivacyFilter enum for 802.1X
 	CIPHER_KEY      PairwiseKey;
@@ -2040,7 +1980,6 @@ typedef struct _MAC_TABLE_ENTRY {
 	QUEUE_HEADER    PsQueue;
 
 	UINT32			StaConnectTime;		// the live time of this station since associated with AP 
-	UINT32			StaIdleTimeout;		/* idle timeout per entry */
 
 
 #ifdef DOT11_N_SUPPORT
@@ -2074,7 +2013,7 @@ typedef struct _MAC_TABLE_ENTRY {
 	UCHAR           TxRateUpPenalty;      // extra # of second penalty due to last unstable condition
 #ifdef WDS_SUPPORT
 	BOOLEAN		LockEntryTx; // TRUE = block to WDS Entry traffic, FALSE = not. 
-	ULONG		TimeStamp_toTxRing;
+	UINT32		TimeStamp_toTxRing;
 #endif // WDS_SUPPORT //
 
 //====================================================
@@ -2144,18 +2083,6 @@ typedef struct _MAC_TABLE_ENTRY {
 #endif // CONFIG_STA_SUPPORT //
 
 
-#ifdef WMM_ACM_SUPPORT
-/* reference to acm_extr.h */
-/* 8 pointers for IN TSPEC and 8 pointers for OUT TSEPC */
-#define WMM_STA_ACM_INFO_SIZE	(sizeof(UINT8 *)*16)
-	UCHAR			ACM_Info[WMM_STA_ACM_INFO_SIZE];
-
-	UCHAR			ACM_NumOfTspecIn;
-	UCHAR			ACM_NumOfTspecOut;
-
-	UCHAR			ACM_NumOfOutTspecInAc[4];
-	UCHAR			ACM_NumOfInTspecInAc[4];
-#endif // WMM_ACM_SUPPORT //
 
 	ULONG AssocDeadLine;
 
@@ -2163,14 +2090,6 @@ typedef struct _MAC_TABLE_ENTRY {
 
 	ULONG ChannelQuality;  // 0..100, Channel Quality Indication for Roaming
 
-
-
-#ifdef VENDOR_FEATURE1_SUPPORT
-	UCHAR			HeaderBuf[128];				// TempBuffer for TX_INFO + TX_WI + 802.11 Header + padding + AMSDU SubHeader + LLC/SNAP
-	UCHAR			HdrPadLen;					// recording Header Padding Length;
-	UCHAR			MpduHeaderLen;
-	UINT16			Protocol;
-#endif // VENDOR_FEATURE1_SUPPORT //
 } MAC_TABLE_ENTRY, *PMAC_TABLE_ENTRY;
 
 typedef struct _MAC_TABLE {
@@ -2234,13 +2153,13 @@ typedef struct _RtmpDiagStrcut_
 //	USHORT			TxDescCnt[DIAGNOSE_TIME][16];		// TxDesc queue length in scale of 0~14, >=15
 	USHORT			TxDescCnt[DIAGNOSE_TIME][24]; // 3*3	// TxDesc queue length in scale of 0~14, >=15
 //	USHORT			TxMcsCnt[DIAGNOSE_TIME][16];			// TxDate MCS Count in range from 0 to 15, step in 1.
-	USHORT			TxMcsCnt[DIAGNOSE_TIME][MAX_MCS_SET]; // 3*3
+	USHORT			TxMcsCnt[DIAGNOSE_TIME][24]; // 3*3
 	USHORT			TxSWQueCnt[DIAGNOSE_TIME][9];		// TxSwQueue length in scale of 0, 1, 2, 3, 4, 5, 6, 7, >=8
 
 	USHORT			TxAggCnt[DIAGNOSE_TIME];
 	USHORT			TxNonAggCnt[DIAGNOSE_TIME];
 //	USHORT			TxAMPDUCnt[DIAGNOSE_TIME][16];		// 10 sec, TxDMA APMDU Aggregation count in range from 0 to 15, in setp of 1.
-	USHORT			TxAMPDUCnt[DIAGNOSE_TIME][MAX_MCS_SET]; // 3*3 // 10 sec, TxDMA APMDU Aggregation count in range from 0 to 15, in setp of 1.
+	USHORT			TxAMPDUCnt[DIAGNOSE_TIME][24]; // 3*3 // 10 sec, TxDMA APMDU Aggregation count in range from 0 to 15, in setp of 1.
 	USHORT			TxRalinkCnt[DIAGNOSE_TIME];			// TxRalink Aggregation Count in 1 sec scale.
 	USHORT			TxAMSDUCnt[DIAGNOSE_TIME];			// TxAMSUD Aggregation Count in 1 sec scale.
 
@@ -2248,7 +2167,7 @@ typedef struct _RtmpDiagStrcut_
 	USHORT			RxDataCnt[DIAGNOSE_TIME];			// Rx Total Data count.
 	USHORT			RxCrcErrCnt[DIAGNOSE_TIME];
 //	USHORT			RxMcsCnt[DIAGNOSE_TIME][16];		// Rx MCS Count in range from 0 to 15, step in 1.
-	USHORT			RxMcsCnt[DIAGNOSE_TIME][MAX_MCS_SET]; // 3*3
+	USHORT			RxMcsCnt[DIAGNOSE_TIME][24]; // 3*3
 }RtmpDiagStruct;
 #endif // DBG_DIAGNOSE //
 
@@ -2286,15 +2205,13 @@ struct _RTMP_ADAPTER
 
 	RTMP_CHIP_OP			chipOps;
 	USHORT					ThisTbttNumToNextWakeUp;
-#ifdef HOSTAPD_SUPPORT
-	UINT32               IoctlIF;
-#endif//HOSTAPD_SUPPORT//
+
 #ifdef INF_AMAZON_PPA
 	UINT32  g_if_id;
 	BOOLEAN	PPAEnable;
 	PPA_DIRECTPATH_CB       *pDirectpathCb;
 #endif // INF_AMAZON_PPA //
-	
+
 #ifdef RTMP_MAC_PCI
 /*****************************************************************************************/
 /*      PCI related parameters                                                           								  */
@@ -2317,7 +2234,7 @@ struct _RTMP_ADAPTER
 
 	BOOLEAN					brt30xxBanMcuCmd;	//when = 0xff means all commands are ok to set .
 	BOOLEAN					b3090ESpecialChip;	//3090E special chip that write EEPROM 0x24=0x9280.
-	//ULONG					CheckDmaBusyCount;  // Check Interrupt Status Register Count.
+	ULONG					CheckDmaBusyCount;  // Check Interrupt Status Register Count.
 	
 	UINT					int_enable_reg;
 	UINT					int_disable_mask;
@@ -2333,11 +2250,6 @@ struct _RTMP_ADAPTER
 
 	NDIS_SPIN_LOCK		irq_lock;
 	UCHAR				irq_disabled;
-
-	//======Cmd Thread in PCI/RBUS/USB
-	CmdQ					CmdQ;
-	NDIS_SPIN_LOCK			CmdQLock;				// CmdQLock spinlock
-	RTMP_OS_TASK			cmdQTask;
 
 
 /*****************************************************************************************/
@@ -2386,9 +2298,9 @@ struct _RTMP_ADAPTER
 #ifdef RTMP_MAC_PCI
 	RTMP_RX_RING            RxRing;
 	NDIS_SPIN_LOCK          RxRingLock;                 // Rx Ring spinlock
-#if defined(RT3090) || defined(RT3572) || defined(RT3390)
+#ifdef RT3090
 	NDIS_SPIN_LOCK          McuCmdLock;              //MCU Command Queue spinlock
-#endif // defined(RT3090) || defined(RT3572) || defined(RT3390) //
+#endif // RT3090 //
 #endif // RTMP_MAC_PCI //
 	
 
@@ -2443,10 +2355,10 @@ struct _RTMP_ADAPTER
 	UCHAR                   ChannelListNum;                     // number of channel in ChannelList[]
 	UCHAR					Bbp94;
 	BOOLEAN					BbpForCCK;
-	ULONG		Tx20MPwrCfgABand[MAX_TXPOWER_ARRAY_SIZE];
-	ULONG		Tx20MPwrCfgGBand[MAX_TXPOWER_ARRAY_SIZE];
-	ULONG		Tx40MPwrCfgABand[MAX_TXPOWER_ARRAY_SIZE];
-	ULONG		Tx40MPwrCfgGBand[MAX_TXPOWER_ARRAY_SIZE];
+	ULONG		Tx20MPwrCfgABand[5];
+	ULONG		Tx20MPwrCfgGBand[5];
+	ULONG		Tx40MPwrCfgABand[5];
+	ULONG		Tx40MPwrCfgGBand[5];
 
 	BOOLEAN     bAutoTxAgcA;                // Enable driver auto Tx Agc control
 	UCHAR	    TssiRefA;					// Store Tssi reference value as 25 temperature.	
@@ -2631,8 +2543,10 @@ struct _RTMP_ADAPTER
 	//BOOLEAN		bDisablescanning;		//defined in RT2870 USB
 	BOOLEAN		bStaFifoTest;
 	BOOLEAN		bProtectionTest;
+	/*
 	BOOLEAN		bHCCATest;
 	BOOLEAN		bGenOneHCCA;
+	*/
 	BOOLEAN		bBroadComHT;
 	//+++Following add from RT2870 USB.
 	ULONG		BulkOutReq;
@@ -2703,13 +2617,6 @@ struct _RTMP_ADAPTER
 	RtmpDiagStruct	DiagStruct;
 #endif // DBG_DIAGNOSE //
 
-#ifdef WMM_ACM_SUPPORT
-	UINT8					*pACM_Ctrl_BK;
-	UINT16					AcmAvalCap; /* unit: 32us */
-
-	NDIS_SPIN_LOCK			AcmTspecSemLock;
-	NDIS_SPIN_LOCK			AcmTspecIrqLock;
-#endif // WMM_ACM_SUPPORT //
 
 	UINT8					FlgCtsEnabled;
 	UINT8					PM_FlgSuspend;
@@ -2723,13 +2630,9 @@ struct _RTMP_ADAPTER
 #endif // RTMP_EFUSE_SUPPORT //
 #endif // RT30xx //
 
-
 #ifdef CONFIG_STA_SUPPORT
 #endif // CONFIG_STA_SUPPORT //
 
-#ifdef VENDOR_FEATURE1_SUPPORT
-	UCHAR	FifoUpdateDone, FifoUpdateRx;
-#endif // VENDOR_FEATURE1_SUPPORT //
 };
 
 
@@ -2830,12 +2733,7 @@ typedef struct _TX_BLK_
 	PUCHAR				pSrcBufData;				// Reference to the sk_buff->data, will changed depends on hanlding progresss
 	UINT				SrcBufLen;					// Length of packet payload which not including Layer 2 header
 	PUCHAR				pExtraLlcSnapEncap;			// NULL means no extra LLC/SNAP is required
-#ifndef VENDOR_FEATURE1_SUPPORT
-	UCHAR				HeaderBuf[128];				// TempBuffer for TX_INFO + TX_WI + 802.11 Header + padding + AMSDU SubHeader + LLC/SNAP
-#else
-	UCHAR				*HeaderBuf;					// TempBuffer for TX_INFO + TX_WI + 802.11 Header + padding + AMSDU SubHeader + LLC/SNAP
-	UCHAR				HeaderBuffer[128];			// TempBuffer for TX_INFO + TX_WI + 802.11 Header + padding + AMSDU SubHeader + LLC/SNAP
-#endif // VENDOR_FEATURE1_SUPPORT //
+	UCHAR				HeaderBuf[96];				// TempBuffer for TX_INFO + TX_WI + 802.11 Header + padding + AMSDU SubHeader + LLC/SNAP
 	UCHAR				MpduHeaderLen;				// 802.11 header length NOT including the padding
 	UCHAR				HdrPadLen;					// recording Header Padding Length;
 	UCHAR				apidx;						// The interface associated to this packet 
@@ -2846,20 +2744,14 @@ typedef struct _TX_BLK_
 	UCHAR				TxRate;						// TODO: Obsoleted? Should change to MCS?
 	UCHAR				CipherAlg;					// cipher alogrithm
 	PCIPHER_KEY			pKey;
-	UCHAR				KeyIdx;						// Indicate the transmit key index
+	
 
 
-	UINT32				Flags;						//See following definitions for detail.
+	USHORT				Flags;						//See following definitions for detail.
 
 	//YOU SHOULD NOT TOUCH IT! Following parameters are used for hardware-depended layer.
 	ULONG				Priv;						// Hardware specific value saved in here.
 
-
-#ifdef RT2883_TEMP_PATCH
-	UCHAR				TxSndgPkt; // 1: sounding 2: NDP sounding
-	UCHAR				TxNDPSndgBW;
-	UCHAR				TxNDPSndgMcs;
-#endif // RT2883_TEMP_PATCH //
 } TX_BLK, *PTX_BLK;
 
 
@@ -2873,16 +2765,12 @@ typedef struct _TX_BLK_
 #define fTX_bWMM				0x0080	// QOS Data
 #define fTX_bClearEAPFrame		0x0100
 
-#define	fTX_bSwEncrypt			0x0400	// this packet need to be encrypted by software before TX
+
 
 #ifdef CONFIG_STA_SUPPORT
 #endif // CONFIG_STA_SUPPORT //
 
 
-
-#ifdef CLIENT_WDS
-#define fTX_bClientWDSFrame		0x10000
-#endif // CLIENT_WDS //
 
 
 #define TX_BLK_SET_FLAG(_pTxBlk, _flag)		(_pTxBlk->Flags |= _flag)
@@ -3732,15 +3620,13 @@ NDIS_STATUS MiniportMMRequest(
 	IN	PUCHAR			pData,
 	IN  UINT            Length);
 
+//+++mark by shiang, now this function merge to MiniportMMRequest()
+//---mark by shiang, now this function merge to MiniportMMRequest()
+
 VOID RTMPSendNullFrame(
 	IN  PRTMP_ADAPTER   pAd,
 	IN  UCHAR           TxRate,
 	IN	BOOLEAN			bQosNull);
-
-VOID	RTMPSendPSMNullFrame(
-	IN PRTMP_ADAPTER pAd,
-	IN UCHAR		Channel,
-	IN UCHAR		*pData);
 
 VOID RTMPSendDisassociationFrame(
 	IN	PRTMP_ADAPTER	pAd);
@@ -3786,9 +3672,6 @@ VOID WpaStaPairwiseKeySetting(
 VOID WpaStaGroupKeySetting(
 	IN	PRTMP_ADAPTER	pAd);
 
-VOID    WpaSendEapolStart(
-	IN	PRTMP_ADAPTER	pAdapter,
-	IN  PUCHAR          pBssid);
 #endif // CONFIG_STA_SUPPORT //
 
 NDIS_STATUS RTMPCloneNdisPacket(
@@ -3820,15 +3703,76 @@ BOOLEAN RTMPCheckDHCPFrame(
 
 BOOLEAN RTMPCheckEtherType(
 	IN	PRTMP_ADAPTER	pAd, 
-	IN	PNDIS_PACKET	pPacket,
-	IN	PMAC_TABLE_ENTRY pMacEntry,
-	OUT PUCHAR pUserPriority,
-	OUT PUCHAR pQueIdx);
+	IN	PNDIS_PACKET	pPacket);
 
 
 VOID RTMPCckBbpTuning(
 	IN	PRTMP_ADAPTER	pAd, 
 	IN	UINT			TxRate);
+
+//
+// Private routines in rtmp_wep.c
+//
+VOID RTMPInitWepEngine(
+	IN  PRTMP_ADAPTER   pAd,
+	IN  PUCHAR          pKey,
+	IN  UCHAR           KeyId,
+	IN  UCHAR           KeyLen, 
+	IN  PUCHAR          pDest);
+
+VOID RTMPEncryptData(
+	IN  PRTMP_ADAPTER   pAd,
+	IN  PUCHAR          pSrc,
+	IN  PUCHAR          pDest,
+	IN  UINT            Len);
+
+BOOLEAN	RTMPDecryptData(
+	IN	PRTMP_ADAPTER	pAdapter,
+	IN	PUCHAR			pSrc,
+	IN	UINT			Len,
+	IN	UINT			idx);
+
+BOOLEAN	RTMPSoftDecryptWEP(
+	IN PRTMP_ADAPTER 	pAd,
+	IN PUCHAR			pData,
+	IN ULONG			DataByteCnt,
+	IN PCIPHER_KEY		pGroupKey);
+
+VOID RTMPSetICV(
+	IN  PRTMP_ADAPTER   pAd,
+	IN  PUCHAR          pDest);
+
+VOID ARCFOUR_INIT(
+	IN  PARCFOURCONTEXT Ctx,
+	IN  PUCHAR          pKey,
+	IN  UINT            KeyLen);
+
+UCHAR   ARCFOUR_BYTE(
+	IN  PARCFOURCONTEXT     Ctx);
+
+VOID ARCFOUR_DECRYPT(
+	IN  PARCFOURCONTEXT Ctx,
+	IN  PUCHAR          pDest, 
+	IN  PUCHAR          pSrc,
+	IN  UINT            Len);
+
+VOID ARCFOUR_ENCRYPT(
+	IN  PARCFOURCONTEXT Ctx,
+	IN  PUCHAR          pDest,
+	IN  PUCHAR          pSrc,
+	IN  UINT            Len);
+
+VOID WPAARCFOUR_ENCRYPT(
+	IN  PARCFOURCONTEXT Ctx,
+	IN  PUCHAR          pDest,
+	IN  PUCHAR          pSrc,
+	IN  UINT            Len);
+
+UINT RTMP_CALC_FCS32(
+	IN  UINT   Fcs,
+	IN  PUCHAR  Cp,
+	IN  INT     Len);
+
 //
 // MLME routines
 //
@@ -3844,11 +3788,6 @@ VOID 	AsicUpdateProtect(
 	IN 		UCHAR			SetMask,
 	IN		BOOLEAN			bDisableBGProtect,
 	IN		BOOLEAN			bNonGFExist);
-
-
-VOID AsicBBPAdjust(
-	IN RTMP_ADAPTER *pAd);
-
 
 VOID AsicSwitchChannel(
 	IN  PRTMP_ADAPTER   pAd, 
@@ -3930,12 +3869,22 @@ VOID AsicAddSharedKeyEntry(
 	IN PRTMP_ADAPTER pAd,
 	IN UCHAR         BssIndex,
 	IN UCHAR         KeyIdx,
-	IN PCIPHER_KEY	 pCipherKey);
+	IN UCHAR         CipherAlg,
+	IN PUCHAR        pKey,
+	IN PUCHAR        pTxMic,
+	IN PUCHAR        pRxMic);
 
 VOID AsicRemoveSharedKeyEntry(
 	IN PRTMP_ADAPTER pAd,
 	IN UCHAR         BssIndex,
 	IN UCHAR         KeyIdx);
+
+VOID AsicUpdateWCIDAttribute(
+	IN PRTMP_ADAPTER pAd,
+	IN USHORT		WCID,
+	IN UCHAR		BssIndex,
+	IN UCHAR        CipherAlg,
+	IN BOOLEAN		bUsePairewiseKeyTable);
 
 VOID AsicUpdateWCIDIVEIV(
 	IN PRTMP_ADAPTER pAd,
@@ -3948,21 +3897,24 @@ VOID AsicUpdateRxWCIDTable(
 	IN USHORT		WCID,
 	IN PUCHAR        pAddr);
 
-VOID	AsicUpdateWcidAttributeEntry(
-	IN	PRTMP_ADAPTER	pAd,
-	IN	UCHAR			BssIdx,
-	IN 	UCHAR		 	KeyIdx,
-	IN 	UCHAR		 	CipherAlg,
-	IN	UINT8				Wcid,
-	IN	UINT8				KeyTabFlag);
+VOID AsicAddKeyEntry(
+	IN PRTMP_ADAPTER pAd,
+	IN USHORT		WCID,
+	IN UCHAR		BssIndex,
+	IN UCHAR		KeyIdx,
+	IN PCIPHER_KEY	pCipherKey,	
+	IN BOOLEAN		bUsePairewiseKeyTable,
+	IN BOOLEAN		bTxKey);
 
 VOID AsicAddPairwiseKeyEntry(
-	IN PRTMP_ADAPTER 	pAd,
-	IN UCHAR			WCID,
-	IN PCIPHER_KEY		pCipherKey);
+	IN PRTMP_ADAPTER pAd,
+	IN PUCHAR        pAddr,
+	IN UCHAR		WCID,
+	IN CIPHER_KEY		 *pCipherKey);
 
 VOID AsicRemovePairwiseKeyEntry(
 	IN PRTMP_ADAPTER  pAd,
+	IN UCHAR		 BssIdx,
 	IN UCHAR		 Wcid);
 
 BOOLEAN AsicSendCommandToMcu(
@@ -3978,7 +3930,6 @@ BOOLEAN AsicCheckCommanOk(
 	IN PRTMP_ADAPTER pAd,
 	IN UCHAR		 Command);
 #endif // RTMP_MAC_PCI //
-
 
 VOID MacAddrRandomBssid(
 	IN  PRTMP_ADAPTER   pAd, 
@@ -4179,8 +4130,7 @@ BOOLEAN MlmeEnqueue(
 	IN ULONG Machine, 
 	IN ULONG MsgType, 
 	IN ULONG MsgLen, 
-	IN VOID *Msg,
-	IN ULONG Priv);
+	IN VOID *Msg);
 
 BOOLEAN MlmeEnqueueForRecv(
 	IN  PRTMP_ADAPTER   pAd, 
@@ -4232,8 +4182,7 @@ VOID StateMachineSetAction(
 VOID StateMachinePerformAction(
 	IN  PRTMP_ADAPTER   pAd, 
 	IN STATE_MACHINE *S, 
-	IN MLME_QUEUE_ELEM *Elem,
-	IN ULONG CurrState);
+	IN MLME_QUEUE_ELEM *Elem);
 
 VOID Drop(
 	IN  PRTMP_ADAPTER   pAd, 
@@ -4749,10 +4698,8 @@ VOID ScanNextChannel(
 ULONG MakeIbssBeacon(
 	IN  PRTMP_ADAPTER   pAd);
 
-#ifdef CONFIG_STA_SUPPORT
-VOID InitChannelRelatedValue(
+VOID CCXAdjacentAPReport(
 	IN  PRTMP_ADAPTER   pAd);
-#endif // CONFIG_STA_SUPPORT //
 
 BOOLEAN MlmeScanReqSanity(
 	IN  PRTMP_ADAPTER   pAd, 
@@ -4884,13 +4831,18 @@ BOOLEAN PeerDisassocSanity(
 	OUT PUCHAR pAddr2, 
 	OUT USHORT *Reason);
 
+BOOLEAN PeerWpaMessageSanity(
+    IN 	PRTMP_ADAPTER 		pAd, 
+    IN 	PEAPOL_PACKET 		pMsg, 
+    IN 	ULONG 				MsgLen, 
+    IN 	UCHAR				MsgType,
+    IN 	MAC_TABLE_ENTRY  	*pEntry);
+
 BOOLEAN PeerDeauthSanity(
 	IN  PRTMP_ADAPTER   pAd, 
 	IN  VOID *Msg, 
 	IN  ULONG MsgLen, 
-	OUT PUCHAR pAddr1,
 	OUT PUCHAR pAddr2, 
-	OUT PUCHAR pAddr3, 
 	OUT USHORT *Reason);
 
 BOOLEAN PeerProbeReqSanity(
@@ -5066,14 +5018,12 @@ CHAR RTMPMaxRssi(
 	IN CHAR				Rssi0,
 	IN CHAR				Rssi1,
 	IN CHAR				Rssi2);
-//Fix 2860 compile bug.
+
+#ifdef RT30xx
 VOID AsicSetRxAnt(
 	IN PRTMP_ADAPTER	pAd,
 	IN UCHAR			Ant);
 
-#ifdef RT30xx
-
-//Move AsicSetRxAnt to the upper to fix 2860 compile bug.
 VOID RTMPFilterCalibration(
 	IN PRTMP_ADAPTER pAd);
 
@@ -5100,11 +5050,9 @@ VOID eFusePhysicalReadRegisters(
 int RtmpEfuseSupportCheck(
 	IN RTMP_ADAPTER *pAd);
 
-#ifdef RALINK_ATE
 INT set_eFuseBufferModeWriteBack_Proc(
 	IN	PRTMP_ADAPTER	pAd,
 	IN	PSTRING			arg);
-#endif // RALINK_ATE //
 
 INT eFuseLoadEEPROM(
 	IN PRTMP_ADAPTER pAd);
@@ -5127,7 +5075,7 @@ NTSTATUS eFuseRead(
 NTSTATUS eFuseWrite(  
    	IN	PRTMP_ADAPTER	pAd,
 	IN	USHORT			Offset,
-	IN	PUSHORT			pData,
+	IN	PUCHAR			pData,
 	IN	USHORT			length);
 //2008/09/11:KH add to support efuse-->
 #endif // RTMP_EFUSE_SUPPORT //
@@ -5147,17 +5095,6 @@ VOID RT30xxReverseRFSleepModeSetup(
 #ifdef RT3090
 VOID NICInitRT3090RFRegisters(
 	IN RTMP_ADAPTER *pAd);
-//
-// Post-process the BBP registers based on the chip model
-//
-// Parameters
-//	pAd: The adapter data structure
-//
-// Return Value
-//	None
-//
-VOID PostBBPInitialization(
-	IN PRTMP_ADAPTER pAd);
 #endif // RT3090 //
 
 VOID RT30xxHaltAction(
@@ -5167,6 +5104,34 @@ VOID RT30xxSetRxAnt(
 	IN PRTMP_ADAPTER	pAd,
 	IN UCHAR			Ant);
 #endif // RT30xx //
+#ifdef RT33xx
+VOID RT33xxLoadRFNormalModeSetup(
+	IN PRTMP_ADAPTER 	pAd);
+
+VOID RT33xxLoadRFSleepModeSetup(
+	IN PRTMP_ADAPTER 	pAd);
+
+VOID RT33xxReverseRFSleepModeSetup(
+	IN PRTMP_ADAPTER 	pAd);
+
+#ifdef RT3370
+VOID NICInitRT3370RFRegisters(
+	IN RTMP_ADAPTER *pAd);
+#endif // RT3070 //
+
+#ifdef RT3390
+VOID NICInitRT3390RFRegisters(
+	IN RTMP_ADAPTER *pAd);
+#endif // RT3090 //
+
+VOID RT33xxHaltAction(
+	IN PRTMP_ADAPTER 	pAd);
+
+VOID RT33xxSetRxAnt(
+	IN PRTMP_ADAPTER	pAd,
+	IN UCHAR			Ant);
+
+#endif // RT33xx //
 
 
 
@@ -5227,7 +5192,7 @@ VOID ChangeToCellPowerLimit(
 	IN UCHAR         AironetCellPowerLimit);
 
 //
-// Prototypes of function definition in cmm_tkip.c
+// Prototypes of function definition in rtmp_tkip.c
 //
 VOID    RTMPInitTkipEngine(
 	IN  PRTMP_ADAPTER   pAd,    
@@ -5284,8 +5249,23 @@ VOID    RTMPTkipAppend(
 VOID    RTMPTkipGetMIC( 
 	IN  PTKIP_KEY_INFO  pTkip);
 
+BOOLEAN RTMPSoftDecryptTKIP(
+	IN PRTMP_ADAPTER pAd,
+	IN PUCHAR	pData,
+	IN ULONG	DataByteCnt, 
+	IN UCHAR    UserPriority,
+	IN PCIPHER_KEY	pWpaKey);
+
+BOOLEAN RTMPSoftDecryptAES(
+	IN PRTMP_ADAPTER pAd,
+	IN PUCHAR	pData,
+	IN ULONG	DataByteCnt, 
+	IN PCIPHER_KEY	pWpaKey);
+
+
+
 //
-// Prototypes of function definition in cmm_cfg.c
+// Prototypes of function definition in cmm_info.c
 //
 INT RT_CfgSetCountryRegion(
 	IN	PRTMP_ADAPTER	pAd, 
@@ -5312,13 +5292,6 @@ INT RT_CfgSetWPAPSKKey(
 	IN UCHAR		*pHashStr,
 	IN INT			hashStrLen,
 	OUT PUCHAR		pPMKBuf);
-
-INT	RT_CfgSetFixedTxPhyMode(
-	IN	PSTRING			arg);
-
-INT	RT_CfgSetMacAddress(
-	IN 	PRTMP_ADAPTER 	pAd,
-	IN	PSTRING			arg);
 
 
 
@@ -5412,17 +5385,88 @@ VOID BuildEffectedChannelList(
 VOID APAsicEvaluateRxAnt(
 	IN PRTMP_ADAPTER	pAd);
 
+#ifdef ANT_DIVERSITY_SUPPORT
+VOID	APAsicAntennaAvg(
+	IN	PRTMP_ADAPTER	pAd,
+	IN	UCHAR	              AntSelect,
+	IN	SHORT	              *RssiAvg);
+#endif // ANT_DIVERSITY_SUPPORT //
 
 VOID APAsicRxAntEvalTimeout(
 	IN PRTMP_ADAPTER	pAd);
 
-#ifdef RT2883_TEMP_PATCH
-VOID eTxBfProbeTimerExec(
-	IN PVOID SystemSpecific1, 
-	IN PVOID FunctionContext, 
-	IN PVOID SystemSpecific2,
-	IN PVOID SystemSpecific3);
-#endif // RT2883_TEMP_PATCH //
+/*===================================
+	Function prototype in cmm_wpa.c
+  =================================== */
+VOID	RTMPToWirelessSta(
+    IN  PRTMP_ADAPTER   	pAd,
+    IN  PMAC_TABLE_ENTRY 	pEntry,
+    IN  PUCHAR          	pHeader802_3,
+    IN  UINT            	HdrLen,
+    IN  PUCHAR          	pData,
+    IN  UINT            	DataLen,
+    IN	BOOLEAN				bClearFrame);
+
+VOID WpaDerivePTK(
+	IN  PRTMP_ADAPTER   pAd,
+	IN  UCHAR   *PMK,
+	IN  UCHAR   *ANonce,
+	IN  UCHAR   *AA,
+	IN  UCHAR   *SNonce,
+	IN  UCHAR   *SA,
+	OUT UCHAR   *output,
+	IN  UINT    len);
+
+VOID    GenRandom(
+	IN  PRTMP_ADAPTER   pAd, 
+	IN	UCHAR			*macAddr,
+	OUT	UCHAR			*random);
+
+BOOLEAN RTMPCheckWPAframe(
+	IN PRTMP_ADAPTER pAd,
+	IN PMAC_TABLE_ENTRY	pEntry,
+	IN PUCHAR 			pData,
+	IN ULONG 			DataByteCount,	
+	IN UCHAR			FromWhichBSSID);
+
+VOID AES_GTK_KEY_UNWRAP( 
+	IN  UCHAR   *key,
+	OUT UCHAR   *plaintext,
+	IN	UINT32	c_len,
+	IN  UCHAR   *ciphertext);
+
+BOOLEAN RTMPParseEapolKeyData(
+	IN  PRTMP_ADAPTER   pAd,
+	IN  PUCHAR          pKeyData,
+	IN  UCHAR           KeyDataLen,
+	IN	UCHAR			GroupKeyIndex,
+	IN	UCHAR			MsgType,
+	IN	BOOLEAN			bWPA2,
+	IN  MAC_TABLE_ENTRY *pEntry);
+
+VOID	ConstructEapolMsg(
+	IN 	PMAC_TABLE_ENTRY	pEntry,
+    IN 	UCHAR				GroupKeyWepStatus,
+    IN 	UCHAR				MsgType,  
+    IN	UCHAR				DefaultKeyIdx,
+	IN 	UCHAR				*KeyNonce,
+	IN	UCHAR				*TxRSC,
+	IN	UCHAR				*GTK,
+	IN	UCHAR				*RSNIE,
+	IN	UCHAR				RSNIE_Len,
+    OUT PEAPOL_PACKET       pMsg);
+
+NDIS_STATUS	RTMPSoftDecryptBroadCastData(
+	IN	PRTMP_ADAPTER					pAd,
+	IN	RX_BLK							*pRxBlk,
+	IN  NDIS_802_11_ENCRYPTION_STATUS 	GroupCipher,
+	IN  PCIPHER_KEY						pShard_key);
+
+VOID RTMPMakeRSNIE(
+	IN  PRTMP_ADAPTER   pAd,
+	IN  UINT            AuthMode,
+	IN  UINT            WepStatus,
+	IN	UCHAR			apidx);
 
 // 
 // function prototype in ap_wpa.c
@@ -5431,6 +5475,10 @@ VOID RTMPGetTxTscFromAsic(
 	IN  PRTMP_ADAPTER   pAd,
 	IN	UCHAR			apidx,
 	OUT	PUCHAR			pTxTsc);
+
+VOID APInstallPairwiseKey(
+	PRTMP_ADAPTER		pAd,
+	PMAC_TABLE_ENTRY	pEntry);
 
 MAC_TABLE_ENTRY *PACInquiry(
 	IN  PRTMP_ADAPTER   pAd, 
@@ -5531,6 +5579,12 @@ VOID WpaDeriveGTK(
 	IN  UCHAR   *AA,
 	OUT UCHAR   *output,
 	IN  UINT    len);
+
+VOID AES_GTK_KEY_WRAP( 
+	IN UCHAR *key,
+	IN UCHAR *plaintext,
+	IN UINT32 p_len,
+	OUT UCHAR *ciphertext);
 
 VOID AES_128_CMAC(
 	IN	PUCHAR	key,
@@ -5767,12 +5821,6 @@ PNDIS_PACKET duplicate_pkt_with_VLAN(
 	IN	ULONG			DataSize,
 	IN	UCHAR			FromWhichBSSID);
 
-
-PNDIS_PACKET ExpandPacket(
-	IN	PRTMP_ADAPTER	pAd,
-	IN	PNDIS_PACKET	pPacket,
-	IN	UINT32			ext_head_len,
-	IN	UINT32			ext_tail_len);
 
 UCHAR VLAN_8023_Header_Copy(
 	IN	PRTMP_ADAPTER	pAd, 
@@ -6069,28 +6117,6 @@ INT	Set_HtDisallowTKIP_Proc(
 
 #endif // DOT11_N_SUPPORT //
 
-#ifdef RT2883_TEMP_PATCH
-INT	Set_ETxBfEnCond_Proc(
-	IN	PRTMP_ADAPTER	pAd, 
-	IN	PCHAR			arg);
-
-INT	Set_NoSndgCntThrd_Proc(
-	IN	PRTMP_ADAPTER	pAd, 
-	IN	PCHAR			arg);
-
-INT	Set_NdpSndgStreams_Proc(
-	IN	PRTMP_ADAPTER	pAd, 
-	IN	PCHAR			arg);
-
-INT	Set_PerThrdAdj_Proc(
-	IN	PRTMP_ADAPTER	pAd, 
-	IN	PCHAR			arg);
-
-INT Set_Trigger_Sounding_Proc(
-    IN  PRTMP_ADAPTER   pAdapter, 
-    IN  PCHAR          arg);
-#endif // RT2883_TEMP_PATCH //
-
 
 
 #ifdef CONFIG_STA_SUPPORT
@@ -6161,15 +6187,6 @@ VOID Indicate_AMSDU_Packet(
 	IN	UCHAR			FromWhichBSSID);
 #endif // DOT11_N_SUPPORT //
 
-#ifdef RT2883_TEMP_PATCH
-VOID Trigger_Sounding_Packet(
-	IN	PRTMP_ADAPTER	pAd,
-	IN	UCHAR			SndgType,
-	IN	UCHAR			SndgBW,
-	IN	UCHAR			SndgMcs,
-	IN  MAC_TABLE_ENTRY *pEntry);
-#endif // RT2883_TEMP_PATCH //
-
 // Normal legacy Rx packet indication
 VOID Indicate_Legacy_Packet(
 	IN	PRTMP_ADAPTER	pAd,
@@ -6205,7 +6222,7 @@ UINT deaggregate_AMSDU_announce(
 {																				\
 	PUCHAR _pRemovedLLCSNAP = NULL, _pDA, _pSA;                                 \
 																				\
-	if (RX_BLK_TEST_FLAG(_pRxBlk, fRX_WDS) || RX_BLK_TEST_FLAG(_pRxBlk, fRX_MESH)) \
+	if (RX_BLK_TEST_FLAG(_pRxBlk, fRX_MESH))                                    \
 	{                                                                           \
 		_pDA = _pRxBlk->pHeader->Addr3;                                         \
 		_pSA = (PUCHAR)_pRxBlk->pHeader + sizeof(HEADER_802_11);                \
@@ -6444,7 +6461,6 @@ INT Set_ShortRetryLimit_Proc(
 	IN	PRTMP_ADAPTER	pAdapter, 
 	IN	PSTRING			arg);
 
-
 BOOLEAN RT28XXChipsetCheck(
 	IN void *_dev_p);
 
@@ -6578,7 +6594,6 @@ BOOLEAN RT28xxPciAsicRadioOn(
 	IN UCHAR     Level);
 
 #ifdef CONFIG_STA_SUPPORT
-#ifdef PCIE_PS_SUPPORT
 VOID RTMPInitPCIeLinkCtrlValue(
 	IN	PRTMP_ADAPTER	pAd);
 
@@ -6596,6 +6611,15 @@ VOID RTMPPCIeLinkCtrlSetting(
 VOID RTMPrt3xSetPCIePowerLinkCtrl(
 	IN	PRTMP_ADAPTER	pAd);
 
+
+VOID RT28xxPciStaAsicForceWakeup(
+	IN PRTMP_ADAPTER pAd,
+	IN BOOLEAN       bFromTx);
+
+VOID RT28xxPciStaAsicSleepThenAutoWakeup(
+	IN PRTMP_ADAPTER pAd, 
+	IN USHORT TbttNumToNextWakeUp);
+
 VOID PsPollWakeExec(
 	IN PVOID SystemSpecific1, 
 	IN PVOID FunctionContext, 
@@ -6607,16 +6631,6 @@ VOID  RadioOnExec(
 	IN PVOID FunctionContext, 
 	IN PVOID SystemSpecific2, 
 	IN PVOID SystemSpecific3);
-#endif // PCIE_PS_SUPPORT //
-
-VOID RT28xxPciStaAsicForceWakeup(
-	IN PRTMP_ADAPTER pAd,
-	IN BOOLEAN       bFromTx);
-
-VOID RT28xxPciStaAsicSleepThenAutoWakeup(
-	IN PRTMP_ADAPTER pAd, 
-	IN USHORT TbttNumToNextWakeUp);
-
 #endif // CONFIG_STA_SUPPORT //
 
 VOID RT28xxPciMlmeRadioOn(
@@ -6662,46 +6676,12 @@ void RtmpTimerQInit(
 VOID QBSS_LoadInit(
  	IN		RTMP_ADAPTER	*pAd);
 
-VOID QBSS_LoadAlarmReset(
- 	IN		RTMP_ADAPTER	*pAd);
-
-VOID QBSS_LoadAlarmResume(
- 	IN		RTMP_ADAPTER	*pAd);
-
-VOID QBSS_LoadAlarmSuspend(
- 	IN		RTMP_ADAPTER	*pAd);
-
-UINT32 QBSS_LoadBusyTimeGet(
- 	IN		RTMP_ADAPTER	*pAd);
-
-BOOLEAN QBSS_LoadIsAlarmIssued(
- 	IN		RTMP_ADAPTER	*pAd);
-
-BOOLEAN QBSS_LoadIsBusyTimeAccepted(
- 	IN		RTMP_ADAPTER	*pAd,
-	IN		UINT32			BusyTime);
-
 UINT32 QBSS_LoadElementAppend(
  	IN		RTMP_ADAPTER	*pAd,
 	OUT		UINT8			*buf_p);
 
-UINT32 QBSS_LoadElementParse(
- 	IN		RTMP_ADAPTER	*pAd,
-	IN		UINT8			*pElement,
-	OUT		UINT16			*pStationCount,
-	OUT		UINT8			*pChanUtil,
-	OUT		UINT16			*pAvalAdmCap);
-
 VOID QBSS_LoadUpdate(
- 	IN		RTMP_ADAPTER	*pAd,
-	IN		ULONG			UpTime);
-
-VOID QBSS_LoadStatusClear(
  	IN		RTMP_ADAPTER	*pAd);
-
-INT	Show_QoSLoad_Proc(
-	IN	PRTMP_ADAPTER	pAd,
-	IN	PSTRING			arg);
 
 ///////////////////////////////////////
 INT RTMPShowCfgValue(
@@ -6785,20 +6765,9 @@ __inline VOID VIRTUAL_IF_DOWN(PRTMP_ADAPTER pAd)
 		rt28xx_close(pAd->net_dev);
 	return;
 }
-
-
 #endif // LINUX //
 
-#ifdef SOFT_ENCRYPT
-BOOLEAN RTMPExpandPacketForSwEncrypt(
-	IN  PRTMP_ADAPTER   pAd,
-	IN	PTX_BLK			pTxBlk);
 
-VOID RTMPUpdateSwCacheCipherInfo(	
-	IN  PRTMP_ADAPTER   pAd,
-	IN	PTX_BLK			pTxBlk,
-	IN	PUCHAR			pHdr);
-#endif // SOFT_ENCRYPT //
 
 
 /*
@@ -6900,35 +6869,6 @@ void RtmpOSFSInfoChange(
 	IN RTMP_OS_FS_INFO *pOSFSInfo, 
 	IN BOOLEAN bSet);
 
-
-VOID	RTInitializeCmdQ(
-	IN	PCmdQ	cmdq);
-
-INT RTPCICmdThread(
-	IN void * Context);
-
-VOID CMDHandler(                                                                                                                                                
-    IN PRTMP_ADAPTER pAd);
-
-VOID	RTThreadDequeueCmd(
-	IN	PCmdQ		cmdq,
-	OUT	PCmdQElmt	*pcmdqelmt);
-
-NDIS_STATUS RTEnqueueInternalCmd(
-	IN PRTMP_ADAPTER	pAd,
-	IN NDIS_OID			Oid,
-	IN PVOID			pInformationBuffer,
-	IN UINT32			InformationBufferLength);
-
-#ifdef HOSTAPD_SUPPORT
-VOID ieee80211_notify_michael_failure(
-	IN	PRTMP_ADAPTER    pAd,
-	IN	PHEADER_802_11   pHeader,
-	IN	UINT            keyix,
-	IN	INT              report);
-
-const CHAR* ether_sprintf(const UINT8 *mac);
-#endif//HOSTAPD_SUPPORT//
 
 #endif  // __RTMP_H__
 

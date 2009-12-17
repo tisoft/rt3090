@@ -124,7 +124,7 @@ VOID BeaconTimeout(
 	}
 #endif // DOT11_N_SUPPORT //
 
-	MlmeEnqueue(pAd, SYNC_STATE_MACHINE, MT2_BEACON_TIMEOUT, 0, NULL, 0);
+	MlmeEnqueue(pAd, SYNC_STATE_MACHINE, MT2_BEACON_TIMEOUT, 0, NULL);
 	RTMP_MLME_HANDLER(pAd);
 }
 
@@ -151,7 +151,7 @@ VOID ScanTimeout(
 	if (RTMP_TEST_FLAG(pAd, fRTMP_ADAPTER_HALT_IN_PROGRESS))
 		return;
 	
-	if (MlmeEnqueue(pAd, SYNC_STATE_MACHINE, MT2_SCAN_TIMEOUT, 0, NULL, 0))
+	if (MlmeEnqueue(pAd, SYNC_STATE_MACHINE, MT2_SCAN_TIMEOUT, 0, NULL))
 	{
 	RTMP_MLME_HANDLER(pAd);
 }
@@ -196,13 +196,13 @@ VOID MlmeScanReqAction(
 	// Increase the scan retry counters.
 	pAd->StaCfg.ScanCnt++;
 	
-#ifdef PCIE_PS_SUPPORT
-    if ((OPSTATUS_TEST_FLAG(pAd, fOP_STATUS_ADVANCE_POWER_SAVE_PCIE_DEVICE)) && 
+#ifdef RTMP_MAC_PCI
+    if ((OPSTATUS_TEST_FLAG(pAd, fOP_STATUS_PCIE_DEVICE)) && 
         (IDLE_ON(pAd)) &&
 		(pAd->StaCfg.bRadio == TRUE) &&
 		(RTMP_TEST_FLAG(pAd, fRTMP_ADAPTER_IDLE_RADIO_OFF)))
 	{
-	    if (pAd->StaCfg.PSControl.field.EnableNewPS == FALSE)
+	        if (pAd->StaCfg.PSControl.field.EnableNewPS == FALSE)
 		{
 			AsicSendCommandToMcu(pAd, 0x31, PowerWakeCID, 0x00, 0x02);   
 			AsicCheckCommanOk(pAd, PowerWakeCID);	
@@ -211,10 +211,10 @@ VOID MlmeScanReqAction(
 		}
 		else
 		{
-			RT28xxPciAsicRadioOn(pAd, GUI_IDLE_POWER_SAVE);
-		}
+		RT28xxPciAsicRadioOn(pAd, GUI_IDLE_POWER_SAVE);
 	}
-#endif // PCIE_PS_SUPPORT //
+	}
+#endif // RTMP_MAC_PCI //
 
 	// first check the parameter sanity
 	if (MlmeScanReqSanity(pAd, 
@@ -238,11 +238,17 @@ VOID MlmeScanReqAction(
 		//
 		if (OPSTATUS_TEST_FLAG(pAd, fOP_STATUS_MEDIA_STATE_CONNECTED) && (INFRA_ON(pAd)))
 		{
-			// TODO: Shiang, check if this #if 0 can change to #if 1
 			NStatus = MlmeAllocateMemory(pAd, (PVOID)&pOutBuffer);
 			if (NStatus	== NDIS_STATUS_SUCCESS)
 			{
-				RTMPSendPSMNullFrame(pAd, pAd->CommonCfg.Channel, pOutBuffer);
+				pHdr80211 = (PHEADER_802_11) pOutBuffer;
+				MgtMacHeaderInit(pAd, pHdr80211, SUBTYPE_NULL_FUNC, 1, pAd->CommonCfg.Bssid, pAd->CommonCfg.Bssid);
+				pHdr80211->Duration = 0;
+				pHdr80211->FC.Type = BTYPE_DATA;
+				pHdr80211->FC.PwrMgmt = PWR_SAVE;
+
+				// Send using priority queue
+				MiniportMMRequest(pAd, 0, pOutBuffer, sizeof(HEADER_802_11));
 				DBGPRINT(RT_DEBUG_TRACE, ("MlmeScanReqAction -- Send PSM Data frame for off channel RM\n"));
 				MlmeFreeMemory(pAd, pOutBuffer);
 				RTMPusecDelay(5000);
@@ -277,7 +283,7 @@ VOID MlmeScanReqAction(
 		DBGPRINT_ERR(("SYNC - MlmeScanReqAction() sanity check fail\n"));
 		pAd->Mlme.SyncMachine.CurrState = SYNC_IDLE;
 		Status = MLME_INVALID_FORMAT;
-		MlmeEnqueue(pAd, MLME_CNTL_STATE_MACHINE, MT2_SCAN_CONF, 2, &Status, 0);
+		MlmeEnqueue(pAd, MLME_CNTL_STATE_MACHINE, MT2_SCAN_CONF, 2, &Status);
 	}
 }
 
@@ -308,15 +314,15 @@ VOID MlmeJoinReqAction(
 
 	DBGPRINT(RT_DEBUG_TRACE, ("SYNC - MlmeJoinReqAction(BSS #%ld)\n", pInfo->BssIdx));
 
-#ifdef PCIE_PS_SUPPORT
-    if ((OPSTATUS_TEST_FLAG(pAd, fOP_STATUS_ADVANCE_POWER_SAVE_PCIE_DEVICE)) && 
+#ifdef RTMP_MAC_PCI
+    if ((OPSTATUS_TEST_FLAG(pAd, fOP_STATUS_PCIE_DEVICE)) && 
         (IDLE_ON(pAd)) &&
 		(pAd->StaCfg.bRadio == TRUE) &&
 		(RTMP_TEST_FLAG(pAd, fRTMP_ADAPTER_IDLE_RADIO_OFF)))
 	{
 		RT28xxPciAsicRadioOn(pAd, GUI_IDLE_POWER_SAVE);
 	}
-#endif // PCIE_PS_SUPPORT //
+#endif // RTMP_MAC_PCI //
 
 	// reset all the timers
 	RTMPCancelTimer(&pAd->MlmeAux.ScanTimer, &TimerCancelled);
@@ -359,7 +365,6 @@ VOID MlmeJoinReqAction(
 	RTMP_BBP_IO_READ8_BY_REG_ID(pAd, BBP_R4, &BBPValue);
 	BBPValue &= (~0x18);
 	RTMP_BBP_IO_WRITE8_BY_REG_ID(pAd, BBP_R4, BBPValue);
-	pAd->CommonCfg.BBPCurrentBW = BW_20;
 	DBGPRINT(RT_DEBUG_TRACE, ("SYNC - BBP R4 to 20MHz.l\n"));
 
 	// switch channel and waiting for beacon timer
@@ -536,14 +541,14 @@ VOID MlmeStartReqAction(
 
 		pAd->Mlme.SyncMachine.CurrState = SYNC_IDLE;
 		Status = MLME_SUCCESS;
-		MlmeEnqueue(pAd, MLME_CNTL_STATE_MACHINE, MT2_START_CONF, 2, &Status, 0);
+		MlmeEnqueue(pAd, MLME_CNTL_STATE_MACHINE, MT2_START_CONF, 2, &Status);
 	} 
 	else 
 	{
 		DBGPRINT_ERR(("SYNC - MlmeStartReqAction() sanity check fail.\n"));
 		pAd->Mlme.SyncMachine.CurrState = SYNC_IDLE;
 		Status = MLME_INVALID_FORMAT;
-		MlmeEnqueue(pAd, MLME_CNTL_STATE_MACHINE, MT2_START_CONF, 2, &Status, 0);
+		MlmeEnqueue(pAd, MLME_CNTL_STATE_MACHINE, MT2_START_CONF, 2, &Status);
 	}
 }
 
@@ -583,7 +588,7 @@ VOID PeerBeaconAtScanAction(
 	UCHAR			NewExtChannelOffset = 0xff;
 
 
-	NdisZeroMemory(Ssid, MAX_LEN_OF_SSID);
+	// NdisFillMemory(Ssid, MAX_LEN_OF_SSID, 0x00);
 	pFrame = (PFRAME_802_11) Elem->Msg;
 	// Init Variable IE structure
 	pVIE = (PNDIS_802_11_VARIABLE_IEs) VarIE;
@@ -593,7 +598,6 @@ VOID PeerBeaconAtScanAction(
 	RTMPZeroMemory(&AddHtInfo, sizeof(ADD_HT_INFO_IE));
 #endif // DOT11_N_SUPPORT //
 
-	NdisZeroMemory(&QbssLoad, sizeof(QBSS_LOAD_PARM)); /* woody */
 	if (PeerBeaconAndProbeRspSanity(pAd, 
 								Elem->Msg, 
 								Elem->MsgLen, 
@@ -712,7 +716,7 @@ VOID PeerBeaconAtJoinAction(
 	UCHAR			NewExtChannelOffset = 0xff;
 #ifdef DOT11_N_SUPPORT
 	UCHAR			CentralChannel;
-	//BOOLEAN			bAllowNrate = FALSE;
+	BOOLEAN			bAllowNrate = FALSE;
 #endif // DOT11_N_SUPPORT //
 
 	// Init Variable IE structure
@@ -848,14 +852,19 @@ VOID PeerBeaconAtJoinAction(
 
 
 #ifdef DOT11_N_SUPPORT
+			if (((pAd->StaCfg.WepStatus != Ndis802_11WEPEnabled) && (pAd->StaCfg.WepStatus != Ndis802_11Encryption2Enabled))
+				|| (pAd->CommonCfg.HT_DisallowTKIP == FALSE))
+			{
+				bAllowNrate = TRUE;
+			}
+			
 			pAd->MlmeAux.NewExtChannelOffset = NewExtChannelOffset;
 			pAd->MlmeAux.HtCapabilityLen = HtCapabilityLen;
 
 			RTMPZeroMemory(&pAd->MlmeAux.HtCapability, SIZE_HT_CAP_IE);
 			// filter out un-supported ht rates
 			if (((HtCapabilityLen > 0) || (PreNHtCapabilityLen > 0)) && 
-				(pAd->StaCfg.DesiredHtPhyInfo.bHtEnable) &&
-				((pAd->CommonCfg.PhyMode >= PHY_11ABGN_MIXED)))
+				((pAd->CommonCfg.PhyMode >= PHY_11ABGN_MIXED) && (bAllowNrate)))
 			{
    				RTMPMoveMemory(&pAd->MlmeAux.AddHtInfo, &AddHtInfo, SIZE_ADD_HT_INFO_IE);
 				
@@ -938,11 +947,9 @@ VOID PeerBeaconAtJoinAction(
 			else  //Used the default TX Power Percentage.
 				pAd->CommonCfg.TxPowerPercentage = pAd->CommonCfg.TxPowerDefault;
 
-			InitChannelRelatedValue(pAd);
-
 			pAd->Mlme.SyncMachine.CurrState = SYNC_IDLE;
 			Status = MLME_SUCCESS;
-			MlmeEnqueue(pAd, MLME_CNTL_STATE_MACHINE, MT2_JOIN_CONF, 2, &Status, 0);
+			MlmeEnqueue(pAd, MLME_CNTL_STATE_MACHINE, MT2_JOIN_CONF, 2, &Status);
 		}
 		// not to me BEACON, ignored
 	} 
@@ -1245,16 +1252,13 @@ VOID PeerBeacon(
 				
 					if (pEntry &&
 						(Elem->Wcid == RESERVED_WCID))
-					{
+				{
 						idx = pAd->StaCfg.DefaultKeyId;
-							RTMP_SET_WCID_SEC_INFO(pAd, BSS0, idx, 
-												   pAd->SharedKey[BSS0][idx].CipherAlg,
-												   pEntry->Aid,
-												   SHAREDKEYTABLE);
-					}
+						RTMP_STA_SECURITY_INFO_ADD(pAd, BSS0, idx, pEntry);
+				}
 				}
 
-				if (pEntry && IS_ENTRY_CLIENT(pEntry))
+				if (pEntry && pEntry->ValidAsCLI)
 					pEntry->LastBeaconRxTime = Now;
 
 				// At least another peer in this IBSS, declare MediaState as CONNECTED
@@ -1371,15 +1375,15 @@ VOID PeerBeacon(
 				//  5. otherwise, put PHY back to sleep to save battery.
 				if (MessageToMe)
 				{
-#ifdef PCIE_PS_SUPPORT
-					if (OPSTATUS_TEST_FLAG(pAd, fOP_STATUS_ADVANCE_POWER_SAVE_PCIE_DEVICE))
+#ifdef RTMP_MAC_PCI
+					if (OPSTATUS_TEST_FLAG(pAd, fOP_STATUS_PCIE_DEVICE))
 					{
 						// Restore to correct BBP R3 value
 						if (pAd->Antenna.field.RxPath > 1)
 						RTMP_BBP_IO_WRITE8_BY_REG_ID(pAd, BBP_R3, pAd->StaCfg.BBPR3);
 						// Turn clk to 80Mhz.
 					}
-#endif // PCIE_PS_SUPPORT //
+#endif // RTMP_MAC_PCI //
 					if (pAd->CommonCfg.bAPSDCapable && pAd->CommonCfg.APEdcaParm.bAPSDCapable &&
 						pAd->CommonCfg.bAPSDAC_BE && pAd->CommonCfg.bAPSDAC_BK && pAd->CommonCfg.bAPSDAC_VI && pAd->CommonCfg.bAPSDAC_VO)
 					{
@@ -1390,13 +1394,13 @@ VOID PeerBeacon(
 				}
 				else if (BcastFlag && (DtimCount == 0) && OPSTATUS_TEST_FLAG(pAd, fOP_STATUS_RECEIVE_DTIM))
 				{
-#ifdef PCIE_PS_SUPPORT
-					if (OPSTATUS_TEST_FLAG(pAd, fOP_STATUS_ADVANCE_POWER_SAVE_PCIE_DEVICE))
+#ifdef RTMP_MAC_PCI
+					if (OPSTATUS_TEST_FLAG(pAd, fOP_STATUS_PCIE_DEVICE))
 					{
 						if (pAd->Antenna.field.RxPath > 1)
 						RTMP_BBP_IO_WRITE8_BY_REG_ID(pAd, BBP_R3, pAd->StaCfg.BBPR3);
 					}
-#endif // PCIE_PS_SUPPORT //
+#endif // RTMP_MAC_PCI //
 				} 
 				else if ((pAd->TxSwQueue[QID_AC_BK].Number != 0)													||
 						(pAd->TxSwQueue[QID_AC_BE].Number != 0)														||
@@ -1410,13 +1414,13 @@ VOID PeerBeacon(
 				{
 					// TODO: consider scheduled HCCA. might not be proper to use traditional DTIM-based power-saving scheme
 					// can we cheat here (i.e. just check MGMT & AC_BE) for better performance?
-#ifdef PCIE_PS_SUPPORT
-					if (OPSTATUS_TEST_FLAG(pAd, fOP_STATUS_ADVANCE_POWER_SAVE_PCIE_DEVICE))
+#ifdef RTMP_MAC_PCI
+					if (OPSTATUS_TEST_FLAG(pAd, fOP_STATUS_PCIE_DEVICE))
 					{
 						if (pAd->Antenna.field.RxPath > 1)
 						RTMP_BBP_IO_WRITE8_BY_REG_ID(pAd, BBP_R3, pAd->StaCfg.BBPR3);
 					}
-#endif // PCIE_PS_SUPPORT //
+#endif // RTMP_MAC_PCI //
 				}
 				else 
 				{
@@ -1515,7 +1519,6 @@ VOID PeerProbeReqAction(
 				return;
 
 			//pAd->StaCfg.AtimWin = 0;  // ??????
-			MgtMacHeaderInit(pAd, &ProbeRspHdr, SUBTYPE_PROBE_RSP, 0, Addr2, pAd->CommonCfg.Bssid);
 
 			Privacy = (pAd->StaCfg.WepStatus == Ndis802_11Encryption1Enabled) || 
 					  (pAd->StaCfg.WepStatus == Ndis802_11Encryption2Enabled) || 
@@ -1612,7 +1615,7 @@ VOID BeaconTimeoutAtJoinAction(
 	DBGPRINT(RT_DEBUG_TRACE, ("SYNC - BeaconTimeoutAtJoinAction\n"));
 	pAd->Mlme.SyncMachine.CurrState = SYNC_IDLE;
 	Status = MLME_REJ_TIMEOUT;
-	MlmeEnqueue(pAd, MLME_CNTL_STATE_MACHINE, MT2_JOIN_CONF, 2, &Status, 0);
+	MlmeEnqueue(pAd, MLME_CNTL_STATE_MACHINE, MT2_JOIN_CONF, 2, &Status);
 }
 
 /* 
@@ -1625,42 +1628,6 @@ VOID ScanTimeoutAction(
 	IN PRTMP_ADAPTER pAd, 
 	IN MLME_QUEUE_ELEM *Elem) 
 {
-	//
-	// To prevent data lost.
-	// Send an NULL data with turned PSM bit on to current associated AP when SCAN in the channel where
-	//  associated AP located.
-	//
-/*
-	if ((pAd->CommonCfg.Channel == pAd->MlmeAux.Channel) && 
-		(pAd->MlmeAux.ScanType == SCAN_ACTIVE) && 
-		(INFRA_ON(pAd)) && 
-		OPSTATUS_TEST_FLAG(pAd, fOP_STATUS_MEDIA_STATE_CONNECTED)
-	)
-	{
-		PUCHAR pOutBuffer;
-		NDIS_STATUS NStatus;
-		PHEADER_802_11 pHdr80211;
-		
-		NStatus = MlmeAllocateMemory(pAd, &pOutBuffer);  //Get an unused nonpaged memory
-		if(NStatus == NDIS_STATUS_SUCCESS) 
-		{
-			NdisZeroMemory(pOutBuffer, MGMT_DMA_BUFFER_SIZE);
-			pHdr80211 = (PHEADER_802_11) pOutBuffer;
-			MgtMacHeaderInit(pAd, pHdr80211, SUBTYPE_NULL_FUNC, 1, pAd->CommonCfg.Bssid, pAd->CommonCfg.Bssid);
-			pHdr80211->Duration = 0;
-			pHdr80211->FC.Type = BTYPE_DATA;
-			pHdr80211->FC.PwrMgmt = PWR_SAVE;
-
-			// Send using priority queue
-			MiniportMMRequest(pAd, 0, pOutBuffer, sizeof(HEADER_802_11));
-			MlmeFreeMemory(pAd, pOutBuffer);
-			OS_WAIT(20);
-			DBGPRINT(RT_DEBUG_TRACE, ("ScanTimeoutAction():Send PWS NullData frame to notify the associated AP!\n"));
-		}
-		else
-			DBGPRINT(RT_DEBUG_TRACE, ("%s(): Cannot get memory to send NullFrame out!\n", __FUNCTION__));
-	}
-*/
 	pAd->MlmeAux.Channel = NextChannel(pAd, pAd->MlmeAux.Channel);
 
 	// Only one channel scanned for CISCO beacon request
@@ -1687,7 +1654,7 @@ VOID InvalidStateWhenScan(
 	DBGPRINT(RT_DEBUG_TRACE, ("AYNC - InvalidStateWhenScan(state=%ld). Reset SYNC machine\n", pAd->Mlme.SyncMachine.CurrState));
 	pAd->Mlme.SyncMachine.CurrState = SYNC_IDLE;
 	Status = MLME_STATE_MACHINE_REJECT;
-	MlmeEnqueue(pAd, MLME_CNTL_STATE_MACHINE, MT2_SCAN_CONF, 2, &Status, 0);
+	MlmeEnqueue(pAd, MLME_CNTL_STATE_MACHINE, MT2_SCAN_CONF, 2, &Status);
 }
 
 /* 
@@ -1703,7 +1670,7 @@ VOID InvalidStateWhenJoin(
 	DBGPRINT(RT_DEBUG_TRACE, ("InvalidStateWhenJoin(state=%ld). Reset SYNC machine\n", pAd->Mlme.SyncMachine.CurrState));
 	pAd->Mlme.SyncMachine.CurrState = SYNC_IDLE;
 	Status = MLME_STATE_MACHINE_REJECT;
-	MlmeEnqueue(pAd, MLME_CNTL_STATE_MACHINE, MT2_JOIN_CONF, 2, &Status, 0);
+	MlmeEnqueue(pAd, MLME_CNTL_STATE_MACHINE, MT2_JOIN_CONF, 2, &Status);
 }
 
 /* 
@@ -1719,7 +1686,7 @@ VOID InvalidStateWhenStart(
 	DBGPRINT(RT_DEBUG_TRACE, ("InvalidStateWhenStart(state=%ld). Reset SYNC machine\n", pAd->Mlme.SyncMachine.CurrState));
 	pAd->Mlme.SyncMachine.CurrState = SYNC_IDLE;
 	Status = MLME_STATE_MACHINE_REJECT;
-	MlmeEnqueue(pAd, MLME_CNTL_STATE_MACHINE, MT2_START_CONF, 2, &Status, 0);
+	MlmeEnqueue(pAd, MLME_CNTL_STATE_MACHINE, MT2_START_CONF, 2, &Status);
 }
 
 /* 

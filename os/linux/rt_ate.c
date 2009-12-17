@@ -75,36 +75,7 @@ static INT ATETxPwrHandler(
 	IN PRTMP_ADAPTER pAd,
 	IN char index);
 
-static NDIS_STATUS ATESTART(
-	IN PRTMP_ADAPTER pAd);
-
-static NDIS_STATUS ATESTOP(
-	IN PRTMP_ADAPTER pAd);
-
-static NDIS_STATUS TXCARR(
-	IN PRTMP_ADAPTER pAd);
-
-static NDIS_STATUS TXCARS(
-        IN PRTMP_ADAPTER pAd);
-
-static NDIS_STATUS TXCONT(
-	IN PRTMP_ADAPTER pAd);
-
-static NDIS_STATUS TXFRAME(
-	IN PRTMP_ADAPTER pAd);
-
-static NDIS_STATUS RXFRAME(
-	IN PRTMP_ADAPTER pAd);
-
-#ifdef RALINK_28xx_QA
-static NDIS_STATUS TXSTOP(
-	IN PRTMP_ADAPTER pAd);
-
-static NDIS_STATUS RXSTOP(
-	IN PRTMP_ADAPTER pAd);
-#endif // RALINK_28xx_QA //
-
-static NDIS_STATUS ATECmdHandler(
+static INT ATECmdHandler(
 	IN	PRTMP_ADAPTER	pAd, 
 	IN	PSTRING			arg);
 
@@ -148,1384 +119,289 @@ static VOID SetJapanFilter(
 
 
 #ifdef RALINK_28xx_QA
-/* command id with Cmd Type == 0x0008(for 28xx)/0x0005(for iNIC) */
-#define RACFG_CMD_RF_WRITE_ALL		0x0000
-#define RACFG_CMD_E2PROM_READ16		0x0001
-#define RACFG_CMD_E2PROM_WRITE16	0x0002
-#define RACFG_CMD_E2PROM_READ_ALL	0x0003
-#define RACFG_CMD_E2PROM_WRITE_ALL	0x0004
-#define RACFG_CMD_IO_READ			0x0005
-#define RACFG_CMD_IO_WRITE			0x0006
-#define RACFG_CMD_IO_READ_BULK		0x0007
-#define RACFG_CMD_BBP_READ8			0x0008
-#define RACFG_CMD_BBP_WRITE8		0x0009
-#define RACFG_CMD_BBP_READ_ALL		0x000a
-#define RACFG_CMD_GET_COUNTER		0x000b
-#define RACFG_CMD_CLEAR_COUNTER		0x000c
-
-#define RACFG_CMD_RSV1				0x000d
-#define RACFG_CMD_RSV2				0x000e
-#define RACFG_CMD_RSV3				0x000f
-
-#define RACFG_CMD_TX_START			0x0010
-#define RACFG_CMD_GET_TX_STATUS		0x0011
-#define RACFG_CMD_TX_STOP			0x0012
-#define RACFG_CMD_RX_START			0x0013
-#define RACFG_CMD_RX_STOP			0x0014
-#define RACFG_CMD_GET_NOISE_LEVEL	0x0015
-
-#define RACFG_CMD_ATE_START			0x0080
-#define RACFG_CMD_ATE_STOP			0x0081
-
-#define RACFG_CMD_ATE_START_TX_CARRIER		0x0100
-#define RACFG_CMD_ATE_START_TX_CONT			0x0101
-#define RACFG_CMD_ATE_START_TX_FRAME		0x0102
-#define RACFG_CMD_ATE_SET_BW	            0x0103
-#define RACFG_CMD_ATE_SET_TX_POWER0	        0x0104
-#define RACFG_CMD_ATE_SET_TX_POWER1			0x0105
-#define RACFG_CMD_ATE_SET_FREQ_OFFSET		0x0106
-#define RACFG_CMD_ATE_GET_STATISTICS		0x0107
-#define RACFG_CMD_ATE_RESET_COUNTER			0x0108
-#define RACFG_CMD_ATE_SEL_TX_ANTENNA		0x0109
-#define RACFG_CMD_ATE_SEL_RX_ANTENNA		0x010a
-#define RACFG_CMD_ATE_SET_PREAMBLE			0x010b
-#define RACFG_CMD_ATE_SET_CHANNEL			0x010c
-#define RACFG_CMD_ATE_SET_ADDR1				0x010d
-#define RACFG_CMD_ATE_SET_ADDR2				0x010e
-#define RACFG_CMD_ATE_SET_ADDR3				0x010f
-#define RACFG_CMD_ATE_SET_RATE				0x0110
-#define RACFG_CMD_ATE_SET_TX_FRAME_LEN		0x0111
-#define RACFG_CMD_ATE_SET_TX_FRAME_COUNT	0x0112
-#define RACFG_CMD_ATE_START_RX_FRAME		0x0113
-#define RACFG_CMD_ATE_E2PROM_READ_BULK	0x0114
-#define RACFG_CMD_ATE_E2PROM_WRITE_BULK	0x0115
-#define RACFG_CMD_ATE_IO_WRITE_BULK		0x0116
-#define RACFG_CMD_ATE_BBP_READ_BULK		0x0117
-#define RACFG_CMD_ATE_BBP_WRITE_BULK	0x0118
-#define RACFG_CMD_ATE_RF_READ_BULK		0x0119
-#define RACFG_CMD_ATE_RF_WRITE_BULK		0x011a
-
-static VOID memcpy_exl(PRTMP_ADAPTER pAd, UCHAR *dst, UCHAR *src, ULONG len);
-static VOID memcpy_exs(PRTMP_ADAPTER pAd, UCHAR *dst, UCHAR *src, ULONG len);
-static VOID RTMP_IO_READ_BULK(PRTMP_ADAPTER pAd, UCHAR *dst, UCHAR *src, UINT32 len);
-
-#define	LEN_OF_ARG 16
-
-static inline INT ResponseToGUI(
-	IN  struct ate_racfghdr *pRaCfg,
-	IN	struct iwreq	*pwrq,
-	IN  INT Length,
-	IN  INT Status)
-{
-	(pRaCfg)->length = htons((Length));														
-	(pRaCfg)->status = htons((Status));														
-	(pwrq)->u.data.length = sizeof((pRaCfg)->magic_no) + sizeof((pRaCfg)->command_type)	
-							+ sizeof((pRaCfg)->command_id) + sizeof((pRaCfg)->length)		
-							+ sizeof((pRaCfg)->sequence) + ntohs((pRaCfg)->length);			
-	ATEDBGPRINT(RT_DEBUG_TRACE, ("wrq->u.data.length = %d\n", (pwrq)->u.data.length));		
-	if (copy_to_user((pwrq)->u.data.pointer, (UCHAR *)(pRaCfg), (pwrq)->u.data.length))	
-	{																							
-		ATEDBGPRINT(RT_DEBUG_ERROR, ("copy_to_user() fail in %s\n", __FUNCTION__));				
-		return (-EFAULT);																		
-
-	}																							
-	else																						
-	{																							
-		ATEDBGPRINT(RT_DEBUG_TRACE, ("%s is done !\n", __FUNCTION__));							
-	}
-
-	return NDIS_STATUS_SUCCESS;
-}
-
-
-static inline INT DO_RACFG_CMD_ATE_START(
+static inline INT 	DO_RACFG_CMD_ATE_START(
 	IN	PRTMP_ADAPTER	pAdapter,
 	IN	struct iwreq	*wrq,
-	IN  struct ate_racfghdr *pRaCfg)
-{
-	ATEDBGPRINT(RT_DEBUG_TRACE,("RACFG_CMD_ATE_START\n"));
-	
-	/* Prepare feedback as soon as we can to avoid QA timeout. */
-	ResponseToGUI(pRaCfg, wrq, sizeof(pRaCfg->status), NDIS_STATUS_SUCCESS);
-	Set_ATE_Proc(pAdapter, "ATESTART");
-
-	return NDIS_STATUS_SUCCESS;
-}
-
+	IN struct ate_racfghdr *pRaCfg
+);
 
 static inline INT DO_RACFG_CMD_ATE_STOP(
 	IN	PRTMP_ADAPTER	pAdapter,
 	IN	struct iwreq	*wrq,
-	IN  struct ate_racfghdr *pRaCfg)
-{
-	INT32 ret;
-
-	ATEDBGPRINT(RT_DEBUG_TRACE,("RACFG_CMD_ATE_STOP\n"));
-
-	/*
-		Distinguish this command came from QA(via ate agent)
-		or ate agent according to the existence of pid in payload.
-
-		No need to prepare feedback if this cmd came directly from ate agent,
-		not from QA.
-	*/
-	pRaCfg->length = ntohs(pRaCfg->length);
-
-	if (pRaCfg->length == sizeof(pAdapter->ate.AtePid))
-	{
-		/*
-			This command came from QA.
-			Get the pid of ATE agent.
-		*/
-		memcpy((UCHAR *)&pAdapter->ate.AtePid,
-						(&pRaCfg->data[0]) - 2/* == sizeof(pRaCfg->status) */,
-						sizeof(pAdapter->ate.AtePid));					
-
-		/* Prepare feedback as soon as we can to avoid QA timeout. */
-		ResponseToGUI(pRaCfg, wrq, sizeof(pRaCfg->status), NDIS_STATUS_SUCCESS);
-
-		/*
-			Kill ATE agent when leaving ATE mode.
-
-			We must kill ATE agent first before setting ATESTOP,
-			or Microsoft will report sth. wrong. 
-		*/
-#ifdef LINUX
-		ret = KILL_THREAD_PID(pAdapter->ate.AtePid, SIGTERM, 1);
-
-		if (ret)
-		{
-			ATEDBGPRINT(RT_DEBUG_ERROR, ("%s: unable to kill ate thread\n", pAdapter->net_dev->name));
-		}
-#endif // LINUX //
-	}
-
-
-	/* AP/STA might have in ATE_STOP mode due to cmd from QA. */
-	if (ATE_ON(pAdapter))
-	{
-		/* Someone has killed ate agent while QA GUI is still open. */
-		Set_ATE_Proc(pAdapter, "ATESTOP");
-		ATEDBGPRINT(RT_DEBUG_TRACE, ("RACFG_CMD_AP_START is done !\n"));
-	}
-
-	return NDIS_STATUS_SUCCESS;
-}
-
+	IN struct ate_racfghdr *pRaCfg
+);
 
 static inline INT DO_RACFG_CMD_RF_WRITE_ALL(
 	IN	PRTMP_ADAPTER	pAdapter,
 	IN	struct iwreq	*wrq,
-	IN  struct ate_racfghdr *pRaCfg)
-{
-	UINT32 R1, R2, R3, R4;
-	USHORT channel;
-	
-	memcpy(&R1, pRaCfg->data-2, 4);
-	memcpy(&R2, pRaCfg->data+2, 4);
-	memcpy(&R3, pRaCfg->data+6, 4);
-	memcpy(&R4, pRaCfg->data+10, 4);
-	memcpy(&channel, pRaCfg->data+14, 2);		
-	
-	pAdapter->LatchRfRegs.R1 = ntohl(R1);
-	pAdapter->LatchRfRegs.R2 = ntohl(R2);
-	pAdapter->LatchRfRegs.R3 = ntohl(R3);
-	pAdapter->LatchRfRegs.R4 = ntohl(R4);
-	pAdapter->LatchRfRegs.Channel = ntohs(channel);
-
-	RTMP_RF_IO_WRITE32(pAdapter, pAdapter->LatchRfRegs.R1);
-	RTMP_RF_IO_WRITE32(pAdapter, pAdapter->LatchRfRegs.R2);
-	RTMP_RF_IO_WRITE32(pAdapter, pAdapter->LatchRfRegs.R3);
-	RTMP_RF_IO_WRITE32(pAdapter, pAdapter->LatchRfRegs.R4);
-
-	ResponseToGUI(pRaCfg, wrq, sizeof(pRaCfg->status), NDIS_STATUS_SUCCESS);
-
-	return  NDIS_STATUS_SUCCESS;
-}
-
+	IN struct ate_racfghdr *pRaCfg
+);
 
 static inline INT DO_RACFG_CMD_E2PROM_READ16(
 	IN	PRTMP_ADAPTER	pAdapter,
 	IN	struct iwreq	*wrq,
-	IN  struct ate_racfghdr *pRaCfg)
-{
-	UINT16	offset=0, value=0;
-	USHORT  tmp=0;				
-
-	offset = ntohs(pRaCfg->status);
-
-	/* "tmp" is especially for some compilers... */
-	RT28xx_EEPROM_READ16(pAdapter, offset, tmp);
-	value = tmp;
-	value = htons(value);
-	
-	ATEDBGPRINT(RT_DEBUG_TRACE,("EEPROM Read offset = 0x%04x, value = 0x%04x\n", offset, value));
-	memcpy(pRaCfg->data, &value, 2);
-
-	ResponseToGUI(pRaCfg, wrq, sizeof(pRaCfg->status)+2, NDIS_STATUS_SUCCESS);
-
-	return NDIS_STATUS_SUCCESS;
-}
-
+	IN struct ate_racfghdr *pRaCfg
+);
 
 static inline INT DO_RACFG_CMD_E2PROM_WRITE16(
 	IN	PRTMP_ADAPTER	pAdapter,
 	IN	struct iwreq	*wrq,
-	IN  struct ate_racfghdr *pRaCfg)
-{
-	USHORT	offset, value;
-	
-	offset = ntohs(pRaCfg->status);
-	memcpy(&value, pRaCfg->data, 2);
-	value = ntohs(value);
-	RT28xx_EEPROM_WRITE16(pAdapter, offset, value);
+	IN struct ate_racfghdr *pRaCfg
+);
 
-	ResponseToGUI(pRaCfg, wrq, sizeof(pRaCfg->status), NDIS_STATUS_SUCCESS);
-
-	return NDIS_STATUS_SUCCESS;
-}
-
-
-static inline INT DO_RACFG_CMD_E2PROM_READ_ALL(
+static inline INT DO_RACFG_CMD_E2PROM_READ_ALL
+(
 	IN	PRTMP_ADAPTER	pAdapter,
 	IN	struct iwreq	*wrq,
-	IN  struct ate_racfghdr *pRaCfg)
-{
-	USHORT buffer[EEPROM_SIZE/2];
-
-	rt_ee_read_all(pAdapter,(USHORT *)buffer);
-	memcpy_exs(pAdapter, pRaCfg->data, (UCHAR *)buffer, EEPROM_SIZE);
-
-	ResponseToGUI(pRaCfg, wrq, sizeof(pRaCfg->status)+EEPROM_SIZE, NDIS_STATUS_SUCCESS);
-
-	return NDIS_STATUS_SUCCESS;
-}
-
+	IN struct ate_racfghdr *pRaCfg
+);
 
 static inline INT DO_RACFG_CMD_E2PROM_WRITE_ALL(
 	IN	PRTMP_ADAPTER	pAdapter,
 	IN	struct iwreq	*wrq,
-	IN  struct ate_racfghdr *pRaCfg)
-{
-	USHORT buffer[EEPROM_SIZE/2];
-
-	NdisZeroMemory((UCHAR *)buffer, EEPROM_SIZE);
-	memcpy_exs(pAdapter, (UCHAR *)buffer, (UCHAR *)&pRaCfg->status, EEPROM_SIZE);
-	rt_ee_write_all(pAdapter,(USHORT *)buffer);
-
-	ResponseToGUI(pRaCfg, wrq, sizeof(pRaCfg->status), NDIS_STATUS_SUCCESS);
-
-	return NDIS_STATUS_SUCCESS;
-}
-
+	IN struct ate_racfghdr *pRaCfg
+);
 
 static inline INT DO_RACFG_CMD_IO_READ(
 	IN	PRTMP_ADAPTER	pAdapter,
 	IN	struct iwreq	*wrq,
-	IN  struct ate_racfghdr *pRaCfg)
-{
-	UINT32	offset;
-	UINT32	value;
-	
-	memcpy(&offset, &pRaCfg->status, 4);
-	offset = ntohl(offset);
-
-	/*
-		We do not need the base address.
-		So just extract the offset out.
-	*/
-	offset &= 0x0000FFFF;
-	RTMP_IO_READ32(pAdapter, offset, &value);
-	value = htonl(value);
-	memcpy(pRaCfg->data, &value, 4);
-
-	ResponseToGUI(pRaCfg, wrq, sizeof(pRaCfg->status)+4, NDIS_STATUS_SUCCESS);
-
-	return NDIS_STATUS_SUCCESS;
-}
-
+	IN struct ate_racfghdr *pRaCfg
+);
 
 static inline INT DO_RACFG_CMD_IO_WRITE(
 	IN	PRTMP_ADAPTER	pAdapter,
 	IN	struct iwreq	*wrq,
-	IN  struct ate_racfghdr *pRaCfg)
-{
-	UINT32	offset, value;
-					
-	memcpy(&offset, pRaCfg->data-2, 4);
-	memcpy(&value, pRaCfg->data+2, 4);
-
-	offset = ntohl(offset);
-
-	/*
-		We do not need the base address.
-		So just extract the offset out.
-	*/
-	offset &= 0x0000FFFF;
-	value = ntohl(value);
-	ATEDBGPRINT(RT_DEBUG_TRACE,("RACFG_CMD_IO_WRITE: offset = %x, value = %x\n", offset, value));
-	RTMP_IO_WRITE32(pAdapter, offset, value);
-	
-	ResponseToGUI(pRaCfg, wrq, sizeof(pRaCfg->status), NDIS_STATUS_SUCCESS);
-
-	return NDIS_STATUS_SUCCESS;
-}
-
+	IN struct ate_racfghdr *pRaCfg
+);
 
 static inline INT DO_RACFG_CMD_IO_READ_BULK(
 	IN	PRTMP_ADAPTER	pAdapter,
 	IN	struct iwreq	*wrq,
-	IN  struct ate_racfghdr *pRaCfg)
-{
-	UINT32	offset;
-	USHORT	len;
-	
-	memcpy(&offset, &pRaCfg->status, 4);
-	offset = ntohl(offset);
-
-	/*
-		We do not need the base address.
-		So just extract the offset out.
-	*/
-	offset &= 0x0000FFFF;
-	memcpy(&len, pRaCfg->data+2, 2);
-	len = ntohs(len);
-
-	if (len > 371)
-	{
-		ATEDBGPRINT(RT_DEBUG_TRACE,("length requested is too large, make it smaller\n"));
-		pRaCfg->length = htons(2);
-		pRaCfg->status = htons(1);
-		return -EFAULT;
-	}
-
-	RTMP_IO_READ_BULK(pAdapter, pRaCfg->data, (UCHAR *)offset, len*4);// unit in four bytes
-
-	ResponseToGUI(pRaCfg, wrq, sizeof(pRaCfg->status)+(len*4), NDIS_STATUS_SUCCESS);
-
-	return NDIS_STATUS_SUCCESS;
-}
-
+	IN struct ate_racfghdr *pRaCfg
+);
 
 static inline INT DO_RACFG_CMD_BBP_READ8(
 	IN	PRTMP_ADAPTER	pAdapter,
 	IN	struct iwreq	*wrq,
-	IN  struct ate_racfghdr *pRaCfg)
-{
-	USHORT	offset;
-	UCHAR	value;
-	
-	value = 0;
-	offset = ntohs(pRaCfg->status);
-
-	if (ATE_ON(pAdapter))
-	{
-		ATE_BBP_IO_READ8_BY_REG_ID(pAdapter, offset, &value);
-	}
-	else
-	{
-		RTMP_BBP_IO_READ8_BY_REG_ID(pAdapter, offset, &value);	
-	}
-
-	pRaCfg->data[0] = value;
-	
-	ResponseToGUI(pRaCfg, wrq, sizeof(pRaCfg->status)+1, NDIS_STATUS_SUCCESS);
-
-	return NDIS_STATUS_SUCCESS;
-}
-
+	IN struct ate_racfghdr *pRaCfg
+);
 
 static inline INT DO_RACFG_CMD_BBP_WRITE8(
 	IN	PRTMP_ADAPTER	pAdapter,
 	IN	struct iwreq	*wrq,
-	IN  struct ate_racfghdr *pRaCfg)
-{
-	USHORT	offset;
-	UCHAR	value;
-	
-	offset = ntohs(pRaCfg->status);
-	memcpy(&value, pRaCfg->data, 1);
-
-	if (ATE_ON(pAdapter))
-	{
-		ATE_BBP_IO_WRITE8_BY_REG_ID(pAdapter, offset, value);
-	}
-	else
-	{
-		RTMP_BBP_IO_WRITE8_BY_REG_ID(pAdapter, offset, value);
-	}
-
-	if ((offset == BBP_R1) || (offset == BBP_R3))
-	{
-		SyncTxRxConfig(pAdapter, offset, value);
-	}
-	
-	ResponseToGUI(pRaCfg, wrq, sizeof(pRaCfg->status), NDIS_STATUS_SUCCESS);
-
-	return NDIS_STATUS_SUCCESS;
-}
-
+	IN struct ate_racfghdr *pRaCfg
+);
 
 static inline INT DO_RACFG_CMD_BBP_READ_ALL(
 	IN	PRTMP_ADAPTER	pAdapter,
 	IN	struct iwreq	*wrq,
-	IN  struct ate_racfghdr *pRaCfg)
-{
-	USHORT bbp_reg_index;
-	
-	for (bbp_reg_index = 0; bbp_reg_index < MAX_BBP_ID+1; bbp_reg_index++)
-	{
-		pRaCfg->data[bbp_reg_index] = 0;
-		
-		if (ATE_ON(pAdapter))
-		{
-			ATE_BBP_IO_READ8_BY_REG_ID(pAdapter, bbp_reg_index, &pRaCfg->data[bbp_reg_index]);
-		}
-		else
-		{
-			RTMP_BBP_IO_READ8_BY_REG_ID(pAdapter, bbp_reg_index, &pRaCfg->data[bbp_reg_index]);
-		}
-	}
-	
-	ResponseToGUI(pRaCfg, wrq, sizeof(pRaCfg->status)+MAX_BBP_ID+1, NDIS_STATUS_SUCCESS);
-	
-	return NDIS_STATUS_SUCCESS;
-}
-
+	IN struct ate_racfghdr *pRaCfg
+);
 
 static inline INT DO_RACFG_CMD_GET_NOISE_LEVEL(
 	IN	PRTMP_ADAPTER	pAdapter,
 	IN	struct iwreq	*wrq,
-	IN  struct ate_racfghdr *pRaCfg)
-{
-	UCHAR	channel;
-	INT32   buffer[3][10];/* 3 : RxPath ; 10 : no. of per rssi samples */
-
-	channel = (ntohs(pRaCfg->status) & 0x00FF);
-	CalNoiseLevel(pAdapter, channel, buffer);
-	memcpy_exl(pAdapter, (UCHAR *)pRaCfg->data, (UCHAR *)&(buffer[0][0]), (sizeof(INT32)*3*10));
-
-	ResponseToGUI(pRaCfg, wrq, sizeof(pRaCfg->status)+(sizeof(INT32)*3*10), NDIS_STATUS_SUCCESS);
-
-	return NDIS_STATUS_SUCCESS;
-}
-
+	IN struct ate_racfghdr *pRaCfg
+);
 
 static inline INT DO_RACFG_CMD_GET_COUNTER(
 	IN	PRTMP_ADAPTER	pAdapter,
 	IN	struct iwreq	*wrq,
-	IN  struct ate_racfghdr *pRaCfg)
-{
-	memcpy_exl(pAdapter, &pRaCfg->data[0], (UCHAR *)&pAdapter->ate.U2M, 4);
-	memcpy_exl(pAdapter, &pRaCfg->data[4], (UCHAR *)&pAdapter->ate.OtherData, 4);
-	memcpy_exl(pAdapter, &pRaCfg->data[8], (UCHAR *)&pAdapter->ate.Beacon, 4);
-	memcpy_exl(pAdapter, &pRaCfg->data[12], (UCHAR *)&pAdapter->ate.OtherCount, 4);
-	memcpy_exl(pAdapter, &pRaCfg->data[16], (UCHAR *)&pAdapter->ate.TxAc0, 4);
-	memcpy_exl(pAdapter, &pRaCfg->data[20], (UCHAR *)&pAdapter->ate.TxAc1, 4);
-	memcpy_exl(pAdapter, &pRaCfg->data[24], (UCHAR *)&pAdapter->ate.TxAc2, 4);
-	memcpy_exl(pAdapter, &pRaCfg->data[28], (UCHAR *)&pAdapter->ate.TxAc3, 4);
-	memcpy_exl(pAdapter, &pRaCfg->data[32], (UCHAR *)&pAdapter->ate.TxHCCA, 4);
-	memcpy_exl(pAdapter, &pRaCfg->data[36], (UCHAR *)&pAdapter->ate.TxMgmt, 4);
-	memcpy_exl(pAdapter, &pRaCfg->data[40], (UCHAR *)&pAdapter->ate.RSSI0, 4);
-	memcpy_exl(pAdapter, &pRaCfg->data[44], (UCHAR *)&pAdapter->ate.RSSI1, 4);
-	memcpy_exl(pAdapter, &pRaCfg->data[48], (UCHAR *)&pAdapter->ate.RSSI2, 4);
-	memcpy_exl(pAdapter, &pRaCfg->data[52], (UCHAR *)&pAdapter->ate.SNR0, 4);
-	memcpy_exl(pAdapter, &pRaCfg->data[56], (UCHAR *)&pAdapter->ate.SNR1, 4);
-	
-	ResponseToGUI(pRaCfg, wrq, sizeof(pRaCfg->status)+60, NDIS_STATUS_SUCCESS);
-
-	return NDIS_STATUS_SUCCESS;
-}
-
+	IN struct ate_racfghdr *pRaCfg
+);
 
 static inline INT DO_RACFG_CMD_CLEAR_COUNTER(
 	IN	PRTMP_ADAPTER	pAdapter,
 	IN	struct iwreq	*wrq,
-	IN  struct ate_racfghdr *pRaCfg)
-{
-	pAdapter->ate.U2M = 0;
-	pAdapter->ate.OtherData = 0;
-	pAdapter->ate.Beacon = 0;
-	pAdapter->ate.OtherCount = 0;
-	pAdapter->ate.TxAc0 = 0;
-	pAdapter->ate.TxAc1 = 0;
-	pAdapter->ate.TxAc2 = 0;
-	pAdapter->ate.TxAc3 = 0;
-	pAdapter->ate.TxHCCA = 0;
-	pAdapter->ate.TxMgmt = 0;
-	pAdapter->ate.TxDoneCount = 0;
-	
-	ResponseToGUI(pRaCfg, wrq, sizeof(pRaCfg->status), NDIS_STATUS_SUCCESS);
-
-	return NDIS_STATUS_SUCCESS;
-}
-
+	IN struct ate_racfghdr *pRaCfg
+);
 
 static inline INT DO_RACFG_CMD_TX_START(
 	IN	PRTMP_ADAPTER	pAdapter,
 	IN	struct iwreq	*wrq,
-	IN  struct ate_racfghdr *pRaCfg)
-{
-	USHORT *p;
-	USHORT	err = 1;
-	UCHAR   Bbp22Value = 0, Bbp24Value = 0;
-
-	if ((pAdapter->ate.TxStatus != 0) && (pAdapter->ate.Mode & ATE_TXFRAME))
-	{
-		ATEDBGPRINT(RT_DEBUG_TRACE,("Ate Tx is already running, to run next Tx, you must stop it first\n"));
-		err = 2; 
-		goto TX_START_ERROR;
-	}
-	else if ((pAdapter->ate.TxStatus != 0) && !(pAdapter->ate.Mode & ATE_TXFRAME))
-	{
-		int i = 0;
-
-		while ((i++ < 10) && (pAdapter->ate.TxStatus != 0))
-		{
-			RTMPusecDelay(5000);
-		}
-
-		/* force it to stop */
-		pAdapter->ate.TxStatus = 0;
-		pAdapter->ate.TxDoneCount = 0;
-		pAdapter->ate.bQATxStart = FALSE;
-	}
-
-	/*
-		If pRaCfg->length == 0, this "RACFG_CMD_TX_START"
-		is for Carrier test or Carrier Suppression.
-	*/
-	if (ntohs(pRaCfg->length) != 0)
-	{
-		/* get frame info */
-
-		NdisMoveMemory(&pAdapter->ate.TxWI, pRaCfg->data + 2, 16);						
-#ifdef RT_BIG_ENDIAN
-		RTMPWIEndianChange((PUCHAR)&pAdapter->ate.TxWI, TYPE_TXWI);
-#endif // RT_BIG_ENDIAN //
-
-		NdisMoveMemory(&pAdapter->ate.TxCount, pRaCfg->data + 18, 4);
-		pAdapter->ate.TxCount = ntohl(pAdapter->ate.TxCount);
-
-		p = (USHORT *)(&pRaCfg->data[22]);
-
-		/* always use QID_AC_BE */
-		pAdapter->ate.QID = 0;
-
-		p = (USHORT *)(&pRaCfg->data[24]);
-		pAdapter->ate.HLen = ntohs(*p);
-
-		if (pAdapter->ate.HLen > 32)
-		{
-			ATEDBGPRINT(RT_DEBUG_ERROR,("pAdapter->ate.HLen > 32\n"));
-			err = 3;
-			goto TX_START_ERROR;
-		}
-
-		NdisMoveMemory(&pAdapter->ate.Header, pRaCfg->data + 26, pAdapter->ate.HLen);
-
-		pAdapter->ate.PLen = ntohs(pRaCfg->length) - (pAdapter->ate.HLen + 28);
-
-		if (pAdapter->ate.PLen > 32)
-		{
-			ATEDBGPRINT(RT_DEBUG_ERROR,("pAdapter->ate.PLen > 32\n"));
-			err = 4;
-			goto TX_START_ERROR;
-		}
-
-		NdisMoveMemory(&pAdapter->ate.Pattern, pRaCfg->data + 26 + pAdapter->ate.HLen, pAdapter->ate.PLen);
-		pAdapter->ate.DLen = pAdapter->ate.TxWI.MPDUtotalByteCount - pAdapter->ate.HLen;
-
-
-	}
-
-	ATE_BBP_IO_READ8_BY_REG_ID(pAdapter, BBP_R22, &Bbp22Value);
-
-	switch (Bbp22Value)
-	{
-		case BBP22_TXFRAME:
-			{
-				if (pAdapter->ate.TxCount == 0)
-				{
-#ifdef RTMP_MAC_PCI
-					pAdapter->ate.TxCount = 0xFFFFFFFF;
-#endif // RTMP_MAC_PCI //
-				}
-				ATEDBGPRINT(RT_DEBUG_TRACE,("START TXFRAME\n"));
-				pAdapter->ate.bQATxStart = TRUE;
-				Set_ATE_Proc(pAdapter, "TXFRAME");
-			}
-			break;
-
-		case BBP22_TXCONT_OR_CARRSUPP:
-			{
-				ATEDBGPRINT(RT_DEBUG_TRACE,("BBP22_TXCONT_OR_CARRSUPP\n"));
-				ATE_BBP_IO_READ8_BY_REG_ID(pAdapter, BBP_R24, &Bbp24Value);
-
-				switch (Bbp24Value)
-				{
-					case BBP24_TXCONT:
-						{
-							ATEDBGPRINT(RT_DEBUG_TRACE,("START TXCONT\n"));
-							pAdapter->ate.bQATxStart = TRUE;
-							Set_ATE_Proc(pAdapter, "TXCONT");
-						}
-						break;
-
-					case BBP24_CARRSUPP:
-						{
-							ATEDBGPRINT(RT_DEBUG_TRACE,("START TXCARRSUPP\n"));
-							pAdapter->ate.bQATxStart = TRUE;
-							pAdapter->ate.Mode |= ATE_TXCARRSUPP;
-						}
-						break;
-
-					default:
-						{
-							ATEDBGPRINT(RT_DEBUG_ERROR,("Unknown TX subtype !"));
-						}
-						break;
-				}
-			}
-			break;	
-
-		case BBP22_TXCARR:
-			{
-				ATEDBGPRINT(RT_DEBUG_TRACE,("START TXCARR\n"));
-				pAdapter->ate.bQATxStart = TRUE;
-				Set_ATE_Proc(pAdapter, "TXCARR");
-			}
-			break;							
-
-		default:
-			{
-				ATEDBGPRINT(RT_DEBUG_ERROR,("Unknown Start TX subtype !"));
-			}
-			break;
-	}
-
-	if (pAdapter->ate.bQATxStart == TRUE)
-	{
-		ResponseToGUI(pRaCfg, wrq, sizeof(pRaCfg->status), NDIS_STATUS_SUCCESS);
-		return NDIS_STATUS_SUCCESS;
-	}
-
-TX_START_ERROR:
-	ResponseToGUI(pRaCfg, wrq, sizeof(pRaCfg->status), err);
-
-	return err;
-}
-
+	IN struct ate_racfghdr *pRaCfg
+);
 
 static inline INT DO_RACFG_CMD_GET_TX_STATUS(
 	IN	PRTMP_ADAPTER	pAdapter,
 	IN	struct iwreq	*wrq,
-	IN  struct ate_racfghdr *pRaCfg)
-{
-	UINT32 count=0;
-	
-	count = htonl(pAdapter->ate.TxDoneCount);
-	NdisMoveMemory(pRaCfg->data, &count, 4);
-
-	ResponseToGUI(pRaCfg, wrq, sizeof(pRaCfg->status)+4, NDIS_STATUS_SUCCESS);
-
-	return NDIS_STATUS_SUCCESS;
-}
-
+	IN struct ate_racfghdr *pRaCfg
+);
 
 static inline INT DO_RACFG_CMD_TX_STOP(
 	IN	PRTMP_ADAPTER	pAdapter,
 	IN	struct iwreq	*wrq,
-	IN  struct ate_racfghdr *pRaCfg)
-{
-	ATEDBGPRINT(RT_DEBUG_TRACE,("RACFG_CMD_TX_STOP\n"));
-
-	Set_ATE_Proc(pAdapter, "TXSTOP");
-
-	ResponseToGUI(pRaCfg, wrq, sizeof(pRaCfg->status), NDIS_STATUS_SUCCESS);
-
-	return NDIS_STATUS_SUCCESS;
-}
-
+	IN struct ate_racfghdr *pRaCfg
+);
 
 static inline INT DO_RACFG_CMD_RX_START(
 	IN	PRTMP_ADAPTER	pAdapter,
 	IN	struct iwreq	*wrq,
-	IN  struct ate_racfghdr *pRaCfg)
-{
-	ATEDBGPRINT(RT_DEBUG_TRACE,("RACFG_CMD_RX_START\n"));
-
-	pAdapter->ate.bQARxStart = TRUE;
-	Set_ATE_Proc(pAdapter, "RXFRAME");
-
-	ResponseToGUI(pRaCfg, wrq, sizeof(pRaCfg->status), NDIS_STATUS_SUCCESS);
-
-	return NDIS_STATUS_SUCCESS;
-}	
-
+	IN struct ate_racfghdr *pRaCfg
+);
 
 static inline INT DO_RACFG_CMD_RX_STOP(
 	IN	PRTMP_ADAPTER	pAdapter,
 	IN	struct iwreq	*wrq,
-	IN  struct ate_racfghdr *pRaCfg)
-{
-	ATEDBGPRINT(RT_DEBUG_TRACE,("RACFG_CMD_RX_STOP\n"));
+	IN struct ate_racfghdr *pRaCfg
+);
 
-	Set_ATE_Proc(pAdapter, "RXSTOP");
-
-	ResponseToGUI(pRaCfg, wrq, sizeof(pRaCfg->status), NDIS_STATUS_SUCCESS);
-
-	return NDIS_STATUS_SUCCESS;
-}
-
+static inline INT DO_RACFG_CMD_RX_STOP(
+	IN	PRTMP_ADAPTER	pAdapter,
+	IN	struct iwreq	*wrq,
+	IN struct ate_racfghdr *pRaCfg
+);
 
 static inline INT DO_RACFG_CMD_ATE_START_TX_CARRIER(
 	IN	PRTMP_ADAPTER	pAdapter,
 	IN	struct iwreq	*wrq,
-	IN  struct ate_racfghdr *pRaCfg)
-{
-	ATEDBGPRINT(RT_DEBUG_TRACE,("RACFG_CMD_ATE_START_TX_CARRIER\n"));
-
-	Set_ATE_Proc(pAdapter, "TXCARR");
-
-	ResponseToGUI(pRaCfg, wrq, sizeof(pRaCfg->status), NDIS_STATUS_SUCCESS);
-
-	return NDIS_STATUS_SUCCESS;
-}
-
+	IN struct ate_racfghdr *pRaCfg
+);
 
 static inline INT DO_RACFG_CMD_ATE_START_TX_CONT(
 	IN	PRTMP_ADAPTER	pAdapter,
 	IN	struct iwreq	*wrq,
-	IN  struct ate_racfghdr *pRaCfg)
-{
-	ATEDBGPRINT(RT_DEBUG_TRACE,("RACFG_CMD_ATE_START_TX_CONT\n"));
-
-	Set_ATE_Proc(pAdapter, "TXCONT");
-
-	ResponseToGUI(pRaCfg, wrq, sizeof(pRaCfg->status), NDIS_STATUS_SUCCESS);
-
-	return NDIS_STATUS_SUCCESS;
-}
-
+	IN struct ate_racfghdr *pRaCfg
+);
 
 static inline INT DO_RACFG_CMD_ATE_START_TX_FRAME(
 	IN	PRTMP_ADAPTER	pAdapter,
 	IN	struct iwreq	*wrq,
-	IN  struct ate_racfghdr *pRaCfg)
-{
-	ATEDBGPRINT(RT_DEBUG_TRACE,("RACFG_CMD_ATE_START_TX_FRAME\n"));
-
-	Set_ATE_Proc(pAdapter, "TXFRAME");
-
-	ResponseToGUI(pRaCfg, wrq, sizeof(pRaCfg->status), NDIS_STATUS_SUCCESS);
-
-	return NDIS_STATUS_SUCCESS;
-}	
-
+	IN struct ate_racfghdr *pRaCfg
+);
 
 static inline INT DO_RACFG_CMD_ATE_SET_BW(
 	IN	PRTMP_ADAPTER	pAdapter,
 	IN	struct iwreq	*wrq,
-	IN  struct ate_racfghdr *pRaCfg)
-{
-	SHORT    value = 0;
-	STRING    str[LEN_OF_ARG];
-
-	NdisZeroMemory(str, LEN_OF_ARG);
-	
-	ATEDBGPRINT(RT_DEBUG_TRACE,("RACFG_CMD_ATE_SET_BW\n"));				
-
-	memcpy((PUCHAR)&value, (PUCHAR)&(pRaCfg->status), 2);
-	value = ntohs(value);
-	sprintf((char *)str, "%d", value);
-
-	Set_ATE_TX_BW_Proc(pAdapter, str);
-	
-	ResponseToGUI(pRaCfg, wrq, sizeof(pRaCfg->status), NDIS_STATUS_SUCCESS);
-
-	return NDIS_STATUS_SUCCESS;
-}
-
+	IN struct ate_racfghdr *pRaCfg
+);
 
 static inline INT DO_RACFG_CMD_ATE_SET_TX_POWER0(
 	IN	PRTMP_ADAPTER	pAdapter,
 	IN	struct iwreq	*wrq,
-	IN  struct ate_racfghdr *pRaCfg)
-{
-	SHORT    value = 0;
-	STRING    str[LEN_OF_ARG];
-
-	NdisZeroMemory(str, LEN_OF_ARG);
-
-	ATEDBGPRINT(RT_DEBUG_TRACE,("RACFG_CMD_ATE_SET_TX_POWER0\n"));				
-
-	memcpy((PUCHAR)&value, (PUCHAR)&(pRaCfg->status), 2);
-	value = ntohs(value);
-	sprintf((char *)str, "%d", value);
-	Set_ATE_TX_POWER0_Proc(pAdapter, str);
-
-	ResponseToGUI(pRaCfg, wrq, sizeof(pRaCfg->status), NDIS_STATUS_SUCCESS);
-
-	return NDIS_STATUS_SUCCESS;
-}
-
+	IN struct ate_racfghdr *pRaCfg
+);
 
 static inline INT DO_RACFG_CMD_ATE_SET_TX_POWER1(
 	IN	PRTMP_ADAPTER	pAdapter,
 	IN	struct iwreq	*wrq,
-	IN  struct ate_racfghdr *pRaCfg)
-{
-	SHORT    value = 0;
-	STRING    str[LEN_OF_ARG];
-
-	NdisZeroMemory(str, LEN_OF_ARG);
-	
-	ATEDBGPRINT(RT_DEBUG_TRACE,("RACFG_CMD_ATE_SET_TX_POWER1\n"));				
-
-	memcpy((PUCHAR)&value, (PUCHAR)&(pRaCfg->status), 2);
-	value = ntohs(value);
-	sprintf((char *)str, "%d", value);
-	Set_ATE_TX_POWER1_Proc(pAdapter, str);
-
-	ResponseToGUI(pRaCfg, wrq, sizeof(pRaCfg->status), NDIS_STATUS_SUCCESS);
-
-	return NDIS_STATUS_SUCCESS;
-}
-
+	IN struct ate_racfghdr *pRaCfg
+);
 
 static inline INT DO_RACFG_CMD_ATE_SET_FREQ_OFFSET(
 	IN	PRTMP_ADAPTER	pAdapter,
 	IN	struct iwreq	*wrq,
-	IN  struct ate_racfghdr *pRaCfg)
-{
-	SHORT    value = 0;
-	STRING    str[LEN_OF_ARG];
-
-	NdisZeroMemory(str, LEN_OF_ARG);
-
-	ATEDBGPRINT(RT_DEBUG_TRACE,("RACFG_CMD_ATE_SET_FREQ_OFFSET\n"));				
-
-	memcpy((PUCHAR)&value, (PUCHAR)&(pRaCfg->status), 2);
-	value = ntohs(value);
-	sprintf((char *)str, "%d", value);
-	Set_ATE_TX_FREQOFFSET_Proc(pAdapter, str);
-
-	ResponseToGUI(pRaCfg, wrq, sizeof(pRaCfg->status), NDIS_STATUS_SUCCESS);
-
-	return NDIS_STATUS_SUCCESS;
-}
-
+	IN struct ate_racfghdr *pRaCfg
+);
 
 static inline INT DO_RACFG_CMD_ATE_GET_STATISTICS(
 	IN	PRTMP_ADAPTER	pAdapter,
 	IN	struct iwreq	*wrq,
-	IN  struct ate_racfghdr *pRaCfg)
-{
-	ATEDBGPRINT(RT_DEBUG_TRACE,("RACFG_CMD_ATE_GET_STATISTICS\n"));
-
-	memcpy_exl(pAdapter, &pRaCfg->data[0], (UCHAR *)&pAdapter->ate.TxDoneCount, 4);
-	memcpy_exl(pAdapter, &pRaCfg->data[4], (UCHAR *)&pAdapter->WlanCounters.RetryCount.u.LowPart, 4);
-	memcpy_exl(pAdapter, &pRaCfg->data[8], (UCHAR *)&pAdapter->WlanCounters.FailedCount.u.LowPart, 4);
-	memcpy_exl(pAdapter, &pRaCfg->data[12], (UCHAR *)&pAdapter->WlanCounters.RTSSuccessCount.u.LowPart, 4);
-	memcpy_exl(pAdapter, &pRaCfg->data[16], (UCHAR *)&pAdapter->WlanCounters.RTSFailureCount.u.LowPart, 4);
-	memcpy_exl(pAdapter, &pRaCfg->data[20], (UCHAR *)&pAdapter->WlanCounters.ReceivedFragmentCount.QuadPart, 4);
-	memcpy_exl(pAdapter, &pRaCfg->data[24], (UCHAR *)&pAdapter->WlanCounters.FCSErrorCount.u.LowPart, 4);
-	memcpy_exl(pAdapter, &pRaCfg->data[28], (UCHAR *)&pAdapter->Counters8023.RxNoBuffer, 4);
-	memcpy_exl(pAdapter, &pRaCfg->data[32], (UCHAR *)&pAdapter->WlanCounters.FrameDuplicateCount.u.LowPart, 4);
-	memcpy_exl(pAdapter, &pRaCfg->data[36], (UCHAR *)&pAdapter->RalinkCounters.OneSecFalseCCACnt, 4);
-	
-	if (pAdapter->ate.RxAntennaSel == 0)
-	{
-		INT32 RSSI0 = 0;
-		INT32 RSSI1 = 0;
-		INT32 RSSI2 = 0;
-
-		RSSI0 = (INT32)(pAdapter->ate.LastRssi0 - pAdapter->BbpRssiToDbmDelta);
-		RSSI1 = (INT32)(pAdapter->ate.LastRssi1 - pAdapter->BbpRssiToDbmDelta);
-		RSSI2 = (INT32)(pAdapter->ate.LastRssi2 - pAdapter->BbpRssiToDbmDelta);
-		memcpy_exl(pAdapter, &pRaCfg->data[40], (UCHAR *)&RSSI0, 4);
-		memcpy_exl(pAdapter, &pRaCfg->data[44], (UCHAR *)&RSSI1, 4);
-		memcpy_exl(pAdapter, &pRaCfg->data[48], (UCHAR *)&RSSI2, 4);
-		ResponseToGUI(pRaCfg, wrq, sizeof(pRaCfg->status)+52, NDIS_STATUS_SUCCESS);
-	}
-	else
-	{
-		INT32 RSSI0 = 0;
-	
-		RSSI0 = (INT32)(pAdapter->ate.LastRssi0 - pAdapter->BbpRssiToDbmDelta);
-		memcpy_exl(pAdapter, &pRaCfg->data[40], (UCHAR *)&RSSI0, 4);
-		ResponseToGUI(pRaCfg, wrq, sizeof(pRaCfg->status)+44, NDIS_STATUS_SUCCESS);
-	}
-
-	return NDIS_STATUS_SUCCESS;
-}
-
+	IN struct ate_racfghdr *pRaCfg
+);
 
 static inline INT DO_RACFG_CMD_ATE_RESET_COUNTER(
 	IN	PRTMP_ADAPTER	pAdapter,
 	IN	struct iwreq	*wrq,
-	IN  struct ate_racfghdr *pRaCfg)
-{
-	SHORT    value = 1;
-	STRING    str[LEN_OF_ARG];
-
-	NdisZeroMemory(str, LEN_OF_ARG);
-
-	ATEDBGPRINT(RT_DEBUG_TRACE,("RACFG_CMD_ATE_RESET_COUNTER\n"));				
-
-	sprintf((char *)str, "%d", value);
-	Set_ResetStatCounter_Proc(pAdapter, str);
-
-	pAdapter->ate.TxDoneCount = 0;
-
-	ResponseToGUI(pRaCfg, wrq, sizeof(pRaCfg->status), NDIS_STATUS_SUCCESS);
-
-	return NDIS_STATUS_SUCCESS;
-}
-
+	IN struct ate_racfghdr *pRaCfg
+);
 
 static inline INT DO_RACFG_CMD_ATE_SEL_TX_ANTENNA(
 	IN	PRTMP_ADAPTER	pAdapter,
 	IN	struct iwreq	*wrq,
-	IN  struct ate_racfghdr *pRaCfg)	
-{
-	SHORT    value = 0;
-	STRING    str[LEN_OF_ARG];
-
-	NdisZeroMemory(str, LEN_OF_ARG);
-	
-	ATEDBGPRINT(RT_DEBUG_TRACE,("RACFG_CMD_ATE_SEL_TX_ANTENNA\n"));				
-
-	memcpy((PUCHAR)&value, (PUCHAR)&(pRaCfg->status), 2);
-	value = ntohs(value);
-	sprintf((char *)str, "%d", value);
-	Set_ATE_TX_Antenna_Proc(pAdapter, str);
-
-	ResponseToGUI(pRaCfg, wrq, sizeof(pRaCfg->status), NDIS_STATUS_SUCCESS);
-
-	return NDIS_STATUS_SUCCESS;
-}
-
+	IN struct ate_racfghdr *pRaCfg
+);	
 
 static inline INT DO_RACFG_CMD_ATE_SEL_RX_ANTENNA(
 	IN	PRTMP_ADAPTER	pAdapter,
 	IN	struct iwreq	*wrq,
-	IN  struct ate_racfghdr *pRaCfg)
-{
-	SHORT    value = 0;
-	STRING    str[LEN_OF_ARG];
-
-	NdisZeroMemory(str, LEN_OF_ARG);
-	
-	ATEDBGPRINT(RT_DEBUG_TRACE,("RACFG_CMD_ATE_SEL_RX_ANTENNA\n"));				
-
-	memcpy((PUCHAR)&value, (PUCHAR)&(pRaCfg->status), 2);
-	value = ntohs(value);
-	sprintf((char *)str, "%d", value);
-	Set_ATE_RX_Antenna_Proc(pAdapter, str);
-
-	ResponseToGUI(pRaCfg, wrq, sizeof(pRaCfg->status), NDIS_STATUS_SUCCESS);
-
-	return NDIS_STATUS_SUCCESS;
-}
-
+	IN struct ate_racfghdr *pRaCfg
+);
 
 static inline INT DO_RACFG_CMD_ATE_SET_PREAMBLE(
 	IN	PRTMP_ADAPTER	pAdapter,
 	IN	struct iwreq	*wrq,
-	IN  struct ate_racfghdr *pRaCfg)
-{
-	SHORT    value = 0;
-	STRING    str[LEN_OF_ARG];
-
-	NdisZeroMemory(str, LEN_OF_ARG);
-	
-	ATEDBGPRINT(RT_DEBUG_TRACE,("RACFG_CMD_ATE_SET_PREAMBLE\n"));				
-
-	memcpy((PUCHAR)&value, (PUCHAR)&(pRaCfg->status), 2);
-	value = ntohs(value);
-	sprintf((char *)str, "%d", value);
-	Set_ATE_TX_MODE_Proc(pAdapter, str);
-
-	ResponseToGUI(pRaCfg, wrq, sizeof(pRaCfg->status), NDIS_STATUS_SUCCESS);
-
-	return NDIS_STATUS_SUCCESS;
-}
-
+	IN struct ate_racfghdr *pRaCfg
+);
 
 static inline INT DO_RACFG_CMD_ATE_SET_CHANNEL(
 	IN	PRTMP_ADAPTER	pAdapter,
 	IN	struct iwreq	*wrq,
-	IN  struct ate_racfghdr *pRaCfg)
-{
-	SHORT    value = 0;
-	STRING    str[LEN_OF_ARG];
-
-	NdisZeroMemory(str, LEN_OF_ARG);
-	
-	ATEDBGPRINT(RT_DEBUG_TRACE,("RACFG_CMD_ATE_SET_CHANNEL\n"));				
-
-	memcpy((PUCHAR)&value, (PUCHAR)&(pRaCfg->status), 2);
-	value = ntohs(value);
-	sprintf((char *)str, "%d", value);
-	Set_ATE_CHANNEL_Proc(pAdapter, str);
-
-	ResponseToGUI(pRaCfg, wrq, sizeof(pRaCfg->status), NDIS_STATUS_SUCCESS);
-
-	return NDIS_STATUS_SUCCESS;
-}
-
+	IN struct ate_racfghdr *pRaCfg
+);
 
 static inline INT DO_RACFG_CMD_ATE_SET_ADDR1(
 	IN	PRTMP_ADAPTER	pAdapter,
 	IN	struct iwreq	*wrq,
-	IN  struct ate_racfghdr *pRaCfg)
-{
-	ATEDBGPRINT(RT_DEBUG_TRACE,("RACFG_CMD_ATE_SET_ADDR1\n"));
-
-	/*
-		Addr is an array of UCHAR,
-		so no need to perform endian swap.
-	*/
-	memcpy(pAdapter->ate.Addr1, (PUCHAR)(pRaCfg->data - 2), MAC_ADDR_LEN);
-
-	ResponseToGUI(pRaCfg, wrq, sizeof(pRaCfg->status), NDIS_STATUS_SUCCESS);
-
-	return NDIS_STATUS_SUCCESS;
-}
-
+	IN struct ate_racfghdr *pRaCfg
+);
 
 static inline INT DO_RACFG_CMD_ATE_SET_ADDR2(
 	IN	PRTMP_ADAPTER	pAdapter,
 	IN	struct iwreq	*wrq,
-	IN  struct ate_racfghdr *pRaCfg)
-{
-	ATEDBGPRINT(RT_DEBUG_TRACE,("RACFG_CMD_ATE_SET_ADDR2\n"));
-
-	/*
-		Addr is an array of UCHAR,
-		so no need to perform endian swap.
-	*/
-	memcpy(pAdapter->ate.Addr2, (PUCHAR)(pRaCfg->data - 2), MAC_ADDR_LEN);
-
-	ResponseToGUI(pRaCfg, wrq, sizeof(pRaCfg->status), NDIS_STATUS_SUCCESS);
-
-	return NDIS_STATUS_SUCCESS;
-}
-
+	IN struct ate_racfghdr *pRaCfg
+);
 
 static inline INT DO_RACFG_CMD_ATE_SET_ADDR3(
 	IN	PRTMP_ADAPTER	pAdapter,
 	IN	struct iwreq	*wrq,
-	IN  struct ate_racfghdr *pRaCfg)
-{
-	ATEDBGPRINT(RT_DEBUG_TRACE,("RACFG_CMD_ATE_SET_ADDR3\n"));
-
-	/*
-		Addr is an array of UCHAR,
-		so no need to perform endian swap.
-	*/
-	memcpy(pAdapter->ate.Addr3, (PUCHAR)(pRaCfg->data - 2), MAC_ADDR_LEN);
-
-	ResponseToGUI(pRaCfg, wrq, sizeof(pRaCfg->status), NDIS_STATUS_SUCCESS);
-
-	return NDIS_STATUS_SUCCESS;
-}
-
+	IN struct ate_racfghdr *pRaCfg
+);
 
 static inline INT DO_RACFG_CMD_ATE_SET_RATE(
 	IN	PRTMP_ADAPTER	pAdapter,
 	IN	struct iwreq	*wrq,
-	IN  struct ate_racfghdr *pRaCfg)
-{
-	SHORT    value = 0;
-	STRING    str[LEN_OF_ARG];
-
-	NdisZeroMemory(str, LEN_OF_ARG);
-	
-	ATEDBGPRINT(RT_DEBUG_TRACE,("RACFG_CMD_ATE_SET_RATE\n"));				
-
-	memcpy((PUCHAR)&value, (PUCHAR)&(pRaCfg->status), 2);
-	value = ntohs(value);
-	sprintf((char *)str, "%d", value);
-	Set_ATE_TX_MCS_Proc(pAdapter, str);
-
-	ResponseToGUI(pRaCfg, wrq, sizeof(pRaCfg->status), NDIS_STATUS_SUCCESS);
-
-	return NDIS_STATUS_SUCCESS;
-}
-
+	IN struct ate_racfghdr *pRaCfg
+);
 
 static inline INT DO_RACFG_CMD_ATE_SET_TX_FRAME_LEN(
 	IN	PRTMP_ADAPTER	pAdapter,
 	IN	struct iwreq	*wrq,
-	IN  struct ate_racfghdr *pRaCfg)
-{
-	SHORT    value = 0;
-	STRING    str[LEN_OF_ARG];
-
-	NdisZeroMemory(str, LEN_OF_ARG);
-	
-	ATEDBGPRINT(RT_DEBUG_TRACE,("RACFG_CMD_ATE_SET_TX_FRAME_LEN\n"));				
-
-	memcpy((PUCHAR)&value, (PUCHAR)&(pRaCfg->status), 2);
-	value = ntohs(value);
-	sprintf((char *)str, "%d", value);
-	Set_ATE_TX_LENGTH_Proc(pAdapter, str);
-
-	ResponseToGUI(pRaCfg, wrq, sizeof(pRaCfg->status), NDIS_STATUS_SUCCESS);
-
-	return NDIS_STATUS_SUCCESS;
-}
-
+	IN struct ate_racfghdr *pRaCfg
+);
 
 static inline INT DO_RACFG_CMD_ATE_SET_TX_FRAME_COUNT(
 	IN	PRTMP_ADAPTER	pAdapter,
 	IN	struct iwreq	*wrq,
-	IN  struct ate_racfghdr *pRaCfg)
-{
-	USHORT    value = 0;
-	STRING    str[LEN_OF_ARG];
-
-	NdisZeroMemory(str, LEN_OF_ARG);
-	
-	ATEDBGPRINT(RT_DEBUG_TRACE,("RACFG_CMD_ATE_SET_TX_FRAME_COUNT\n"));				
-
-	memcpy((PUCHAR)&value, (PUCHAR)&(pRaCfg->status), 2);
-	value = ntohs(value);
-
-#ifdef RTMP_MAC_PCI
-	/* TX_FRAME_COUNT == 0 means tx infinitely */
-	if (value == 0)
-	{
-		/* Use TxCount = 0xFFFFFFFF to approximate the infinity. */
-		pAdapter->ate.TxCount = 0xFFFFFFFF;
-		ATEDBGPRINT(RT_DEBUG_TRACE, ("Set_ATE_TX_COUNT_Proc (TxCount = %d)\n", pAdapter->ate.TxCount));
-		ATEDBGPRINT(RT_DEBUG_TRACE, ("Ralink: Set_ATE_TX_COUNT_Proc Success\n"));
-
-
-	}
-	else
-#endif // RTMP_MAC_PCI //
-	{
-		sprintf((char *)str, "%d", value);
-		Set_ATE_TX_COUNT_Proc(pAdapter, str);
-	}
-
-	ResponseToGUI(pRaCfg, wrq, sizeof(pRaCfg->status), NDIS_STATUS_SUCCESS);
-
-	return NDIS_STATUS_SUCCESS;
-}
-
+	IN struct ate_racfghdr *pRaCfg
+);
 
 static inline INT DO_RACFG_CMD_ATE_START_RX_FRAME(
 	IN	PRTMP_ADAPTER	pAdapter,
 	IN	struct iwreq	*wrq,
-	IN  struct ate_racfghdr *pRaCfg)
-{
-	ATEDBGPRINT(RT_DEBUG_TRACE,("RACFG_CMD_RX_START\n"));
-
-	Set_ATE_Proc(pAdapter, "RXFRAME");
-
-	ResponseToGUI(pRaCfg, wrq, sizeof(pRaCfg->status), NDIS_STATUS_SUCCESS);
-
-	return NDIS_STATUS_SUCCESS;
-}
-
+	IN struct ate_racfghdr *pRaCfg
+);
 
 static inline INT DO_RACFG_CMD_ATE_E2PROM_READ_BULK(
 	IN	PRTMP_ADAPTER	pAdapter,
 	IN	struct iwreq	*wrq,
-	IN  struct ate_racfghdr *pRaCfg)
-{
-	USHORT offset;
-	USHORT len;
-	USHORT buffer[EEPROM_SIZE/2];
-	
-	offset = ntohs(pRaCfg->status);
-	memcpy(&len, pRaCfg->data, 2);
-	len = ntohs(len);
-	
-	rt_ee_read_all(pAdapter, (USHORT *)buffer);
-
-	if (offset + len <= EEPROM_SIZE)
-		memcpy_exs(pAdapter, pRaCfg->data, (UCHAR *)buffer+offset, len);
-	else
-		ATEDBGPRINT(RT_DEBUG_ERROR, ("exceed EEPROM size\n"));
-
-	ResponseToGUI(pRaCfg, wrq, sizeof(pRaCfg->status)+len, NDIS_STATUS_SUCCESS);
-
-	return NDIS_STATUS_SUCCESS;
-}
-
+	IN struct ate_racfghdr *pRaCfg
+);
 
 static inline INT DO_RACFG_CMD_ATE_E2PROM_WRITE_BULK(
 	IN	PRTMP_ADAPTER	pAdapter,
 	IN	struct iwreq	*wrq,
-	IN  struct ate_racfghdr *pRaCfg)
-{
-	USHORT offset;
-	USHORT len;
-	USHORT buffer[EEPROM_SIZE/2];
-	
-	offset = ntohs(pRaCfg->status);
-	memcpy(&len, pRaCfg->data, 2);
-	len = ntohs(len);
-
-	rt_ee_read_all(pAdapter,(USHORT *)buffer);
-	memcpy_exs(pAdapter, (UCHAR *)buffer + offset, (UCHAR *)pRaCfg->data + 2, len);
-	rt_ee_write_all(pAdapter,(USHORT *)buffer);
-
-	ResponseToGUI(pRaCfg, wrq, sizeof(pRaCfg->status), NDIS_STATUS_SUCCESS);
-
-	return NDIS_STATUS_SUCCESS;
-}
-
+	IN struct ate_racfghdr *pRaCfg
+);
 
 static inline INT DO_RACFG_CMD_ATE_IO_WRITE_BULK(
 	IN	PRTMP_ADAPTER	pAdapter,
 	IN	struct iwreq	*wrq,
-	IN  struct ate_racfghdr *pRaCfg)
-{
-	UINT32 offset, i, value;
-	USHORT len;
-	
-	memcpy(&offset, &pRaCfg->status, 4);
-	offset = ntohl(offset);
-	memcpy(&len, pRaCfg->data+2, 2);
-	len = ntohs(len);
-	
-	for (i = 0; i < len; i += 4)
-	{
-		memcpy_exl(pAdapter, (UCHAR *)&value, pRaCfg->data+4+i, 4);
-		ATEDBGPRINT(RT_DEBUG_TRACE,("Write %x %x\n", offset + i, value));
-		RTMP_IO_WRITE32(pAdapter, ((offset+i) & (0xffff)), value);
-	}
-
-	ResponseToGUI(pRaCfg, wrq, sizeof(pRaCfg->status), NDIS_STATUS_SUCCESS);
-
-	return NDIS_STATUS_SUCCESS;
-}
-
+	IN struct ate_racfghdr *pRaCfg
+);
 
 static inline INT DO_RACFG_CMD_ATE_BBP_READ_BULK(
 	IN	PRTMP_ADAPTER	pAdapter,
 	IN	struct iwreq	*wrq,
-	IN  struct ate_racfghdr *pRaCfg)
-{
-	USHORT offset;
-	USHORT len;
-	USHORT j;
-	
-	offset = ntohs(pRaCfg->status);
-	memcpy(&len, pRaCfg->data, 2);
-	len = ntohs(len);
-	
-	for (j = offset; j < (offset+len); j++)
-	{
-		pRaCfg->data[j - offset] = 0;
-		
-		if (pAdapter->ate.Mode == ATE_STOP)
-		{
-			RTMP_BBP_IO_READ8_BY_REG_ID(pAdapter, j, &pRaCfg->data[j - offset]);
-		}
-		else
-		{
-			ATE_BBP_IO_READ8_BY_REG_ID(pAdapter, j, &pRaCfg->data[j - offset]);
-		}
-	}
-
-	ResponseToGUI(pRaCfg, wrq, sizeof(pRaCfg->status)+len, NDIS_STATUS_SUCCESS);
-
-	return NDIS_STATUS_SUCCESS;
-}
-
+	IN struct ate_racfghdr *pRaCfg
+);
 
 static inline INT DO_RACFG_CMD_ATE_BBP_WRITE_BULK(
 	IN	PRTMP_ADAPTER	pAdapter,
 	IN	struct iwreq	*wrq,
-	IN  struct ate_racfghdr *pRaCfg)
-{
-	USHORT offset;
-	USHORT len;
-	USHORT j;
-	UCHAR *value;
-	
-	offset = ntohs(pRaCfg->status);
-	memcpy(&len, pRaCfg->data, 2);
-	len = ntohs(len);
-					
-	for (j = offset; j < (offset+len); j++)
-	{
-		value = pRaCfg->data + 2 + (j - offset);
-		if (pAdapter->ate.Mode == ATE_STOP)
-		{
-			RTMP_BBP_IO_WRITE8_BY_REG_ID(pAdapter, j,  *value);
-		}
-		else
-		{
-			ATE_BBP_IO_WRITE8_BY_REG_ID(pAdapter, j,  *value);
-		}
-	}
+	IN struct ate_racfghdr *pRaCfg
+);
 
-	ResponseToGUI(pRaCfg, wrq, sizeof(pRaCfg->status), NDIS_STATUS_SUCCESS);
-
-	return NDIS_STATUS_SUCCESS;
-}
-
-
-#ifdef RTMP_RF_RW_SUPPORT
-static inline INT DO_RACFG_CMD_ATE_RF_READ_BULK(
-	IN	PRTMP_ADAPTER	pAdapter,
-	IN	struct iwreq	*wrq,
-	IN  struct ate_racfghdr *pRaCfg)
-{
-	USHORT offset;
-	USHORT len;
-	USHORT j;
-	
-	offset = ntohs(pRaCfg->status);
-	memcpy(&len, pRaCfg->data, 2);
-	len = ntohs(len);
-
-	for (j = offset; j < (offset+len); j++)
-	{
-		pRaCfg->data[j - offset] = 0;
-		ATE_RF_IO_READ8_BY_REG_ID(pAdapter, j,  &pRaCfg->data[j - offset]);
-	}
-
-	ResponseToGUI(pRaCfg, wrq, sizeof(pRaCfg->status)+len, NDIS_STATUS_SUCCESS);
-
-	return NDIS_STATUS_SUCCESS;
-}
-
-
-static inline INT DO_RACFG_CMD_ATE_RF_WRITE_BULK(
-	IN	PRTMP_ADAPTER	pAdapter,
-	IN	struct iwreq	*wrq,
-	IN  struct ate_racfghdr *pRaCfg)
-{
-	USHORT offset;
-	USHORT len;
-	USHORT j;
-	UCHAR *value;
-	
-	offset = ntohs(pRaCfg->status);
-	memcpy(&len, pRaCfg->data, 2);
-	len = ntohs(len);
-
-	for (j = offset; j < (offset+len); j++)
-	{
-		value = pRaCfg->data + 2 + (j - offset);
-		ATE_RF_IO_WRITE8_BY_REG_ID(pAdapter, j,  *value);
-	}
-
-	ResponseToGUI(pRaCfg, wrq, sizeof(pRaCfg->status), NDIS_STATUS_SUCCESS);
-
-	return NDIS_STATUS_SUCCESS;
-}
-#endif // RTMP_RF_RW_SUPPORT //
 #endif // RALINK_28xx_QA //
 
 
@@ -1654,7 +530,7 @@ static int CheckMCSValid(
 	IN UCHAR Mcs)
 #endif // RT30xx //
 {
-	int i;
+	INT i;
 	PCHAR pRateTab;
 
 	switch (Mode)
@@ -1697,13 +573,12 @@ static INT ATETxPwrHandler(
 	IN char index)
 {
 	ULONG R;
-	CHAR TxPower = 0;
+	CHAR TxPower;
 	UCHAR Bbp94 = 0;
 	BOOLEAN bPowerReduce = FALSE;
 #ifdef RTMP_RF_RW_SUPPORT
-	UCHAR RFValue = 0;
+	UCHAR RFValue;
 #endif // RTMP_RF_RW_SUPPORT //
-
 #ifdef RALINK_28xx_QA
 	if ((pAd->ate.bQATxStart == TRUE) || (pAd->ate.bQARxStart == TRUE))
 	{
@@ -1715,25 +590,14 @@ static INT ATETxPwrHandler(
 	}
 	else
 #endif // RALINK_28xx_QA //
-	TxPower = index == 0 ? pAd->ate.TxPower0 : pAd->ate.TxPower1;
-
-#ifdef RTMP_RF_RW_SUPPORT
-		if (IS_RT30xx(pAd))
-		{
-			// Set Tx Power
-			UCHAR ANT_POWER_INDEX=RF_R12+index;
-			ATE_RF_IO_READ8_BY_REG_ID(pAd, ANT_POWER_INDEX, (PUCHAR)&RFValue);
-			RFValue = (RFValue & 0xE0) | TxPower;
-			ATE_RF_IO_WRITE8_BY_REG_ID(pAd, ANT_POWER_INDEX, (UCHAR)RFValue);
-			ATEDBGPRINT(RT_DEBUG_TRACE, ("3070 or 2070:%s (TxPower[%d]=%d, RFValue=%x)\n", __FUNCTION__, index,TxPower, RFValue));
-		}
-		else
-#endif // RTMP_RF_RW_SUPPORT //
 	{
+		TxPower = index == 0 ? pAd->ate.TxPower0 : pAd->ate.TxPower1;
+
 		if (pAd->ate.Channel <= 14)
 		{
 			if (TxPower > 31)
 			{
+				
 				// R3, R4 can't large than 31 (0x24), 31 ~ 36 used by BBP 94
 				R = 31;
 				if (TxPower <= 36)
@@ -1741,6 +605,7 @@ static INT ATETxPwrHandler(
 			}
 			else if (TxPower < 0)
 			{
+				
 				// R3, R4 can't less than 0, -1 ~ -6 used by BBP 94
 				R = 0;
 				if (TxPower >= -6)
@@ -1759,11 +624,13 @@ static INT ATETxPwrHandler(
 		{
 			if (TxPower > 15)
 			{
+				
 				// R3, R4 can't large than 15 (0x0F)
 				R = 15;
 			}
 			else if (TxPower < 0)
 			{
+				
 				// R3, R4 can't less than 0
 				// -1 ~ -7
 				ASSERT((TxPower >= -7));
@@ -1778,7 +645,19 @@ static INT ATETxPwrHandler(
 
 			ATEDBGPRINT(RT_DEBUG_TRACE, ("%s (TxPower=%d, R=%lu)\n", __FUNCTION__, TxPower, R));
 		}
-
+//2008/09/10:KH adds to support 3070 ATE TX Power tunning real time<--
+#ifdef RTMP_RF_RW_SUPPORT
+		if (IS_RT30xx(pAd))
+		{
+			// Set Tx Power
+			ATE_RF_IO_READ8_BY_REG_ID(pAd, RF_R12, (PUCHAR)&RFValue);
+			RFValue = (RFValue & 0xE0) | TxPower;
+			ATE_RF_IO_WRITE8_BY_REG_ID(pAd, RF_R12, (UCHAR)RFValue);
+			ATEDBGPRINT(RT_DEBUG_TRACE, ("3070 or 2070:%s (TxPower=%d, RFValue=%x)\n", __FUNCTION__, TxPower, RFValue));
+		}
+		else
+#endif // RTMP_RF_RW_SUPPORT //
+		{
 		if (pAd->ate.Channel <= 14)
 		{
 			if (index == 0)
@@ -1839,1132 +718,11 @@ static INT ATETxPwrHandler(
 		}
 		RtmpRfIoWrite(pAd);
 	}
+//2008/09/10:KH adds to support 3070 ATE TX Power tunning real time-->
 
-	return 0;
+		return 0;
+	}
 }
-
-
-static NDIS_STATUS ATESTART(
-	IN PRTMP_ADAPTER pAd)
-{
-	UINT32			MacData=0, atemode=0, temp=0;
-	NDIS_STATUS		Status = NDIS_STATUS_SUCCESS;
-#ifdef RTMP_MAC_PCI
-	UINT32			ring_index=0;
-	PTXD_STRUC		pTxD = NULL;
-#ifdef RT_BIG_ENDIAN
-    PTXD_STRUC      pDestTxD = NULL;
-    TXD_STRUC       TxD;
-#endif // RT_BIG_ENDIAN //
-#endif // RTMP_MAC_PCI //
-#ifdef RT30xx
-	UINT32			bbp_index=0;
-	UCHAR			RestoreRfICType=pAd->RfIcType;
-#endif // RT30xx //
-	UCHAR			BbpData = 0;
-
-	ATEDBGPRINT(RT_DEBUG_TRACE, ("ATE : ===> %s\n", __FUNCTION__));
-
-#if defined(LINUX) || defined(VXWORKS)
-#ifdef RTMP_MAC_PCI
-	/* check if we have removed the firmware */
-	if (!(ATE_ON(pAd)))
-	{
-		NICEraseFirmware(pAd);
-	}
-#endif // RTMP_MAC_PCI //
-#endif // defined(LINUX) || defined(VXWORKS) //
-
-	atemode = pAd->ate.Mode;
-	pAd->ate.Mode = ATE_START;
-
-	/* Disable Rx */
-	RTMP_IO_READ32(pAd, MAC_SYS_CTRL, &MacData);
-	MacData &= ~(1 << 3);
-	RTMP_IO_WRITE32(pAd, MAC_SYS_CTRL, MacData);
-	
-	/* Disable auto responder */
-	RTMP_IO_READ32(pAd, AUTO_RSP_CFG, &temp);
-	temp = temp & 0xFFFFFFFE;
-	RTMP_IO_WRITE32(pAd, AUTO_RSP_CFG, temp);
-
-	/* clean bit4 to stop continuous Tx production test */
-	/* Disable or cancel pending irp first ??? */
-	RTMP_IO_READ32(pAd, MAC_SYS_CTRL, &MacData);
-	MacData &= 0xFFFFFFEF; 
-	RTMP_IO_WRITE32(pAd, MAC_SYS_CTRL, MacData);
-
-	if (atemode == ATE_TXCARR)
-	{
-		/* RT35xx ATE will reuse this code segment. */
-#ifdef RT30xx
-		/* Hardware Reset BBP */
-		RTMP_IO_READ32(pAd, MAC_SYS_CTRL, &temp);
-		temp = temp | 0x00000002;
-		RTMP_IO_WRITE32(pAd, MAC_SYS_CTRL, temp);
-		RTMP_IO_READ32(pAd, MAC_SYS_CTRL, &temp);
-		temp = temp & ~(0x00000002);
-		RTMP_IO_WRITE32(pAd, MAC_SYS_CTRL, temp);
-
-		/* Restore All BBP Value */
-		for (bbp_index=0;bbp_index<ATE_BBP_REG_NUM;bbp_index++)
-			ATE_BBP_IO_WRITE8_BY_REG_ID(pAd,bbp_index,restore_BBP[bbp_index]);
-
-		/*
-			The RfIcType will be reset to zero after the hardware reset bbp command.
-			Therefore, we must restore the original RfIcType.
-		*/
-		pAd->RfIcType=RestoreRfICType;
-#endif // RT30xx //
-
-		/* No Carrier Test set BBP R22 bit7=0, bit6=0, bit[5~0]=0x0 */
-		ATE_BBP_IO_READ8_BY_REG_ID(pAd, BBP_R22, &BbpData);
-		BbpData &= 0xFFFFFF00; // clear bit7, bit6, bit[5~0]	
-	    ATE_BBP_IO_WRITE8_BY_REG_ID(pAd, BBP_R22, BbpData);
-	}
-	else if (atemode == ATE_TXCARRSUPP)
-	{
-		/* RT35xx ATE will reuse this code segment. */
-#ifdef RT30xx
-		/* Hardware Reset BBP */
-		RTMP_IO_READ32(pAd, MAC_SYS_CTRL, &temp);
-		temp = temp | 0x00000002;
-		RTMP_IO_WRITE32(pAd, MAC_SYS_CTRL, temp);
-		RTMP_IO_READ32(pAd, MAC_SYS_CTRL, &temp);
-		temp = temp & ~(0x00000002);
-		RTMP_IO_WRITE32(pAd, MAC_SYS_CTRL, temp);
-
-		/* Restore All BBP Value */
-		for (bbp_index=0;bbp_index<ATE_BBP_REG_NUM;bbp_index++)
-			ATE_BBP_IO_WRITE8_BY_REG_ID(pAd,bbp_index,restore_BBP[bbp_index]);
-
-
-		/*
-			The RfIcType will be reset to zero after the hardware reset bbp command.
-			Therefore, we must restore the original RfIcType.
-		*/
-		pAd->RfIcType=RestoreRfICType;			
-#endif // RT30xx //
-
-		/* No Cont. TX set BBP R22 bit7=0 */
-		ATE_BBP_IO_READ8_BY_REG_ID(pAd, BBP_R22, &BbpData);
-		BbpData &= ~(1 << 7); // set bit7=0
-		ATE_BBP_IO_WRITE8_BY_REG_ID(pAd, BBP_R22, BbpData);
-
-		/* No Carrier Suppression set BBP R24 bit0=0 */
-		ATE_BBP_IO_READ8_BY_REG_ID(pAd, BBP_R24, &BbpData);
-		BbpData &= 0xFFFFFFFE; // clear bit0	
-	    ATE_BBP_IO_WRITE8_BY_REG_ID(pAd, BBP_R24, BbpData);
-	}		
-
-	/*
-		We should free some resource which was allocated
-		when ATE_TXFRAME , ATE_STOP, and ATE_TXCONT.
-	*/
-	else if ((atemode & ATE_TXFRAME) || (atemode == ATE_STOP))
-	{
-#ifdef RTMP_MAC_PCI
-		PRTMP_TX_RING pTxRing = &pAd->TxRing[QID_AC_BE];
-#endif // RTMP_MAC_PCI //
-		if (atemode == ATE_TXCONT)
-		{
-#ifdef RT30xx
-			/* Hardware Reset BBP */
-			RTMP_IO_READ32(pAd, MAC_SYS_CTRL, &temp);
-			temp = temp | 0x00000002;
-			RTMP_IO_WRITE32(pAd, MAC_SYS_CTRL, temp);
-			RTMP_IO_READ32(pAd, MAC_SYS_CTRL, &temp);
-			temp = temp & ~(0x00000002);
-			RTMP_IO_WRITE32(pAd, MAC_SYS_CTRL, temp);
-
-			/* Restore All BBP Value */
-			for (bbp_index=0;bbp_index<ATE_BBP_REG_NUM;bbp_index++)
-				ATE_BBP_IO_WRITE8_BY_REG_ID(pAd,bbp_index,restore_BBP[bbp_index]);
-
-		/*
-			The RfIcType will be reset to zero after the hardware reset bbp command.
-			Therefore, we must restore the original RfIcType.
-		*/
-		pAd->RfIcType=RestoreRfICType;			
-#endif // RT30xx //
-
-			/* Not Cont. TX anymore, so set BBP R22 bit7=0 */
-			ATE_BBP_IO_READ8_BY_REG_ID(pAd, BBP_R22, &BbpData);
-			BbpData &= ~(1 << 7); // set bit7=0
-			ATE_BBP_IO_WRITE8_BY_REG_ID(pAd, BBP_R22, BbpData);
-		}
-
-		/* Abort Tx, Rx DMA. */
-		RtmpDmaEnable(pAd, 0);
-#ifdef RTMP_MAC_PCI
-		for (ring_index=0; ring_index<TX_RING_SIZE; ring_index++)
-		{
-			PNDIS_PACKET  pPacket;
-
-#ifndef RT_BIG_ENDIAN
-		    pTxD = (PTXD_STRUC)pAd->TxRing[QID_AC_BE].Cell[ring_index].AllocVa;
-#else
-    		pDestTxD = (PTXD_STRUC)pAd->TxRing[QID_AC_BE].Cell[ring_index].AllocVa;
-    		TxD = *pDestTxD;
-    		pTxD = &TxD;
-    		RTMPDescriptorEndianChange((PUCHAR)pTxD, TYPE_TXD);
-#endif // !RT_BIG_ENDIAN //
-			pTxD->DMADONE = 0;
-			pPacket = pTxRing->Cell[ring_index].pNdisPacket;
-
-			if (pPacket)
-			{
-				PCI_UNMAP_SINGLE(pAd, pTxD->SDPtr0, pTxD->SDLen0, PCI_DMA_TODEVICE);
-				RELEASE_NDIS_PACKET(pAd, pPacket, NDIS_STATUS_SUCCESS);
-			}
-
-			/* Always assign pNdisPacket as NULL after clear */
-			pTxRing->Cell[ring_index].pNdisPacket = NULL;
-
-			pPacket = pTxRing->Cell[ring_index].pNextNdisPacket;
-
-			if (pPacket)
-			{
-				PCI_UNMAP_SINGLE(pAd, pTxD->SDPtr1, pTxD->SDLen1, PCI_DMA_TODEVICE);
-				RELEASE_NDIS_PACKET(pAd, pPacket, NDIS_STATUS_SUCCESS);
-			}
-
-			/* Always assign pNextNdisPacket as NULL after clear */
-			pTxRing->Cell[ring_index].pNextNdisPacket = NULL;
-#ifdef RT_BIG_ENDIAN
-			RTMPDescriptorEndianChange((PUCHAR)pTxD, TYPE_TXD);
-			WriteBackToDescriptor((PUCHAR)pDestTxD, (PUCHAR)pTxD, FALSE, TYPE_TXD);
-#endif // RT_BIG_ENDIAN //
-		}
-#endif // RTMP_MAC_PCI //
-
-		/* Start Tx, RX DMA */
-		RtmpDmaEnable(pAd, 1);
-	}
-
-
-	/* reset Rx statistics. */
-	pAd->ate.LastSNR0 = 0;
-	pAd->ate.LastSNR1 = 0;
-	pAd->ate.LastRssi0 = 0;
-	pAd->ate.LastRssi1 = 0;
-	pAd->ate.LastRssi2 = 0;
-	pAd->ate.AvgRssi0 = 0;
-	pAd->ate.AvgRssi1 = 0;
-	pAd->ate.AvgRssi2 = 0;
-	pAd->ate.AvgRssi0X8 = 0;
-	pAd->ate.AvgRssi1X8 = 0;
-	pAd->ate.AvgRssi2X8 = 0;
-	pAd->ate.NumOfAvgRssiSample = 0;
-
-#ifdef RALINK_28xx_QA
-	/* Tx frame */
-	pAd->ate.bQATxStart = FALSE;
-	pAd->ate.bQARxStart = FALSE;
-	pAd->ate.seq = 0; 
-
-	/* counters */
-	pAd->ate.U2M = 0;
-	pAd->ate.OtherData = 0;
-	pAd->ate.Beacon = 0;
-	pAd->ate.OtherCount = 0;
-	pAd->ate.TxAc0 = 0;
-	pAd->ate.TxAc1 = 0;
-	pAd->ate.TxAc2 = 0;
-	pAd->ate.TxAc3 = 0;
-	pAd->ate.TxHCCA = 0;
-	pAd->ate.TxMgmt = 0;
-	pAd->ate.RSSI0 = 0;
-	pAd->ate.RSSI1 = 0;
-	pAd->ate.RSSI2 = 0;
-	pAd->ate.SNR0 = 0;
-	pAd->ate.SNR1 = 0;
-
-	/* control */
-	pAd->ate.TxDoneCount = 0;
-	// TxStatus : 0 --> task is idle, 1 --> task is running
-	pAd->ate.TxStatus = 0;
-#endif // RALINK_28xx_QA //
-
-	// Soft reset BBP.
-	BbpSoftReset(pAd);
-
-
-#ifdef CONFIG_STA_SUPPORT 
-	/* LinkDown() has "AsicDisableSync();" and "RTMP_BBP_IO_R/W8_BY_REG_ID();" inside. */
-//	LinkDown(pAd, FALSE);
-//	AsicEnableBssSync(pAd);
-	AsicDisableSync(pAd);
-#ifdef RTMP_MAC_PCI
-#if defined(LINUX) || defined(VXWORKS)
-	RTMP_OS_NETDEV_STOP_QUEUE(pAd->net_dev);
-#endif // defined(LINUX) || defined(VXWORKS) //
-#endif // RTMP_MAC_PCI //
-	/* 
-		If we skip "LinkDown()", we should disable protection
-		to prevent from sending out RTS or CTS-to-self.
-	*/
-	ATEDisableAsicProtect(pAd);
-	RTMPStationStop(pAd);
-#endif // CONFIG_STA_SUPPORT //
-
-#ifdef RTMP_MAC_PCI
-	/* Disable Tx */
-	RTMP_IO_READ32(pAd, MAC_SYS_CTRL, &MacData);
-	MacData &= ~(1 << 2);
-	RTMP_IO_WRITE32(pAd, MAC_SYS_CTRL, MacData);
-
-	/* Disable Rx */
-	RTMP_IO_READ32(pAd, MAC_SYS_CTRL, &MacData);
-	MacData &= ~(1 << 3);
-	RTMP_IO_WRITE32(pAd, MAC_SYS_CTRL, MacData);
-
-#endif // RTMP_MAC_PCI //
-
-
-	ATEDBGPRINT(RT_DEBUG_TRACE, ("ATE : <=== %s\n", __FUNCTION__));
-	return Status;
-}
-
-
-static NDIS_STATUS ATESTOP(
-	IN PRTMP_ADAPTER pAd)
-{
-	UINT32			MacData=0, ring_index=0;
-	NDIS_STATUS		Status = NDIS_STATUS_SUCCESS;
-#ifdef RTMP_MAC_PCI
-	PRXD_STRUC		pRxD = NULL;
-#endif // RTMP_MAC_PCI //
-	UCHAR			BbpData = 0;
-
-	ATEDBGPRINT(RT_DEBUG_TRACE, ("ATE : ===> %s\n", __FUNCTION__));
-
-	/*
-		Abort Tx, RX DMA.
-		Q   : How to do the following I/O if Tx, Rx DMA is aborted ?
-		Ans : Bulk endpoints are aborted, while the control endpoint is not.
-	*/
-
-	/* Default value in BBP R22 is 0x0. */
-	BbpData = 0;
-	ATE_BBP_IO_WRITE8_BY_REG_ID(pAd, BBP_R22, BbpData);
-
-	/* Clean bit4 to stop continuous Tx production test. */
-	RTMP_IO_READ32(pAd, MAC_SYS_CTRL, &MacData);
-	MacData &= 0xFFFFFFEF;
-	RTMP_IO_WRITE32(pAd, MAC_SYS_CTRL, MacData); 
-	
-	/* Disable Rx */
-	RTMP_IO_READ32(pAd, MAC_SYS_CTRL, &MacData);
-	MacData &= ~(1 << 3);
-	RTMP_IO_WRITE32(pAd, MAC_SYS_CTRL, MacData);
-	
-	/* Abort Tx, RX DMA */
-	RtmpDmaEnable(pAd, 0);
-
-	/* Disable Tx */
-	RTMP_IO_READ32(pAd, MAC_SYS_CTRL, &MacData);
-	MacData &= ~(1 << 2);
-	RTMP_IO_WRITE32(pAd, MAC_SYS_CTRL, MacData);
-
-#ifdef RTMP_MAC_PCI
-#if defined(LINUX) || defined(VXWORKS)
-	pAd->ate.bFWLoading = TRUE;
-
-	Status = NICLoadFirmware(pAd);
-
-	if (Status != NDIS_STATUS_SUCCESS)
-	{
-		ATEDBGPRINT(RT_DEBUG_ERROR, ("NICLoadFirmware failed, Status[=0x%08x]\n", Status));
-		return Status;
-	}
-#endif // defined(LINUX) || defined(VXWORKS) //
-	pAd->ate.Mode = ATE_STOP;
-
-	/*
-		Even the firmware has been loaded, 
-		we still could use ATE_BBP_IO_READ8_BY_REG_ID(). 
-		But this is not suggested.
-	*/
-	BbpSoftReset(pAd);
-
-	RTMP_ASIC_INTERRUPT_DISABLE(pAd);
-	
-	NICInitializeAdapter(pAd, TRUE);
-	
-	/*
-		Reinitialize Rx Ring before Rx DMA is enabled.
-		>>>RxCoherent<<< was gone !
-	*/
-	for (ring_index = 0; ring_index < RX_RING_SIZE; ring_index++)
-	{
-		pRxD = (PRXD_STRUC) pAd->RxRing.Cell[ring_index].AllocVa;
-		pRxD->DDONE = 0;
-	}
-
-	/* We should read EEPROM for all cases. */  
-	NICReadEEPROMParameters(pAd, NULL);
-	NICInitAsicFromEEPROM(pAd); 
-
-	AsicSwitchChannel(pAd, pAd->CommonCfg.Channel, FALSE);
-
-	/* empty function */
-	AsicLockChannel(pAd, pAd->CommonCfg.Channel);		
-
-	/* clear garbage interrupts */
-	RTMP_IO_WRITE32(pAd, INT_SOURCE_CSR, 0xffffffff);
-	/* Enable Interrupt */
-	RTMP_ASIC_INTERRUPT_ENABLE(pAd);
-#endif // RTMP_MAC_PCI //
-
-
-	/* restore RX_FILTR_CFG */
-
-#ifdef CONFIG_STA_SUPPORT 
-	/* restore RX_FILTR_CFG due to that QA maybe set it to 0x3 */
-	RTMP_IO_WRITE32(pAd, RX_FILTR_CFG, STANORMAL);
-#endif // CONFIG_STA_SUPPORT //
-
-	/* Enable Tx */
-	RTMP_IO_READ32(pAd, MAC_SYS_CTRL, &MacData);
-	MacData |= (1 << 2);
-	RTMP_IO_WRITE32(pAd, MAC_SYS_CTRL, MacData);
-
-	/* move to above */
-
-	/* Enable Tx, Rx DMA. */
-	RtmpDmaEnable(pAd, 1);
-
-	/* Enable Rx */
-	RTMP_IO_READ32(pAd, MAC_SYS_CTRL, &MacData);
-	MacData |= (1 << 3);
-	RTMP_IO_WRITE32(pAd, MAC_SYS_CTRL, MacData);
-
-#ifdef RTMP_MAC_PCI
-
-#ifdef CONFIG_STA_SUPPORT 
-	RTMPStationStart(pAd);
-#endif // CONFIG_STA_SUPPORT //
-#endif // RTMP_MAC_PCI
-
-
-#if defined(LINUX) || defined(VXWORKS)
-	RTMP_OS_NETDEV_START_QUEUE(pAd->net_dev);
-#endif // defined(LINUX) || defined(VXWORKS) //
-
-	ATEDBGPRINT(RT_DEBUG_TRACE, ("ATE : <=== %s\n", __FUNCTION__));
-	return Status;
-}
-
-
-static NDIS_STATUS TXCARR(
-	IN PRTMP_ADAPTER pAd)
-{
-	UINT32			MacData=0;
-	NDIS_STATUS		Status = NDIS_STATUS_SUCCESS;
-#ifdef RT30xx
-	UINT32			bbp_index=0;	 
-#endif // RT30xx //
-	UCHAR			BbpData = 0;
-
-	ATEDBGPRINT(RT_DEBUG_TRACE, ("ATE : ===> %s\n", __FUNCTION__));
-
-	pAd->ate.Mode = ATE_TXCARR;
-
-	/* RT35xx ATE will reuse this code segment. */
-#ifdef RT30xx
-	for (bbp_index=0;bbp_index<ATE_BBP_REG_NUM;bbp_index++)
-		restore_BBP[bbp_index]=0;
-	/* Record All BBP Value */
-	for (bbp_index=0;bbp_index<ATE_BBP_REG_NUM;bbp_index++)
-		ATE_BBP_IO_READ8_BY_REG_ID(pAd,bbp_index,&restore_BBP[bbp_index]);
-#endif // RT30xx //
-
-
-	/* QA has done the following steps if it is used. */
-	if (pAd->ate.bQATxStart == FALSE) 
-	{
-		/* Soft reset BBP. */
-		BbpSoftReset(pAd);
-
-		/* Carrier Test set BBP R22 bit7=1, bit6=1, bit[5~0]=0x01 */
-		ATE_BBP_IO_READ8_BY_REG_ID(pAd, BBP_R22, &BbpData);
-		BbpData &= 0xFFFFFF00; // clear bit7, bit6, bit[5~0]
-		BbpData |= 0x000000C1; // set bit7=1, bit6=1, bit[5~0]=0x01
-		ATE_BBP_IO_WRITE8_BY_REG_ID(pAd, BBP_R22, BbpData);
-
-		/* set MAC_SYS_CTRL(0x1004) Continuous Tx Production Test (bit4) = 1 */
-		RTMP_IO_READ32(pAd, MAC_SYS_CTRL, &MacData);
-		MacData = MacData | 0x00000010;
-		RTMP_IO_WRITE32(pAd, MAC_SYS_CTRL, MacData);
-	}
-
-	ATEDBGPRINT(RT_DEBUG_TRACE, ("ATE : <=== %s\n", __FUNCTION__));
-	return Status;
-}
-
-static NDIS_STATUS TXCARS(
-        IN PRTMP_ADAPTER pAd)
-{
-	UINT32			MacData=0;
-	NDIS_STATUS		Status = NDIS_STATUS_SUCCESS;
-#ifdef RT30xx
-	UINT32			bbp_index=0;	 
-#endif // RT30xx //
-	UCHAR			BbpData = 0;
-
-	ATEDBGPRINT(RT_DEBUG_TRACE, ("ATE : ===> %s\n", __FUNCTION__));
-
-	pAd->ate.Mode = ATE_TXCARRSUPP;
-
-	/* RT35xx ATE will reuse this code segment. */
-#ifdef RT30xx
-	for (bbp_index=0;bbp_index<ATE_BBP_REG_NUM;bbp_index++)
-		restore_BBP[bbp_index]=0;
-	/* Record All BBP Value */
-	for (bbp_index=0;bbp_index<ATE_BBP_REG_NUM;bbp_index++)
-		ATE_BBP_IO_READ8_BY_REG_ID(pAd,bbp_index,&restore_BBP[bbp_index]);
-#endif // RT30xx //
-
-
-	/* QA has done the following steps if it is used. */
-	if (pAd->ate.bQATxStart == FALSE) 
-	{
-		/* Soft reset BBP. */
-		BbpSoftReset(pAd);
-
-		/* Carrier Suppression set BBP R22 bit7=1 (Enable Continue Tx Mode) */
-		ATE_BBP_IO_READ8_BY_REG_ID(pAd, BBP_R22, &BbpData);
-		BbpData |= 0x00000080; // set bit7=1, bit6=1, bit[5~0]=0x01
-		ATE_BBP_IO_WRITE8_BY_REG_ID(pAd, BBP_R22, BbpData);
- 		 // Carrier Suppression set BBP R24 bit0=1 (TX continuously send out 5.5MHZ sin save)
-                ATE_BBP_IO_READ8_BY_REG_ID(pAd, BBP_R24, &BbpData);
-               BbpData |= 0x00000001; //set bit0=1
-		ATE_BBP_IO_WRITE8_BY_REG_ID(pAd, BBP_R24, BbpData);
-
-		/* set MAC_SYS_CTRL(0x1004) Continuous Tx Production Test (bit4) = 1 */
-		RTMP_IO_READ32(pAd, MAC_SYS_CTRL, &MacData);
-		MacData = MacData | 0x00000010;
-		RTMP_IO_WRITE32(pAd, MAC_SYS_CTRL, MacData);
-	}
-
-	ATEDBGPRINT(RT_DEBUG_TRACE, ("ATE : <=== %s\n", __FUNCTION__));
-	return Status;
-}
-
-static NDIS_STATUS TXCONT(
-	IN PRTMP_ADAPTER pAd)
-{
-	UINT32			MacData=0;
-	NDIS_STATUS		Status = NDIS_STATUS_SUCCESS;
-#ifdef RTMP_MAC_PCI
-	UINT32			ring_index=0;
-	PTXD_STRUC		pTxD = NULL;
-	PRTMP_TX_RING 	pTxRing = &pAd->TxRing[QID_AC_BE];
-#ifdef RT_BIG_ENDIAN
-    PTXD_STRUC      pDestTxD = NULL;
-    TXD_STRUC       TxD;
-#endif // RT_BIG_ENDIAN //
-#endif // RTMP_MAC_PCI //
-#ifdef RT30xx
-	UINT32			bbp_index=0;
-#endif // RT30xx //
-	UCHAR			BbpData = 0;
-
-	ATEDBGPRINT(RT_DEBUG_TRACE, ("ATE : ===> %s\n", __FUNCTION__));
-
-	if (pAd->ate.bQATxStart == TRUE)
-	{
-		/*
-			set MAC_SYS_CTRL(0x1004) bit4(Continuous Tx Production Test)
-			and bit2(MAC TX enable) back to zero.
-		*/ 
-		RTMP_IO_READ32(pAd, MAC_SYS_CTRL, &MacData);
-		MacData &= 0xFFFFFFEB;
-		RTMP_IO_WRITE32(pAd, MAC_SYS_CTRL, MacData);
-
-		/* set BBP R22 bit7=0 */
-		ATE_BBP_IO_READ8_BY_REG_ID(pAd, BBP_R22, &BbpData);
-		BbpData &= 0xFFFFFF7F; // set bit7=0
-		ATE_BBP_IO_WRITE8_BY_REG_ID(pAd, BBP_R22, BbpData);
-	}
-
-	/* RT35xx ATE will reuse this code segment. */
-#ifdef RT30xx
-	for(bbp_index=0;bbp_index<ATE_BBP_REG_NUM;bbp_index++)
-		restore_BBP[bbp_index]=0;
-	/* Record All BBP Value */
-	for(bbp_index=0;bbp_index<ATE_BBP_REG_NUM;bbp_index++)
-		ATE_BBP_IO_READ8_BY_REG_ID(pAd,bbp_index,&restore_BBP[bbp_index]);
-#endif // RT30xx //
-
-
-	/* 
-		for TxCont mode.
-		Step 1: Send 50 packets first then wait for a moment.
-		Step 2: Send more 50 packet then start continue mode.
-	*/
-
-
-	/* Step 1: send 50 packets first. */
-	pAd->ate.Mode = ATE_TXCONT;
-	pAd->ate.TxCount = 50;
-
-
-	/* Soft reset BBP. */
-	BbpSoftReset(pAd);
-
-	/* Abort Tx, RX DMA. */
-	RtmpDmaEnable(pAd, 0);
-
-#ifdef RTMP_MAC_PCI
-	/* Fix can't smooth kick */
-	{
-		RTMP_IO_READ32(pAd, TX_DTX_IDX0 + QID_AC_BE * 0x10,  &pTxRing->TxDmaIdx);
-		pTxRing->TxSwFreeIdx = pTxRing->TxDmaIdx;
-		pTxRing->TxCpuIdx = pTxRing->TxDmaIdx;
-		RTMP_IO_WRITE32(pAd, TX_CTX_IDX0 + QID_AC_BE * 0x10, pTxRing->TxCpuIdx);
-	}
-#endif // RTMP_MAC_PCI //
-
-	/* Do it after Tx/Rx DMA is aborted. */
-	pAd->ate.TxDoneCount = 0;
-	
-	/* Only needed if we have to send some normal frames. */
-	SetJapanFilter(pAd);
-
-#ifdef RTMP_MAC_PCI
-	for (ring_index = 0; (ring_index < TX_RING_SIZE-1) && (ring_index < pAd->ate.TxCount); ring_index++)
-	{
-		PNDIS_PACKET pPacket;
-		UINT32 TxIdx = pTxRing->TxCpuIdx;
-
-#ifndef RT_BIG_ENDIAN
-		pTxD = (PTXD_STRUC)pTxRing->Cell[TxIdx].AllocVa;
-#else
-		pDestTxD = (PTXD_STRUC)pTxRing->Cell[TxIdx].AllocVa;
-		TxD = *pDestTxD;
-		pTxD = &TxD;
-		RTMPDescriptorEndianChange((PUCHAR)pTxD, TYPE_TXD);
-#endif // !RT_BIG_ENDIAN //
-
-		/* Clean current cell. */
-		pPacket = pTxRing->Cell[TxIdx].pNdisPacket;
-
-		if (pPacket)
-		{
-			PCI_UNMAP_SINGLE(pAd, pTxD->SDPtr0, pTxD->SDLen0, PCI_DMA_TODEVICE);
-			RELEASE_NDIS_PACKET(pAd, pPacket, NDIS_STATUS_SUCCESS);
-		}
-
-		/* Always assign pNdisPacket as NULL after clear */
-		pTxRing->Cell[TxIdx].pNdisPacket = NULL;
-
-		pPacket = pTxRing->Cell[TxIdx].pNextNdisPacket;
-
-		if (pPacket)
-		{
-			PCI_UNMAP_SINGLE(pAd, pTxD->SDPtr1, pTxD->SDLen1, PCI_DMA_TODEVICE);
-			RELEASE_NDIS_PACKET(pAd, pPacket, NDIS_STATUS_SUCCESS);
-		}
-
-		/* Always assign pNextNdisPacket as NULL after clear */
-		pTxRing->Cell[TxIdx].pNextNdisPacket = NULL;
-
-#ifdef RT_BIG_ENDIAN
-		RTMPDescriptorEndianChange((PUCHAR)pTxD, TYPE_TXD);
-		WriteBackToDescriptor((PUCHAR)pDestTxD, (PUCHAR)pTxD, FALSE, TYPE_TXD);
-#endif // RT_BIG_ENDIAN //
-
-		if (ATESetUpFrame(pAd, TxIdx) != 0)
-			return NDIS_STATUS_FAILURE;
-
-		INC_RING_INDEX(pTxRing->TxCpuIdx, TX_RING_SIZE);
-	}
-
-	ATESetUpFrame(pAd, pTxRing->TxCpuIdx);
-#endif // RTMP_MAC_PCI //
-
-
-	/* Enable Tx */
-	RTMP_IO_READ32(pAd, MAC_SYS_CTRL, &MacData);
-	MacData |= (1 << 2);
-	RTMP_IO_WRITE32(pAd, MAC_SYS_CTRL, MacData);
-
-	/* Disable Rx */
-	RTMP_IO_READ32(pAd, MAC_SYS_CTRL, &MacData);
-	MacData &= ~(1 << 3);
-	RTMP_IO_WRITE32(pAd, MAC_SYS_CTRL, MacData);
-
-	/* Start Tx, RX DMA. */
-	RtmpDmaEnable(pAd, 1);
-
-
-#ifdef RALINK_28xx_QA
-	if (pAd->ate.bQATxStart == TRUE)
-	{
-		pAd->ate.TxStatus = 1;
-	}
-#endif // RALINK_28xx_QA //
-
-#ifdef RTMP_MAC_PCI
-	/* kick Tx Ring */
-	RTMP_IO_WRITE32(pAd, TX_CTX_IDX0 + QID_AC_BE * RINGREG_DIFF, pAd->TxRing[QID_AC_BE].TxCpuIdx);
-
-	RTMPusecDelay(5000);
-#endif // RTMP_MAC_PCI //
-
-
-	/* Step 2: send more 50 packets then start continue mode. */
-	/* Abort Tx, RX DMA. */
-	RtmpDmaEnable(pAd, 0);
-
-	/* Cont. TX set BBP R22 bit7=1 */
-	ATE_BBP_IO_READ8_BY_REG_ID(pAd, BBP_R22, &BbpData);
-	BbpData |= 0x00000080; // set bit7=1
-	ATE_BBP_IO_WRITE8_BY_REG_ID(pAd, BBP_R22, BbpData);
-
-	pAd->ate.TxCount = 50;
-#ifdef RTMP_MAC_PCI
-	/* Fix can't smooth kick */
-	{
-		RTMP_IO_READ32(pAd, TX_DTX_IDX0 + QID_AC_BE * 0x10,  &pTxRing->TxDmaIdx);
-		pTxRing->TxSwFreeIdx = pTxRing->TxDmaIdx;
-		pTxRing->TxCpuIdx = pTxRing->TxDmaIdx;
-		RTMP_IO_WRITE32(pAd, TX_CTX_IDX0 + QID_AC_BE * 0x10, pTxRing->TxCpuIdx);					
-	}
-#endif // RTMP_MAC_PCI //
-
-	pAd->ate.TxDoneCount = 0;
-	SetJapanFilter(pAd);
-
-#ifdef RTMP_MAC_PCI
-	for (ring_index = 0; (ring_index < TX_RING_SIZE-1) && (ring_index < pAd->ate.TxCount); ring_index++)
-	{
-		PNDIS_PACKET pPacket;
-		UINT32 TxIdx = pTxRing->TxCpuIdx;
-
-#ifndef RT_BIG_ENDIAN
-		pTxD = (PTXD_STRUC)pTxRing->Cell[TxIdx].AllocVa;
-#else
-		pDestTxD = (PTXD_STRUC)pTxRing->Cell[TxIdx].AllocVa;
-		TxD = *pDestTxD;
-		pTxD = &TxD;
-		RTMPDescriptorEndianChange((PUCHAR)pTxD, TYPE_TXD);
-#endif // !RT_BIG_ENDIAN //
-		/* clean current cell */
-		pPacket = pTxRing->Cell[TxIdx].pNdisPacket;
-
-		if (pPacket)
-		{
-			PCI_UNMAP_SINGLE(pAd, pTxD->SDPtr0, pTxD->SDLen0, PCI_DMA_TODEVICE);
-			RELEASE_NDIS_PACKET(pAd, pPacket, NDIS_STATUS_SUCCESS);
-		}
-
-		/* Always assign pNdisPacket as NULL after clear. */
-		pTxRing->Cell[TxIdx].pNdisPacket = NULL;
-
-		pPacket = pTxRing->Cell[TxIdx].pNextNdisPacket;
-
-		if (pPacket)
-		{
-			PCI_UNMAP_SINGLE(pAd, pTxD->SDPtr1, pTxD->SDLen1, PCI_DMA_TODEVICE);
-			RELEASE_NDIS_PACKET(pAd, pPacket, NDIS_STATUS_SUCCESS);
-		}
-
-		/* Always assign pNextNdisPacket as NULL after clear. */
-		pTxRing->Cell[TxIdx].pNextNdisPacket = NULL;
-
-#ifdef RT_BIG_ENDIAN
-		RTMPDescriptorEndianChange((PUCHAR)pTxD, TYPE_TXD);
-		WriteBackToDescriptor((PUCHAR)pDestTxD, (PUCHAR)pTxD, FALSE, TYPE_TXD);
-#endif // RT_BIG_ENDIAN //
-
-		if (ATESetUpFrame(pAd, TxIdx) != 0)
-			return NDIS_STATUS_FAILURE;
-
-		INC_RING_INDEX(pTxRing->TxCpuIdx, TX_RING_SIZE);
-	}
-
-	ATESetUpFrame(pAd, pTxRing->TxCpuIdx);
-#endif // RTMP_MAC_PCI //
-
-
-	/* Enable Tx */
-	RTMP_IO_READ32(pAd, MAC_SYS_CTRL, &MacData);
-	MacData |= (1 << 2);
-	RTMP_IO_WRITE32(pAd, MAC_SYS_CTRL, MacData);
-
-	/* Disable Rx */
-	RTMP_IO_READ32(pAd, MAC_SYS_CTRL, &MacData);
-	MacData &= ~(1 << 3);
-	RTMP_IO_WRITE32(pAd, MAC_SYS_CTRL, MacData);
-
-	/* Start Tx, Rx DMA. */
-	RtmpDmaEnable(pAd, 1);
-
-#ifdef RALINK_28xx_QA
-	if (pAd->ate.bQATxStart == TRUE)
-	{
-		pAd->ate.TxStatus = 1;
-	}
-#endif // RALINK_28xx_QA //
-
-#ifdef RTMP_MAC_PCI
-	/* kick Tx Ring */
-	RTMP_IO_WRITE32(pAd, TX_CTX_IDX0 + QID_AC_BE * RINGREG_DIFF, pAd->TxRing[QID_AC_BE].TxCpuIdx);
-#endif // RTMP_MAC_PCI //
-
-	RTMPusecDelay(500);
-
-	/* enable continuous tx production test */
-	RTMP_IO_READ32(pAd, MAC_SYS_CTRL, &MacData);
-	MacData |= 0x00000010;
-	RTMP_IO_WRITE32(pAd, MAC_SYS_CTRL, MacData);							
-
-	ATEDBGPRINT(RT_DEBUG_TRACE, ("ATE : <=== %s\n", __FUNCTION__));
-	return Status;
-}
-
-
-static NDIS_STATUS TXFRAME(
-	IN PRTMP_ADAPTER pAd)
-{
-	UINT32			MacData=0;
-	NDIS_STATUS		Status = NDIS_STATUS_SUCCESS;
-#ifdef RTMP_MAC_PCI
-	UINT32			ring_index=0;
-	PRTMP_TX_RING 	pTxRing = &pAd->TxRing[QID_AC_BE];
-	PTXD_STRUC		pTxD = NULL;
-#ifdef RT_BIG_ENDIAN
-    PTXD_STRUC      pDestTxD = NULL;
-    TXD_STRUC       TxD;
-#endif // RT_BIG_ENDIAN //
-#endif // RTMP_MAC_PCI //
-	UCHAR			BbpData = 0;
-
-
-	ATEDBGPRINT(RT_DEBUG_TRACE, ("ATE : ===> %s(Count=%d)\n", __FUNCTION__, pAd->ate.TxCount));
-	pAd->ate.Mode |= ATE_TXFRAME;
-
-#ifdef RTMP_MAC_PCI
-	/* Default value in BBP R22 is 0x0. */
-	BbpData = 0;
-	ATE_BBP_IO_WRITE8_BY_REG_ID(pAd, BBP_R22, BbpData);
-
-	/* Soft reset BBP. */
-	BbpSoftReset(pAd);
-
-	/* clean bit4 to stop continuous Tx production test */
-	RTMP_IO_READ32(pAd, MAC_SYS_CTRL, &MacData);
-	MacData &= 0xFFFFFFEF; 
-	RTMP_IO_WRITE32(pAd, MAC_SYS_CTRL, MacData);
-
-	/* Abort Tx, RX DMA. */
-	RtmpDmaEnable(pAd, 0);
-
-	/* Fix can't smooth kick */
-	{
-		RTMP_IO_READ32(pAd, TX_DTX_IDX0 + QID_AC_BE * 0x10,  &pTxRing->TxDmaIdx);
-		pTxRing->TxSwFreeIdx = pTxRing->TxDmaIdx;
-		pTxRing->TxCpuIdx = pTxRing->TxDmaIdx;
-		RTMP_IO_WRITE32(pAd, TX_CTX_IDX0 + QID_AC_BE * 0x10, pTxRing->TxCpuIdx);					
-	}
-
-	pAd->ate.TxDoneCount = 0;
-
-	SetJapanFilter(pAd);
-	
-	for (ring_index = 0; (ring_index < TX_RING_SIZE-1) && (ring_index < pAd->ate.TxCount); ring_index++)
-	{
-		PNDIS_PACKET pPacket;
-		UINT32 TxIdx = pTxRing->TxCpuIdx;
-
-#ifndef RT_BIG_ENDIAN
-		pTxD = (PTXD_STRUC)pTxRing->Cell[TxIdx].AllocVa;
-#else
-		pDestTxD = (PTXD_STRUC)pTxRing->Cell[TxIdx].AllocVa;
-		TxD = *pDestTxD;
-		pTxD = &TxD;
-		RTMPDescriptorEndianChange((PUCHAR)pTxD, TYPE_TXD);
-#endif // !RT_BIG_ENDIAN //
-		/* Clean current cell. */
-		pPacket = pTxRing->Cell[TxIdx].pNdisPacket;
-
-		if (pPacket)
-		{
-			PCI_UNMAP_SINGLE(pAd, pTxD->SDPtr0, pTxD->SDLen0, PCI_DMA_TODEVICE);
-			RELEASE_NDIS_PACKET(pAd, pPacket, NDIS_STATUS_SUCCESS);
-		}
-
-		/* Always assign pNdisPacket as NULL after clear */
-		pTxRing->Cell[TxIdx].pNdisPacket = NULL;
-
-		pPacket = pTxRing->Cell[TxIdx].pNextNdisPacket;
-
-		if (pPacket)
-		{
-			PCI_UNMAP_SINGLE(pAd, pTxD->SDPtr1, pTxD->SDLen1, PCI_DMA_TODEVICE);
-			RELEASE_NDIS_PACKET(pAd, pPacket, NDIS_STATUS_SUCCESS);
-		}
-
-		/* Always assign pNextNdisPacket as NULL after clear */
-		pTxRing->Cell[TxIdx].pNextNdisPacket = NULL;
-
-#ifdef RT_BIG_ENDIAN
-		RTMPDescriptorEndianChange((PUCHAR)pTxD, TYPE_TXD);
-		WriteBackToDescriptor((PUCHAR)pDestTxD, (PUCHAR)pTxD, FALSE, TYPE_TXD);
-#endif // RT_BIG_ENDIAN //
-
-		if (ATESetUpFrame(pAd, TxIdx) != 0)
-			return NDIS_STATUS_FAILURE;
-
-		INC_RING_INDEX(pTxRing->TxCpuIdx, TX_RING_SIZE);
-
-	}
-
-	ATESetUpFrame(pAd, pTxRing->TxCpuIdx);
-
-	/* Start Tx, Rx DMA. */
-	RtmpDmaEnable(pAd, 1);
-
-	/* Enable Tx */
-	RTMP_IO_READ32(pAd, MAC_SYS_CTRL, &MacData);
-	MacData |= (1 << 2);
-	RTMP_IO_WRITE32(pAd, MAC_SYS_CTRL, MacData);
-#endif // RTMP_MAC_PCI //
-
-
-#ifdef RALINK_28xx_QA
-	/* add this for LoopBack mode */
-	if (pAd->ate.bQARxStart == FALSE)  
-	{
-		/* Disable Rx */
-		RTMP_IO_READ32(pAd, MAC_SYS_CTRL, &MacData);
-		MacData &= ~(1 << 3);
-		RTMP_IO_WRITE32(pAd, MAC_SYS_CTRL, MacData);
-	}
-
-	if (pAd->ate.bQATxStart == TRUE)  
-	{
-		pAd->ate.TxStatus = 1;
-	}
-#else
-	/* Disable Rx */
-	RTMP_IO_READ32(pAd, MAC_SYS_CTRL, &MacData);
-	MacData &= ~(1 << 3);
-	RTMP_IO_WRITE32(pAd, MAC_SYS_CTRL, MacData);
-#endif // RALINK_28xx_QA //
-
-#ifdef RTMP_MAC_PCI
-	RTMP_IO_READ32(pAd, TX_DTX_IDX0 + QID_AC_BE * RINGREG_DIFF, &pAd->TxRing[QID_AC_BE].TxDmaIdx);
-	/* kick Tx Ring */
-	RTMP_IO_WRITE32(pAd, TX_CTX_IDX0 + QID_AC_BE * RINGREG_DIFF, pAd->TxRing[QID_AC_BE].TxCpuIdx);
-
-	pAd->RalinkCounters.KickTxCount++;
-#endif // RTMP_MAC_PCI //
-
-
-	ATEDBGPRINT(RT_DEBUG_TRACE, ("ATE : <=== %s\n", __FUNCTION__));
-	return Status;
-}
-
-
-static NDIS_STATUS RXFRAME(
-	IN PRTMP_ADAPTER pAd)
-{
-	UINT32			MacData=0;
-	NDIS_STATUS		Status = NDIS_STATUS_SUCCESS;
-	UCHAR			BbpData = 0;
-
-	ATEDBGPRINT(RT_DEBUG_TRACE, ("ATE : ===> %s\n", __FUNCTION__));
-
-	/* Disable Rx of MAC block */
-	RTMP_IO_READ32(pAd, MAC_SYS_CTRL, &MacData);
-	MacData &= ~(1 << 3);
-	RTMP_IO_WRITE32(pAd, MAC_SYS_CTRL, MacData);
-
-	/* Default value in BBP R22 is 0x0. */
-	BbpData = 0;
-	ATE_BBP_IO_WRITE8_BY_REG_ID(pAd, BBP_R22, BbpData);
-
-	/* Clean bit4 to stop continuous Tx production test. */
-	RTMP_IO_READ32(pAd, MAC_SYS_CTRL, &MacData);
-	MacData &= 0xFFFFFFEF;
-	RTMP_IO_WRITE32(pAd, MAC_SYS_CTRL, MacData);
-
-	pAd->ate.Mode |= ATE_RXFRAME;
-
-
-	/* Disable Tx of MAC block. */
-	RTMP_IO_READ32(pAd, MAC_SYS_CTRL, &MacData);
-	MacData &= ~(1 << 2);
-	RTMP_IO_WRITE32(pAd, MAC_SYS_CTRL, MacData);
-
-
-	/* Enable Rx of MAC block. */
-	RTMP_IO_READ32(pAd, MAC_SYS_CTRL, &MacData);
-	MacData |= (1 << 3);
-	RTMP_IO_WRITE32(pAd, MAC_SYS_CTRL, MacData);
-
-
-	ATEDBGPRINT(RT_DEBUG_TRACE, ("ATE : <=== %s\n", __FUNCTION__));
-	return Status;
-}
-
-
-#ifdef RALINK_28xx_QA
-static NDIS_STATUS TXSTOP(
-	IN PRTMP_ADAPTER pAd)
-{
-	UINT32			MacData=0, atemode=0;
-	NDIS_STATUS		Status = NDIS_STATUS_SUCCESS;
-#ifdef RTMP_MAC_PCI
-	UINT32			ring_index=0;
-	PTXD_STRUC		pTxD = NULL;
-#ifdef RT_BIG_ENDIAN
-    PTXD_STRUC      pDestTxD = NULL;
-    TXD_STRUC       TxD;
-#endif // RT_BIG_ENDIAN //
-#endif // RTMP_MAC_PCI //
-	UCHAR			BbpData = 0;
-
-	ATEDBGPRINT(RT_DEBUG_TRACE, ("ATE : ===> %s\n", __FUNCTION__));
-	
-	atemode = pAd->ate.Mode;
-	pAd->ate.Mode &= ATE_TXSTOP;
-	pAd->ate.bQATxStart = FALSE;
-
-	if (atemode == ATE_TXCARR)
-	{
-		/* No Carrier Test set BBP R22 bit7=0, bit6=0, bit[5~0]=0x0 */
-		ATE_BBP_IO_READ8_BY_REG_ID(pAd, BBP_R22, &BbpData);
-		BbpData &= 0xFFFFFF00; // clear bit7, bit6, bit[5~0]	
-	    ATE_BBP_IO_WRITE8_BY_REG_ID(pAd, BBP_R22, BbpData);
-	}
-	else if (atemode == ATE_TXCARRSUPP)
-	{
-		/* No Cont. TX set BBP R22 bit7=0 */
-		ATE_BBP_IO_READ8_BY_REG_ID(pAd, BBP_R22, &BbpData);
-		BbpData &= ~(1 << 7); // set bit7=0
-		ATE_BBP_IO_WRITE8_BY_REG_ID(pAd, BBP_R22, BbpData);
-
-		/* No Carrier Suppression set BBP R24 bit0=0 */
-		ATE_BBP_IO_READ8_BY_REG_ID(pAd, BBP_R24, &BbpData);
-		BbpData &= 0xFFFFFFFE; // clear bit0	
-	    ATE_BBP_IO_WRITE8_BY_REG_ID(pAd, BBP_R24, BbpData);
-	}		
-
-	/*
-		We should free some resource which was allocated
-		when ATE_TXFRAME, ATE_STOP, and ATE_TXCONT.
-	*/
-	else if ((atemode & ATE_TXFRAME) || (atemode == ATE_STOP))
-#ifdef RTMP_MAC_PCI
-	{
-		PRTMP_TX_RING pTxRing = &pAd->TxRing[QID_AC_BE];
-
-		if (atemode == ATE_TXCONT)
-		{
-			// No Cont. TX set BBP R22 bit7=0
-			ATE_BBP_IO_READ8_BY_REG_ID(pAd, BBP_R22, &BbpData);
-			BbpData &= ~(1 << 7); //set bit7=0
-			ATE_BBP_IO_WRITE8_BY_REG_ID(pAd, BBP_R22, BbpData);
-		}
-
-		/* Abort Tx, Rx DMA. */
-		RtmpDmaEnable(pAd, 0);
-
-		for (ring_index=0; ring_index<TX_RING_SIZE; ring_index++)
-		{
-			PNDIS_PACKET  pPacket;
-
-#ifndef RT_BIG_ENDIAN
-		    pTxD = (PTXD_STRUC)pAd->TxRing[QID_AC_BE].Cell[ring_index].AllocVa;
-#else
-    		pDestTxD = (PTXD_STRUC)pAd->TxRing[QID_AC_BE].Cell[ring_index].AllocVa;
-    		TxD = *pDestTxD;
-    		pTxD = &TxD;
-    		RTMPDescriptorEndianChange((PUCHAR)pTxD, TYPE_TXD);
-#endif // !RT_BIG_ENDIAN //
-			pTxD->DMADONE = 0;
-			pPacket = pTxRing->Cell[ring_index].pNdisPacket;
-
-			if (pPacket)
-			{
-				PCI_UNMAP_SINGLE(pAd, pTxD->SDPtr0, pTxD->SDLen0, PCI_DMA_TODEVICE);
-				RELEASE_NDIS_PACKET(pAd, pPacket, NDIS_STATUS_SUCCESS);
-			}
-
-			/* Always assign pNdisPacket as NULL after clear */
-			pTxRing->Cell[ring_index].pNdisPacket = NULL;
-
-			pPacket = pTxRing->Cell[ring_index].pNextNdisPacket;
-
-			if (pPacket)
-			{
-				PCI_UNMAP_SINGLE(pAd, pTxD->SDPtr1, pTxD->SDLen1, PCI_DMA_TODEVICE);
-				RELEASE_NDIS_PACKET(pAd, pPacket, NDIS_STATUS_SUCCESS);
-			}
-
-			/* Always assign pNextNdisPacket as NULL after clear */
-			pTxRing->Cell[ring_index].pNextNdisPacket = NULL;
-#ifdef RT_BIG_ENDIAN
-			RTMPDescriptorEndianChange((PUCHAR)pTxD, TYPE_TXD);
-			WriteBackToDescriptor((PUCHAR)pDestTxD, (PUCHAR)pTxD, FALSE, TYPE_TXD);
-#endif // RT_BIG_ENDIAN //
-		}
-		/* Enable Tx, Rx DMA */
-		RtmpDmaEnable(pAd, 1);
-	}
-#endif // RTMP_MAC_PCI //
-
-
-	/* task Tx status : 0 --> task is idle, 1 --> task is running */
-	pAd->ate.TxStatus = 0;
-
-	/* Soft reset BBP. */
-	BbpSoftReset(pAd);
-
-	/* Disable Tx */
-	RTMP_IO_READ32(pAd, MAC_SYS_CTRL, &MacData);
-	MacData &= ~(1 << 2);
-	RTMP_IO_WRITE32(pAd, MAC_SYS_CTRL, MacData);
-
-
-	ATEDBGPRINT(RT_DEBUG_TRACE, ("ATE : <=== %s\n", __FUNCTION__));
-	return Status;
-}
-
-
-static NDIS_STATUS RXSTOP(
-	IN PRTMP_ADAPTER pAd)
-{
-	UINT32			MacData=0;
-	NDIS_STATUS		Status = NDIS_STATUS_SUCCESS;
-
-	ATEDBGPRINT(RT_DEBUG_TRACE, ("ATE : ===> %s\n", __FUNCTION__));
-
-	/* Disable Rx */
-	RTMP_IO_READ32(pAd, MAC_SYS_CTRL, &MacData);
-	MacData &= ~(1 << 3);
-	RTMP_IO_WRITE32(pAd, MAC_SYS_CTRL, MacData);
-
-	pAd->ate.Mode &= ATE_RXSTOP;
-	pAd->ate.bQARxStart = FALSE;
-//	pAd->ate.TxDoneCount = pAd->ate.TxCount;
-
-
-	/* Soft reset BBP. */
-	BbpSoftReset(pAd);
-
-	/* move to above */
-
-	ATEDBGPRINT(RT_DEBUG_TRACE, ("ATE : <=== %s\n", __FUNCTION__));
-	return Status;
-}
-#endif // RALINK_28xx_QA //
-
 
 
 /*
@@ -2973,92 +731,865 @@ static NDIS_STATUS RXSTOP(
         Set ATE operation mode to
         0. ATESTART  = Start ATE Mode
         1. ATESTOP   = Stop ATE Mode
-        2. TXCARR    = Transmit Carrier
-        3. TXCONT    = Continuous Transmit
+        2. TXCONT    = Continuous Transmit
+        3. TXCARR    = Transmit Carrier
         4. TXFRAME   = Transmit Frames
         5. RXFRAME   = Receive Frames
 #ifdef RALINK_28xx_QA
         6. TXSTOP    = Stop Any Type of Transmition
         7. RXSTOP    = Stop Receiving Frames        
 #endif // RALINK_28xx_QA //
-
     Return:
-        NDIS_STATUS_SUCCESS if all parameters are OK.
+        TRUE if all parameters are OK, FALSE otherwise
 ==========================================================================
 */
-static NDIS_STATUS	ATECmdHandler(
+#ifdef RTMP_MAC_PCI
+static INT	ATECmdHandler(
 	IN	PRTMP_ADAPTER	pAd, 
 	IN	PSTRING			arg)
 {
+	UINT32			Value = 0;
+	UCHAR			BbpData;
+	UINT32			MacData = 0;
+	PTXD_STRUC		pTxD;
+	INT				index;
+	UINT			i = 0, atemode = 0;
+	PRXD_STRUC		pRxD;
+	PRTMP_TX_RING 	pTxRing = &pAd->TxRing[QID_AC_BE];
 	NDIS_STATUS		Status = NDIS_STATUS_SUCCESS;
+#ifdef	RT_BIG_ENDIAN
+    PTXD_STRUC      pDestTxD;
+    TXD_STRUC       TxD;
+#endif
 
-	ATEDBGPRINT(RT_DEBUG_TRACE, ("===> %s\n", __FUNCTION__));
+	ATEDBGPRINT(RT_DEBUG_TRACE, ("===> ATECmdHandler()\n"));
 
 	ATEAsicSwitchChannel(pAd);
 
-	/* AsicLockChannel() is empty function so far in fact */
+	/* empty function */
 	AsicLockChannel(pAd, pAd->ate.Channel);
 
 	RTMPusecDelay(5000);
 
+	// read MAC_SYS_CTRL and backup MAC_SYS_CTRL value.
+	RTMP_IO_READ32(pAd, MAC_SYS_CTRL, &MacData);
+
+	// Default value in BBP R22 is 0x0.
+	BbpData = 0;
+
+	// clean bit4 to stop continuous Tx production test.
+	MacData &= 0xFFFFFFEF; 
+
+	// Enter ATE mode and set Tx/Rx Idle
 	if (!strcmp(arg, "ATESTART")) 		
 	{
-		Status = ATESTART(pAd);
+		ATEDBGPRINT(RT_DEBUG_TRACE, ("ATE: ATESTART\n"));
+
+#if defined(LINUX) || defined(VXWORKS)
+		// check if we have removed the firmware
+		if (!(ATE_ON(pAd)))
+		{
+			NICEraseFirmware(pAd);
+		}
+#endif // defined(LINUX) || defined(VXWORKS) //
+
+		atemode = pAd->ate.Mode;
+		pAd->ate.Mode = ATE_START;
+		RTMP_IO_WRITE32(pAd, MAC_SYS_CTRL, MacData);
+
+		if (atemode == ATE_TXCARR)
+		{
+			// No Carrier Test set BBP R22 bit7=0, bit6=0, bit[5~0]=0x0
+			ATE_BBP_IO_READ8_BY_REG_ID(pAd, BBP_R22, &BbpData);
+			BbpData &= 0xFFFFFF00; // clear bit7, bit6, bit[5~0]	
+		    ATE_BBP_IO_WRITE8_BY_REG_ID(pAd, BBP_R22, BbpData);
+		}
+		else if (atemode == ATE_TXCARRSUPP)
+		{
+			// No Cont. TX set BBP R22 bit7=0
+			ATE_BBP_IO_READ8_BY_REG_ID(pAd, BBP_R22, &BbpData);
+			BbpData &= ~(1 << 7); // set bit7=0
+			ATE_BBP_IO_WRITE8_BY_REG_ID(pAd, BBP_R22, BbpData);
+
+			// No Carrier Suppression set BBP R24 bit0=0
+			ATE_BBP_IO_READ8_BY_REG_ID(pAd, BBP_R24, &BbpData);
+			BbpData &= 0xFFFFFFFE; // clear bit0	
+		    ATE_BBP_IO_WRITE8_BY_REG_ID(pAd, BBP_R24, BbpData);
+		}		
+
+		/*
+			We should free some resource which was allocated
+			when ATE_TXFRAME , ATE_STOP, and ATE_TXCONT.
+		*/
+		else if ((atemode & ATE_TXFRAME) || (atemode == ATE_STOP))
+		{
+			PRTMP_TX_RING pTxRing = &pAd->TxRing[QID_AC_BE];
+
+			if (atemode == ATE_TXCONT)
+			{
+				// No Cont. TX set BBP R22 bit7=0
+				ATE_BBP_IO_READ8_BY_REG_ID(pAd, BBP_R22, &BbpData);
+				BbpData &= ~(1 << 7); // set bit7=0
+				ATE_BBP_IO_WRITE8_BY_REG_ID(pAd, BBP_R22, BbpData);
+			}
+
+			// Abort Tx, Rx DMA.
+			RtmpDmaEnable(pAd, 0);
+			for (i=0; i<TX_RING_SIZE; i++)
+			{
+				PNDIS_PACKET  pPacket;
+
+#ifndef RT_BIG_ENDIAN
+			    pTxD = (PTXD_STRUC)pAd->TxRing[QID_AC_BE].Cell[i].AllocVa;
+#else
+        		pDestTxD = (PTXD_STRUC)pAd->TxRing[QID_AC_BE].Cell[i].AllocVa;
+        		TxD = *pDestTxD;
+        		pTxD = &TxD;
+        		RTMPDescriptorEndianChange((PUCHAR)pTxD, TYPE_TXD);
+#endif
+				pTxD->DMADONE = 0;
+				pPacket = pTxRing->Cell[i].pNdisPacket;
+
+				if (pPacket)
+				{
+					PCI_UNMAP_SINGLE(pAd, pTxD->SDPtr0, pTxD->SDLen0, PCI_DMA_TODEVICE);
+					RELEASE_NDIS_PACKET(pAd, pPacket, NDIS_STATUS_SUCCESS);
+				}
+
+				// Always assign pNdisPacket as NULL after clear
+				pTxRing->Cell[i].pNdisPacket = NULL;
+
+				pPacket = pTxRing->Cell[i].pNextNdisPacket;
+
+				if (pPacket)
+				{
+					PCI_UNMAP_SINGLE(pAd, pTxD->SDPtr1, pTxD->SDLen1, PCI_DMA_TODEVICE);
+					RELEASE_NDIS_PACKET(pAd, pPacket, NDIS_STATUS_SUCCESS);
+				}
+
+				// Always assign pNextNdisPacket as NULL after clear
+				pTxRing->Cell[i].pNextNdisPacket = NULL;
+#ifdef RT_BIG_ENDIAN
+				RTMPDescriptorEndianChange((PUCHAR)pTxD, TYPE_TXD);
+				WriteBackToDescriptor((PUCHAR)pDestTxD, (PUCHAR)pTxD, FALSE, TYPE_TXD);
+#endif
+			}
+
+			// Start Tx, RX DMA
+			RtmpDmaEnable(pAd, 1);
+		}
+
+		// reset Rx statistics.
+		pAd->ate.LastSNR0 = 0;
+		pAd->ate.LastSNR1 = 0;
+		pAd->ate.LastRssi0 = 0;
+		pAd->ate.LastRssi1 = 0;
+		pAd->ate.LastRssi2 = 0;
+		pAd->ate.AvgRssi0 = 0;
+		pAd->ate.AvgRssi1 = 0;
+		pAd->ate.AvgRssi2 = 0;
+		pAd->ate.AvgRssi0X8 = 0;
+		pAd->ate.AvgRssi1X8 = 0;
+		pAd->ate.AvgRssi2X8 = 0;
+		pAd->ate.NumOfAvgRssiSample = 0;
+
+#ifdef RALINK_28xx_QA
+		// Tx frame
+		pAd->ate.bQATxStart = FALSE;
+		pAd->ate.bQARxStart = FALSE;
+		pAd->ate.seq = 0; 
+
+		// counters
+		pAd->ate.U2M = 0;
+		pAd->ate.OtherData = 0;
+		pAd->ate.Beacon = 0;
+		pAd->ate.OtherCount = 0;
+		pAd->ate.TxAc0 = 0;
+		pAd->ate.TxAc1 = 0;
+		pAd->ate.TxAc2 = 0;
+		pAd->ate.TxAc3 = 0;
+		/*pAd->ate.TxHCCA = 0;*/
+		pAd->ate.TxMgmt = 0;
+		pAd->ate.RSSI0 = 0;
+		pAd->ate.RSSI1 = 0;
+		pAd->ate.RSSI2 = 0;
+		pAd->ate.SNR0 = 0;
+		pAd->ate.SNR1 = 0;
+
+		// control
+		pAd->ate.TxDoneCount = 0;
+		// TxStatus : 0 --> task is idle, 1 --> task is running
+		pAd->ate.TxStatus = 0;
+#endif // RALINK_28xx_QA //
+
+		// Soft reset BBP.
+		BbpSoftReset(pAd);
+
+
+#ifdef CONFIG_STA_SUPPORT 
+		/* LinkDown() has "AsicDisableSync();" and "RTMP_BBP_IO_R/W8_BY_REG_ID();" inside. */
+//      LinkDown(pAd, FALSE);
+//		AsicEnableBssSync(pAd);
+
+#if defined(LINUX) || defined(VXWORKS)
+		RTMP_OS_NETDEV_STOP_QUEUE(pAd->net_dev);
+#endif // defined(LINUX) || defined(VXWORKS) //
+
+		/* 
+			If we skip "LinkDown()", we should disable protection
+			to prevent from sending out RTS or CTS-to-self.
+		*/
+		ATEDisableAsicProtect(pAd);
+		RTMPStationStop(pAd);
+#endif // CONFIG_STA_SUPPORT //
+
+		/* Disable Tx */
+		RTMP_IO_READ32(pAd, MAC_SYS_CTRL, &Value);
+		Value &= ~(1 << 2);
+		RTMP_IO_WRITE32(pAd, MAC_SYS_CTRL, Value);
+
+		/* Disable Rx */
+		RTMP_IO_READ32(pAd, MAC_SYS_CTRL, &Value);
+		Value &= ~(1 << 3);
+		RTMP_IO_WRITE32(pAd, MAC_SYS_CTRL, Value);
 	}
 	else if (!strcmp(arg, "ATESTOP")) 
-	{
-		Status = ATESTOP(pAd);
+	{						
+		ATEDBGPRINT(RT_DEBUG_TRACE, ("ATE: ATESTOP\n"));
+		
+		ATE_BBP_IO_WRITE8_BY_REG_ID(pAd, BBP_R22, BbpData);
+
+		// recover the MAC_SYS_CTRL register back
+		RTMP_IO_WRITE32(pAd, MAC_SYS_CTRL, MacData); 
+		
+		// disable Tx, Rx
+		RTMP_IO_READ32(pAd, MAC_SYS_CTRL, &Value);
+		Value &= (0xfffffff3);
+		RTMP_IO_WRITE32(pAd, MAC_SYS_CTRL, Value);
+		
+		// abort Tx, RX DMA
+		RtmpDmaEnable(pAd, 0);
+
+#ifdef LINUX
+		pAd->ate.bFWLoading = TRUE;
+
+		Status = NICLoadFirmware(pAd);
+
+		if (Status != NDIS_STATUS_SUCCESS)
+		{
+			ATEDBGPRINT(RT_DEBUG_ERROR, ("NICLoadFirmware failed, Status[=0x%08x]\n", Status));
+			return FALSE;
+		}
+#endif // LINUX //
+		pAd->ate.Mode = ATE_STOP;
+
+		/*
+			Even the firmware has been loaded, 
+			we still could use ATE_BBP_IO_READ8_BY_REG_ID(). 
+			But this is not suggested.
+		*/
+		BbpSoftReset(pAd);
+
+		RTMP_ASIC_INTERRUPT_DISABLE(pAd);
+		
+		NICInitializeAdapter(pAd, TRUE);
+		
+		/*
+			Reinitialize Rx Ring before Rx DMA is enabled.
+			>>>RxCoherent<<< was gone !
+		*/
+		for (index = 0; index < RX_RING_SIZE; index++)
+		{
+			pRxD = (PRXD_STRUC) pAd->RxRing.Cell[index].AllocVa;
+			pRxD->DDONE = 0;
+		}
+
+		// We should read EEPROM for all cases.  
+		NICReadEEPROMParameters(pAd, NULL);
+		NICInitAsicFromEEPROM(pAd); 
+
+		AsicSwitchChannel(pAd, pAd->CommonCfg.Channel, FALSE);
+
+		/* empty function */
+		AsicLockChannel(pAd, pAd->CommonCfg.Channel);		
+
+		/* clear garbage interrupts */
+		RTMP_IO_WRITE32(pAd, INT_SOURCE_CSR, 0xffffffff);
+		/* Enable Interrupt */
+		RTMP_ASIC_INTERRUPT_ENABLE(pAd);
+
+		/* restore RX_FILTR_CFG */
+
+#ifdef CONFIG_STA_SUPPORT 
+		/* restore RX_FILTR_CFG due to that QA maybe set it to 0x3 */
+		RTMP_IO_WRITE32(pAd, RX_FILTR_CFG, STANORMAL);
+#endif // CONFIG_STA_SUPPORT //
+
+		// Enable Tx
+		RTMP_IO_READ32(pAd, MAC_SYS_CTRL, &Value);
+		Value |= (1 << 2);
+		RTMP_IO_WRITE32(pAd, MAC_SYS_CTRL, Value);
+
+		// Enable Tx, Rx DMA.
+		RtmpDmaEnable(pAd, 1);
+
+		// Enable Rx
+		RTMP_IO_READ32(pAd, MAC_SYS_CTRL, &Value);
+		Value |= (1 << 3);
+		RTMP_IO_WRITE32(pAd, MAC_SYS_CTRL, Value);
+
+
+#ifdef CONFIG_STA_SUPPORT 
+		RTMPStationStart(pAd);
+#endif // CONFIG_STA_SUPPORT //
+
+#if defined(LINUX) || defined(VXWORKS)
+		RTMP_OS_NETDEV_START_QUEUE(pAd->net_dev);
+#endif // defined(LINUX) || defined(VXWORKS) //
 	}
 	else if (!strcmp(arg, "TXCARR"))	
 	{
-		Status = TXCARR(pAd);
+		ATEDBGPRINT(RT_DEBUG_TRACE, ("ATE: TXCARR\n"));
+		pAd->ate.Mode = ATE_TXCARR;
+
+		// QA has done the following steps if it is used.
+		if (pAd->ate.bQATxStart == FALSE) 
+		{
+			// Soft reset BBP.
+			BbpSoftReset(pAd);
+
+			// Carrier Test set BBP R22 bit7=1, bit6=1, bit[5~0]=0x01
+			ATE_BBP_IO_READ8_BY_REG_ID(pAd, BBP_R22, &BbpData);
+			BbpData &= 0xFFFFFF00; //clear bit7, bit6, bit[5~0]
+			BbpData |= 0x000000C1; //set bit7=1, bit6=1, bit[5~0]=0x01
+			ATE_BBP_IO_WRITE8_BY_REG_ID(pAd, BBP_R22, BbpData);
+
+			// set MAC_SYS_CTRL(0x1004) Continuous Tx Production Test (bit4) = 1
+			RTMP_IO_READ32(pAd, MAC_SYS_CTRL, &Value);
+			Value = Value | 0x00000010;
+			RTMP_IO_WRITE32(pAd, MAC_SYS_CTRL, Value);
+		}
 	}
 	else if (!strcmp(arg, "TXCONT"))	
 	{
-		Status = TXCONT(pAd);
+		if (pAd->ate.bQATxStart == TRUE)
+		{
+			/*
+				set MAC_SYS_CTRL(0x1004) bit4(Continuous Tx Production Test)
+				and bit2(MAC TX enable) back to zero.
+			*/ 
+			RTMP_IO_READ32(pAd, MAC_SYS_CTRL, &MacData);
+			MacData &= 0xFFFFFFEB;
+			RTMP_IO_WRITE32(pAd, MAC_SYS_CTRL, MacData);
+
+			// set BBP R22 bit7=0
+			ATE_BBP_IO_READ8_BY_REG_ID(pAd, BBP_R22, &BbpData);
+			BbpData &= 0xFFFFFF7F; //set bit7=0
+			ATE_BBP_IO_WRITE8_BY_REG_ID(pAd, BBP_R22, BbpData);
+		}
+
+		/* 
+			for TxCont mode.
+			Step 1: Send 50 packets first then wait for a moment.
+			Step 2: Send more 50 packet then start continue mode.
+		*/
+		ATEDBGPRINT(RT_DEBUG_TRACE, ("ATE: TXCONT\n"));
+
+		// Step 1: send 50 packets first.
+		pAd->ate.Mode = ATE_TXCONT;
+		pAd->ate.TxCount = 50;
+
+		/* Do it after Tx/Rx DMA is aborted. */
+//		pAd->ate.TxDoneCount = 0;
+
+		// Soft reset BBP.
+		BbpSoftReset(pAd);
+
+		// Abort Tx, RX DMA.
+		RtmpDmaEnable(pAd, 0);
+
+		// Fix can't smooth kick
+		{
+			RTMP_IO_READ32(pAd, TX_DTX_IDX0 + QID_AC_BE * 0x10,  &pTxRing->TxDmaIdx);
+			pTxRing->TxSwFreeIdx = pTxRing->TxDmaIdx;
+			pTxRing->TxCpuIdx = pTxRing->TxDmaIdx;
+			RTMP_IO_WRITE32(pAd, TX_CTX_IDX0 + QID_AC_BE * 0x10, pTxRing->TxCpuIdx);
+		}
+
+		pAd->ate.TxDoneCount = 0;
+		
+		/* Only needed if we have to send some normal frames. */
+		SetJapanFilter(pAd);
+		
+		for (i = 0; (i < TX_RING_SIZE-1) && (i < pAd->ate.TxCount); i++)
+		{
+			PNDIS_PACKET pPacket;
+			UINT32 TxIdx = pTxRing->TxCpuIdx;
+
+#ifndef RT_BIG_ENDIAN
+			pTxD = (PTXD_STRUC)pTxRing->Cell[TxIdx].AllocVa;
+#else
+			pDestTxD = (PTXD_STRUC)pTxRing->Cell[TxIdx].AllocVa;
+			TxD = *pDestTxD;
+			pTxD = &TxD;
+			RTMPDescriptorEndianChange((PUCHAR)pTxD, TYPE_TXD);
+#endif
+			// Clean current cell.
+			pPacket = pTxRing->Cell[TxIdx].pNdisPacket;
+
+			if (pPacket)
+			{
+				PCI_UNMAP_SINGLE(pAd, pTxD->SDPtr0, pTxD->SDLen0, PCI_DMA_TODEVICE);
+				RELEASE_NDIS_PACKET(pAd, pPacket, NDIS_STATUS_SUCCESS);
+			}
+
+			// Always assign pNdisPacket as NULL after clear
+			pTxRing->Cell[TxIdx].pNdisPacket = NULL;
+
+			pPacket = pTxRing->Cell[TxIdx].pNextNdisPacket;
+
+			if (pPacket)
+			{
+				PCI_UNMAP_SINGLE(pAd, pTxD->SDPtr1, pTxD->SDLen1, PCI_DMA_TODEVICE);
+				RELEASE_NDIS_PACKET(pAd, pPacket, NDIS_STATUS_SUCCESS);
+			}
+
+			// Always assign pNextNdisPacket as NULL after clear
+			pTxRing->Cell[TxIdx].pNextNdisPacket = NULL;
+
+#ifdef RT_BIG_ENDIAN
+			RTMPDescriptorEndianChange((PUCHAR)pTxD, TYPE_TXD);
+			WriteBackToDescriptor((PUCHAR)pDestTxD, (PUCHAR)pTxD, FALSE, TYPE_TXD);
+#endif
+
+			if (ATESetUpFrame(pAd, TxIdx) != 0)
+				break;
+
+			INC_RING_INDEX(pTxRing->TxCpuIdx, TX_RING_SIZE);
+		}
+
+		// Setup frame format.
+		ATESetUpFrame(pAd, pTxRing->TxCpuIdx);
+
+		// Start Tx, RX DMA.
+		RtmpDmaEnable(pAd, 1);
+
+		// Enable Tx
+		RTMP_IO_READ32(pAd, MAC_SYS_CTRL, &Value);
+		Value |= (1 << 2);
+		RTMP_IO_WRITE32(pAd, MAC_SYS_CTRL, Value);
+
+		// Disable Rx
+		RTMP_IO_READ32(pAd, MAC_SYS_CTRL, &Value);
+		Value &= ~(1 << 3);
+		RTMP_IO_WRITE32(pAd, MAC_SYS_CTRL, Value);
+
+#ifdef RALINK_28xx_QA
+		if (pAd->ate.bQATxStart == TRUE)
+		{
+			pAd->ate.TxStatus = 1;
+		}
+#endif // RALINK_28xx_QA //
+
+		// kick Tx-Ring
+		RTMP_IO_WRITE32(pAd, TX_CTX_IDX0 + QID_AC_BE * RINGREG_DIFF, pAd->TxRing[QID_AC_BE].TxCpuIdx);
+
+		RTMPusecDelay(5000);
+
+
+		// Step 2: send more 50 packets then start continue mode.
+		// Abort Tx, RX DMA.
+		RtmpDmaEnable(pAd, 0);
+
+		// Cont. TX set BBP R22 bit7=1
+		ATE_BBP_IO_READ8_BY_REG_ID(pAd, BBP_R22, &BbpData);
+		BbpData |= 0x00000080; //set bit7=1
+		ATE_BBP_IO_WRITE8_BY_REG_ID(pAd, BBP_R22, BbpData);
+
+		pAd->ate.TxCount = 50;
+
+		// Fix can't smooth kick
+		{
+			RTMP_IO_READ32(pAd, TX_DTX_IDX0 + QID_AC_BE * 0x10,  &pTxRing->TxDmaIdx);
+			pTxRing->TxSwFreeIdx = pTxRing->TxDmaIdx;
+			pTxRing->TxCpuIdx = pTxRing->TxDmaIdx;
+			RTMP_IO_WRITE32(pAd, TX_CTX_IDX0 + QID_AC_BE * 0x10, pTxRing->TxCpuIdx);					
+		}
+
+		pAd->ate.TxDoneCount = 0;
+
+		SetJapanFilter(pAd);
+
+		for (i = 0; (i < TX_RING_SIZE-1) && (i < pAd->ate.TxCount); i++)
+		{
+			PNDIS_PACKET pPacket;
+			UINT32 TxIdx = pTxRing->TxCpuIdx;
+
+#ifndef RT_BIG_ENDIAN
+			pTxD = (PTXD_STRUC)pTxRing->Cell[TxIdx].AllocVa;
+#else
+			pDestTxD = (PTXD_STRUC)pTxRing->Cell[TxIdx].AllocVa;
+			TxD = *pDestTxD;
+			pTxD = &TxD;
+			RTMPDescriptorEndianChange((PUCHAR)pTxD, TYPE_TXD);
+#endif
+			// clean current cell.
+			pPacket = pTxRing->Cell[TxIdx].pNdisPacket;
+
+			if (pPacket)
+			{
+				PCI_UNMAP_SINGLE(pAd, pTxD->SDPtr0, pTxD->SDLen0, PCI_DMA_TODEVICE);
+				RELEASE_NDIS_PACKET(pAd, pPacket, NDIS_STATUS_SUCCESS);
+			}
+
+			// Always assign pNdisPacket as NULL after clear
+			pTxRing->Cell[TxIdx].pNdisPacket = NULL;
+
+			pPacket = pTxRing->Cell[TxIdx].pNextNdisPacket;
+
+			if (pPacket)
+			{
+				PCI_UNMAP_SINGLE(pAd, pTxD->SDPtr1, pTxD->SDLen1, PCI_DMA_TODEVICE);
+				RELEASE_NDIS_PACKET(pAd, pPacket, NDIS_STATUS_SUCCESS);
+			}
+
+			// Always assign pNextNdisPacket as NULL after clear
+			pTxRing->Cell[TxIdx].pNextNdisPacket = NULL;
+
+#ifdef RT_BIG_ENDIAN
+			RTMPDescriptorEndianChange((PUCHAR)pTxD, TYPE_TXD);
+			WriteBackToDescriptor((PUCHAR)pDestTxD, (PUCHAR)pTxD, FALSE, TYPE_TXD);
+#endif
+
+			if (ATESetUpFrame(pAd, TxIdx) != 0)
+				break;
+
+			INC_RING_INDEX(pTxRing->TxCpuIdx, TX_RING_SIZE);
+		}
+
+		ATESetUpFrame(pAd, pTxRing->TxCpuIdx);
+
+		// Start Tx, RX DMA.
+		RtmpDmaEnable(pAd, 1);
+
+		// Enable Tx
+		RTMP_IO_READ32(pAd, MAC_SYS_CTRL, &Value);
+		Value |= (1 << 2);
+		RTMP_IO_WRITE32(pAd, MAC_SYS_CTRL, Value);
+
+		// Disable Rx
+		RTMP_IO_READ32(pAd, MAC_SYS_CTRL, &Value);
+		Value &= ~(1 << 3);
+		RTMP_IO_WRITE32(pAd, MAC_SYS_CTRL, Value);
+
+#ifdef RALINK_28xx_QA
+		if (pAd->ate.bQATxStart == TRUE)
+		{
+			pAd->ate.TxStatus = 1;
+		}
+#endif // RALINK_28xx_QA //
+
+		// kick Tx-Ring.
+		RTMP_IO_WRITE32(pAd, TX_CTX_IDX0 + QID_AC_BE * RINGREG_DIFF, pAd->TxRing[QID_AC_BE].TxCpuIdx);
+
+		RTMPusecDelay(500);
+
+		RTMP_IO_READ32(pAd, MAC_SYS_CTRL, &MacData);
+		MacData |= 0x00000010;
+		RTMP_IO_WRITE32(pAd, MAC_SYS_CTRL, MacData);							
 	}
 	else if (!strcmp(arg, "TXFRAME")) 
 	{
-		Status = TXFRAME(pAd);
-	}
-	else if (!strcmp(arg, "RXFRAME")) 
-	{
-		Status = RXFRAME(pAd);
-	}
-	else if (!strcmp(arg, "TXCARS"))	
-	{
-		Status = TXCARS(pAd);
+		ATEDBGPRINT(RT_DEBUG_TRACE, ("ATE: TXFRAME(Count=%d)\n", pAd->ate.TxCount));
+		pAd->ate.Mode |= ATE_TXFRAME;
+		ATE_BBP_IO_WRITE8_BY_REG_ID(pAd, BBP_R22, BbpData);
+
+		// Soft reset BBP.
+		BbpSoftReset(pAd);
+		RTMP_IO_WRITE32(pAd, MAC_SYS_CTRL, MacData);
+
+		// Abort Tx, RX DMA.
+		RtmpDmaEnable(pAd, 0);
+
+		// Fix can't smooth kick
+		{
+			RTMP_IO_READ32(pAd, TX_DTX_IDX0 + QID_AC_BE * 0x10,  &pTxRing->TxDmaIdx);
+			pTxRing->TxSwFreeIdx = pTxRing->TxDmaIdx;
+			pTxRing->TxCpuIdx = pTxRing->TxDmaIdx;
+			RTMP_IO_WRITE32(pAd, TX_CTX_IDX0 + QID_AC_BE * 0x10, pTxRing->TxCpuIdx);					
+		}
+
+		pAd->ate.TxDoneCount = 0;
+
+		SetJapanFilter(pAd);
+		
+		for (i = 0; (i < TX_RING_SIZE-1) && (i < pAd->ate.TxCount); i++)
+		{
+			PNDIS_PACKET pPacket;
+			UINT32 TxIdx = pTxRing->TxCpuIdx;
+
+#ifndef RT_BIG_ENDIAN
+			pTxD = (PTXD_STRUC)pTxRing->Cell[TxIdx].AllocVa;
+#else
+			pDestTxD = (PTXD_STRUC)pTxRing->Cell[TxIdx].AllocVa;
+			TxD = *pDestTxD;
+			pTxD = &TxD;
+			RTMPDescriptorEndianChange((PUCHAR)pTxD, TYPE_TXD);
+#endif
+			// Clean current cell.
+			pPacket = pTxRing->Cell[TxIdx].pNdisPacket;
+
+			if (pPacket)
+			{
+				PCI_UNMAP_SINGLE(pAd, pTxD->SDPtr0, pTxD->SDLen0, PCI_DMA_TODEVICE);
+				RELEASE_NDIS_PACKET(pAd, pPacket, NDIS_STATUS_SUCCESS);
+			}
+
+			// Always assign pNdisPacket as NULL after clear
+			pTxRing->Cell[TxIdx].pNdisPacket = NULL;
+
+			pPacket = pTxRing->Cell[TxIdx].pNextNdisPacket;
+
+			if (pPacket)
+			{
+				PCI_UNMAP_SINGLE(pAd, pTxD->SDPtr1, pTxD->SDLen1, PCI_DMA_TODEVICE);
+				RELEASE_NDIS_PACKET(pAd, pPacket, NDIS_STATUS_SUCCESS);
+			}
+
+			// Always assign pNextNdisPacket as NULL after clear
+			pTxRing->Cell[TxIdx].pNextNdisPacket = NULL;
+
+#ifdef RT_BIG_ENDIAN
+			RTMPDescriptorEndianChange((PUCHAR)pTxD, TYPE_TXD);
+			WriteBackToDescriptor((PUCHAR)pDestTxD, (PUCHAR)pTxD, FALSE, TYPE_TXD);
+#endif
+
+			if (ATESetUpFrame(pAd, TxIdx) != 0)
+				break;
+
+			INC_RING_INDEX(pTxRing->TxCpuIdx, TX_RING_SIZE);
+
+		}
+
+		ATESetUpFrame(pAd, pTxRing->TxCpuIdx);
+
+		// Start Tx, Rx DMA.
+		RtmpDmaEnable(pAd, 1);
+
+		// Enable Tx
+		RTMP_IO_READ32(pAd, MAC_SYS_CTRL, &Value);
+		Value |= (1 << 2);
+		RTMP_IO_WRITE32(pAd, MAC_SYS_CTRL, Value);
+
+#ifdef RALINK_28xx_QA
+		// add this for LoopBack mode
+		if (pAd->ate.bQARxStart == FALSE)  
+		{
+			// Disable Rx
+			RTMP_IO_READ32(pAd, MAC_SYS_CTRL, &Value);
+			Value &= ~(1 << 3);
+			RTMP_IO_WRITE32(pAd, MAC_SYS_CTRL, Value);
+		}
+
+		if (pAd->ate.bQATxStart == TRUE)  
+		{
+			pAd->ate.TxStatus = 1;
+		}
+#else
+		// Disable Rx
+		RTMP_IO_READ32(pAd, MAC_SYS_CTRL, &Value);
+		Value &= ~(1 << 3);
+		RTMP_IO_WRITE32(pAd, MAC_SYS_CTRL, Value);
+#endif // RALINK_28xx_QA //
+
+		RTMP_IO_READ32(pAd, TX_DTX_IDX0 + QID_AC_BE * RINGREG_DIFF, &pAd->TxRing[QID_AC_BE].TxDmaIdx);
+		// kick Tx-Ring.
+		RTMP_IO_WRITE32(pAd, TX_CTX_IDX0 + QID_AC_BE * RINGREG_DIFF, pAd->TxRing[QID_AC_BE].TxCpuIdx);
+
+		pAd->RalinkCounters.KickTxCount++;
 	}
 #ifdef RALINK_28xx_QA
-	/* Enter ATE mode and set Tx/Rx Idle */
 	else if (!strcmp(arg, "TXSTOP"))
 	{
-		Status = TXSTOP(pAd);
+		ATEDBGPRINT(RT_DEBUG_TRACE, ("ATE: TXSTOP\n"));
+		atemode = pAd->ate.Mode;
+		pAd->ate.Mode &= ATE_TXSTOP;
+		pAd->ate.bQATxStart = FALSE;
+//		pAd->ate.TxDoneCount = pAd->ate.TxCount;
+
+		if (atemode == ATE_TXCARR)
+		{
+			// No Carrier Test set BBP R22 bit7=0, bit6=0, bit[5~0]=0x0
+			ATE_BBP_IO_READ8_BY_REG_ID(pAd, BBP_R22, &BbpData);
+			BbpData &= 0xFFFFFF00; //clear bit7, bit6, bit[5~0]	
+		    ATE_BBP_IO_WRITE8_BY_REG_ID(pAd, BBP_R22, BbpData);
+		}
+		else if (atemode == ATE_TXCARRSUPP)
+		{
+			// No Cont. TX set BBP R22 bit7=0
+			ATE_BBP_IO_READ8_BY_REG_ID(pAd, BBP_R22, &BbpData);
+			BbpData &= ~(1 << 7); //set bit7=0
+			ATE_BBP_IO_WRITE8_BY_REG_ID(pAd, BBP_R22, BbpData);
+
+			// No Carrier Suppression set BBP R24 bit0=0
+			ATE_BBP_IO_READ8_BY_REG_ID(pAd, BBP_R24, &BbpData);
+			BbpData &= 0xFFFFFFFE; //clear bit0	
+		    ATE_BBP_IO_WRITE8_BY_REG_ID(pAd, BBP_R24, BbpData);
+		}		
+
+		/*
+			We should free some resource which was allocated
+			when ATE_TXFRAME, ATE_STOP, and ATE_TXCONT.
+		*/
+		else if ((atemode & ATE_TXFRAME) || (atemode == ATE_STOP))
+		{
+			PRTMP_TX_RING pTxRing = &pAd->TxRing[QID_AC_BE];
+
+			if (atemode == ATE_TXCONT)
+			{
+				// No Cont. TX set BBP R22 bit7=0
+				ATE_BBP_IO_READ8_BY_REG_ID(pAd, BBP_R22, &BbpData);
+				BbpData &= ~(1 << 7); //set bit7=0
+				ATE_BBP_IO_WRITE8_BY_REG_ID(pAd, BBP_R22, BbpData);
+			}
+
+			// Abort Tx, Rx DMA.
+			RtmpDmaEnable(pAd, 0);
+
+			for (i=0; i<TX_RING_SIZE; i++)
+			{
+				PNDIS_PACKET  pPacket;
+
+#ifndef RT_BIG_ENDIAN
+			    pTxD = (PTXD_STRUC)pAd->TxRing[QID_AC_BE].Cell[i].AllocVa;
+#else
+        		pDestTxD = (PTXD_STRUC)pAd->TxRing[QID_AC_BE].Cell[i].AllocVa;
+        		TxD = *pDestTxD;
+        		pTxD = &TxD;
+        		RTMPDescriptorEndianChange((PUCHAR)pTxD, TYPE_TXD);
+#endif
+				pTxD->DMADONE = 0;
+				pPacket = pTxRing->Cell[i].pNdisPacket;
+
+				if (pPacket)
+				{
+					PCI_UNMAP_SINGLE(pAd, pTxD->SDPtr0, pTxD->SDLen0, PCI_DMA_TODEVICE);
+					RELEASE_NDIS_PACKET(pAd, pPacket, NDIS_STATUS_SUCCESS);
+				}
+
+				// Always assign pNdisPacket as NULL after clear
+				pTxRing->Cell[i].pNdisPacket = NULL;
+
+				pPacket = pTxRing->Cell[i].pNextNdisPacket;
+
+				if (pPacket)
+				{
+					PCI_UNMAP_SINGLE(pAd, pTxD->SDPtr1, pTxD->SDLen1, PCI_DMA_TODEVICE);
+					RELEASE_NDIS_PACKET(pAd, pPacket, NDIS_STATUS_SUCCESS);
+				}
+
+				// Always assign pNextNdisPacket as NULL after clear
+				pTxRing->Cell[i].pNextNdisPacket = NULL;
+#ifdef RT_BIG_ENDIAN
+				RTMPDescriptorEndianChange((PUCHAR)pTxD, TYPE_TXD);
+				WriteBackToDescriptor((PUCHAR)pDestTxD, (PUCHAR)pTxD, FALSE, TYPE_TXD);
+#endif
+			}
+			// Enable Tx, Rx DMA
+			RtmpDmaEnable(pAd, 1);
+
+		}
+
+		// TxStatus : 0 --> task is idle, 1 --> task is running
+		pAd->ate.TxStatus = 0;
+
+		// Soft reset BBP.
+		BbpSoftReset(pAd);
+
+		// Disable Tx
+		RTMP_IO_READ32(pAd, MAC_SYS_CTRL, &Value);
+		Value &= ~(1 << 2);
+		RTMP_IO_WRITE32(pAd, MAC_SYS_CTRL, Value);
 	}
 	else if (!strcmp(arg, "RXSTOP"))
 	{
-		Status = RXSTOP(pAd);
+		ATEDBGPRINT(RT_DEBUG_TRACE, ("ATE: RXSTOP\n"));
+		atemode = pAd->ate.Mode;
+		pAd->ate.Mode &= ATE_RXSTOP;
+		pAd->ate.bQARxStart = FALSE;
+//		pAd->ate.TxDoneCount = pAd->ate.TxCount;
+
+		if (atemode == ATE_TXCARR)
+		{
+			;
+		}
+		else if (atemode == ATE_TXCARRSUPP)
+		{
+			;
+		}		
+
+		/*
+			We should free some resource which was allocated
+			when ATE_TXFRAME, ATE_STOP, and ATE_TXCONT.
+		*/
+		else if ((atemode & ATE_TXFRAME) || (atemode == ATE_STOP))
+		{
+			if (atemode == ATE_TXCONT)
+			{
+				;
+			}
+		}
+
+		// Soft reset BBP.
+		BbpSoftReset(pAd);
+
+		// Disable Rx
+		RTMP_IO_READ32(pAd, MAC_SYS_CTRL, &Value);
+		Value &= ~(1 << 3);
+		RTMP_IO_WRITE32(pAd, MAC_SYS_CTRL, Value);
 	}
 #endif // RALINK_28xx_QA //
+	else if (!strcmp(arg, "RXFRAME")) 
+	{
+		ATEDBGPRINT(RT_DEBUG_TRACE, ("ATE: RXFRAME\n"));
+
+		ATE_BBP_IO_WRITE8_BY_REG_ID(pAd, BBP_R22, BbpData);
+		RTMP_IO_WRITE32(pAd, MAC_SYS_CTRL, MacData);
+
+		pAd->ate.Mode |= ATE_RXFRAME;
+
+		// Disable Tx of MAC block.
+		RTMP_IO_READ32(pAd, MAC_SYS_CTRL, &Value);
+		Value &= ~(1 << 2);
+		RTMP_IO_WRITE32(pAd, MAC_SYS_CTRL, Value);
+
+		// Enable Rx of MAC block.
+		RTMP_IO_READ32(pAd, MAC_SYS_CTRL, &Value);
+		Value |= (1 << 3);
+		RTMP_IO_WRITE32(pAd, MAC_SYS_CTRL, Value);
+	}
 	else
 	{	
-		ATEDBGPRINT(RT_DEBUG_TRACE, ("ATE : Invalid arg !\n"));
-		Status = NDIS_STATUS_INVALID_DATA;
+		ATEDBGPRINT(RT_DEBUG_TRACE, ("ATE: Invalid arg!\n"));
+		return FALSE;
 	}
 	RTMPusecDelay(5000);
 
-	ATEDBGPRINT(RT_DEBUG_TRACE, ("<=== %s\n", __FUNCTION__));
+	ATEDBGPRINT(RT_DEBUG_TRACE, ("<=== ATECmdHandler()\n"));
 
-	return Status;
+	return TRUE;
 }
+/*=======================End of RTMP_MAC_PCI =======================*/
+#endif // RTMP_MAC_PCI //
+
+
 
 
 INT	Set_ATE_Proc(
 	IN	PRTMP_ADAPTER	pAd, 
 	IN	PSTRING			arg)
 {
-
-	if (ATECmdHandler(pAd, arg) == NDIS_STATUS_SUCCESS)
+	if (ATECmdHandler(pAd, arg))
 	{
 		ATEDBGPRINT(RT_DEBUG_TRACE, ("Ralink: Set_ATE_Proc Success\n"));
 
@@ -3376,7 +1907,7 @@ INT	Set_ATE_TX_Antenna_Proc(
 	ATEDBGPRINT(RT_DEBUG_TRACE, ("Set_ATE_TX_Antenna_Proc (Antenna = %d)\n", pAd->ate.TxAntennaSel));
 	ATEDBGPRINT(RT_DEBUG_TRACE,("Ralink: Set_ATE_TX_Antenna_Proc Success\n"));
 
-	/* calibration power unbalance issues */
+	// calibration power unbalance issues, merged from Arch Team
 	ATEAsicSwitchChannel(pAd);
 
 	
@@ -3412,7 +1943,7 @@ INT	Set_ATE_RX_Antenna_Proc(
 	ATEDBGPRINT(RT_DEBUG_TRACE, ("Set_ATE_RX_Antenna_Proc (Antenna = %d)\n", pAd->ate.RxAntennaSel));
 	ATEDBGPRINT(RT_DEBUG_TRACE, ("Ralink: Set_ATE_RX_Antenna_Proc Success\n"));
 
-	/* calibration power unbalance issues */
+	// calibration power unbalance issues, merged from Arch Team
 	ATEAsicSwitchChannel(pAd);
 
 	
@@ -3435,9 +1966,6 @@ INT	Set_ATE_TX_FREQOFFSET_Proc(
 {
 	UCHAR RFFreqOffset = 0;
 	ULONG R4 = 0;
-#ifdef RTMP_RF_RW_SUPPORT
-	UCHAR RFValue = 0;
-#endif // RTMP_RF_RW_SUPPORT //
 	
 	RFFreqOffset = simple_strtol(arg, 0, 10);
 #ifndef RTMP_RF_RW_SUPPORT
@@ -3446,7 +1974,7 @@ INT	Set_ATE_TX_FREQOFFSET_Proc(
 	/* RT35xx ATE will reuse this code segment. */
 #ifdef RTMP_RF_RW_SUPPORT
 //2008/08/06: KH modified the limit of offset value from 65 to 95(0x5F)
-	if (RFFreqOffset >= 96)
+	if (RFFreqOffset >= 95)
 #endif // RTMP_RF_RW_SUPPORT //
 	{
 		ATEDBGPRINT(RT_DEBUG_ERROR, ("Set_ATE_TX_FREQOFFSET_Proc::Out of range, it should be in range of 0~63.\n"));
@@ -3454,10 +1982,11 @@ INT	Set_ATE_TX_FREQOFFSET_Proc(
 	}
 
 	pAd->ate.RFFreqOffset = RFFreqOffset;
-
 #ifdef RTMP_RF_RW_SUPPORT
 	if (IS_RT30xx(pAd) || IS_RT3572(pAd))
 	{
+		// Set RF offset
+		UCHAR RFValue;
 		ATE_RF_IO_READ8_BY_REG_ID(pAd, RF_R23, (PUCHAR)&RFValue);
 //2008/08/06: KH modified "pAd->RFFreqOffset" to "pAd->ate.RFFreqOffset"
 		RFValue = ((RFValue & 0x80) | pAd->ate.RFFreqOffset);
@@ -3515,7 +2044,7 @@ INT	Set_ATE_TX_BW_Proc(
  	}
 
 	/* RT35xx ATE will reuse this code segment. */
-	// Fix the error spectrum of CCK-40MHZ.
+	// Fix the error spectrum of CCK-40MHZ
 	// Turn on BBP 20MHz mode by request here.
 	if ((pAd->ate.TxWI.PHYMODE == MODE_CCK) && (pAd->ate.TxWI.BW == BW_40))
 	{
@@ -3602,6 +2131,7 @@ INT	Set_ATE_TX_BW_Proc(
 			pAd->LatchRfRegs.R4 &= ~0x00200000;
 			RtmpRfIoWrite(pAd);
 		}
+		
 	}
 	// If bandwidth = 40M, set RF Reg4 bit 21 = 0.
 	else if (pAd->ate.TxWI.BW == BW_40)
@@ -3883,13 +2413,13 @@ INT Set_ATE_Read_RF_Proc(
 	IN	PSTRING			arg)
 {
 #ifdef RTMP_RF_RW_SUPPORT
-	/* modify by WY for Read RF Reg. error */
-	UCHAR RFValue;
-	INT index=0;
-
 //2008/07/10:KH add to support RT30xx ATE<--
 	if (IS_RT30xx(pAd) || IS_RT3572(pAd))
 	{
+		/* modify by WY for Read RF Reg. error */
+		UCHAR RFValue;
+		INT index=0;
+
 		for (index = 0; index < 32; index++)
 		{
 			ATE_RF_IO_READ8_BY_REG_ID(pAd, index, (PUCHAR)&RFValue);
@@ -3921,6 +2451,7 @@ INT Set_ATE_Write_RF1_Proc(
 	{
 		ate_print("Warning!! RT3xxx Don't Support !\n");
 		return FALSE;
+			
 	}
 	else
 //2008/07/10:KH add to support 3070 ATE-->
@@ -3945,6 +2476,7 @@ INT Set_ATE_Write_RF2_Proc(
 	{
 		ate_print("Warning!! RT3xxx Don't Support !\n");
 		return FALSE;
+			
 	}
 	else
 //2008/07/10:KH add to support 3070 ATE-->
@@ -3969,6 +2501,7 @@ INT Set_ATE_Write_RF3_Proc(
 	{
 		ate_print("Warning!! RT3xxx Don't Support !\n");
 		return FALSE;
+			
 	}
 	else
 //2008/07/10:KH add to support 3070 ATE-->
@@ -3993,6 +2526,7 @@ INT Set_ATE_Write_RF4_Proc(
 	{
 		ate_print("Warning!! RT3xxx Don't Support !\n");
 		return FALSE;
+			
 	}
 	else
 //2008/07/10:KH add to support 3070 ATE-->
@@ -4060,25 +2594,7 @@ INT Set_ATE_Load_E2P_Proc(
 			else
 			{
 				/* write the content of .bin file to EEPROM */
-#if defined(RTMP_MAC_PCI) && defined(RTMP_PCI_SUPPORT)
-                {
-                    USHORT index=0;
-                    USHORT value=0;
-
-                    INT32 e2p_size=512;/* == 0x200 for PCI interface */
-                    USHORT tempData=0;
-                    for (index = 0 ; index < (e2p_size / 2); )
-                    {
-                        /* "value" is especially for some compilers... */
-                        tempData = le2cpu16(WriteEEPROM[index]);
-                        value = tempData;
-                        RT28xx_EEPROM_WRITE16(pAd, index*2, value);
-                        index ++;
-                    }
-                }
-#else
 				rt_ee_write_all(pAd, WriteEEPROM);
-#endif /* defined(RTMP_MAC_PCI) && defined(RTMP_PCI_SUPPORT) */
 				ret = TRUE;
 			}
 			break;
@@ -4216,12 +2732,10 @@ VOID ATEAsicSwitchChannel(
 	UINT32 R2 = 0, R3 = DEFAULT_RF_TX_POWER, R4 = 0, Value = 0;
 	CHAR TxPwer = 0, TxPwer2 = 0;
 	UCHAR index = 0, BbpValue = 0, R66 = 0x30;
-	RTMP_RF_REGS *RFRegTable = NULL;
+	RTMP_RF_REGS *RFRegTable;
 	UCHAR Channel = 0;
-#ifdef RTMP_RF_RW_SUPPORT
-	/* added to prevent RF register reading error */
-	UCHAR RFValue = 0;
-#endif // RTMP_RF_RW_SUPPORT //
+
+	RFRegTable = NULL;
 
 #ifdef RALINK_28xx_QA
 	// for QA mode, TX power values are passed from UI
@@ -4236,6 +2750,9 @@ VOID ATEAsicSwitchChannel(
 	else
 #endif // RALINK_28xx_QA //
 	Channel = pAd->ate.Channel;
+
+	// select antenna for RT3090
+	AsicAntennaSelect(pAd, Channel);
 
 	// fill Tx power value
 	TxPwer = pAd->ate.TxPower0;
@@ -4253,6 +2770,7 @@ VOID ATEAsicSwitchChannel(
 			(pAd->RfIcType == RFIC_2020)))
 	{
 		/* modify by WY for Read RF Reg. error */
+		UCHAR RFValue = 0;
 
 		for (index = 0; index < NUM_OF_3020_CHNL; index++)
 		{
@@ -4325,6 +2843,7 @@ VOID ATEAsicSwitchChannel(
 			case RFIC_2850:
 			case RFIC_2720:
 			case RFIC_2750:
+				
 				for (index = 0; index < NUM_OF_2850_CHNL; index++)
 				{
 					if (Channel == RFRegTable[index].Channel)
@@ -4525,13 +3044,13 @@ VOID ATEAsicSwitchChannel(
 	    }
 
         // According the Rory's suggestion to solve the middle range issue.
-		ATE_BBP_IO_READ8_BY_REG_ID(pAd, BBP_R86, &BbpValue);
+		ATE_BBP_IO_READ8_BY_REG_ID(pAd, BBP_R86, &BbpValue);// may be removed for RT35xx ++
 
 		ASSERT((BbpValue == 0x00));
 		if ((BbpValue != 0x00))
 		{
 			ATE_BBP_IO_WRITE8_BY_REG_ID(pAd, BBP_R86, 0x00);
-		}
+		}// may be removed for RT35xx --
 
 		// 5.5 GHz band selection PIN, bit1 and bit2 are complement
 		RTMP_IO_READ32(pAd, TX_BAND_CFG, &Value);
@@ -4549,7 +3068,7 @@ VOID ATEAsicSwitchChannel(
 			TxPinCfg &= 0xFFFFF3FF;
 		}
 
-		/* calibration power unbalance issues */
+		// calibration power unbalance issues 
 		if (pAd->Antenna.field.TxPath == 2)
 		{
 			if (pAd->ate.TxAntennaSel == 1)
@@ -4571,11 +3090,10 @@ VOID ATEAsicSwitchChannel(
 		ATE_BBP_IO_WRITE8_BY_REG_ID(pAd, BBP_R62, (0x37 - GET_LNA_GAIN(pAd)));
 		ATE_BBP_IO_WRITE8_BY_REG_ID(pAd, BBP_R63, (0x37 - GET_LNA_GAIN(pAd)));
 		ATE_BBP_IO_WRITE8_BY_REG_ID(pAd, BBP_R64, (0x37 - GET_LNA_GAIN(pAd)));
-		{
-			ATE_BBP_IO_WRITE8_BY_REG_ID(pAd, BBP_R82, 0xF2);
-		}
+		ATE_BBP_IO_WRITE8_BY_REG_ID(pAd, BBP_R82, 0xF2);
+		
         // According the Rory's suggestion to solve the middle range issue.
-		ATE_BBP_IO_READ8_BY_REG_ID(pAd, BBP_R86, &BbpValue);
+		ATE_BBP_IO_READ8_BY_REG_ID(pAd, BBP_R86, &BbpValue);// may be removed for RT35xx ++
 
 		ASSERT((BbpValue == 0x00));
 		if ((BbpValue != 0x00))
@@ -4587,7 +3105,7 @@ VOID ATEAsicSwitchChannel(
 		ASSERT((BbpValue == 0x04));
 
 		ATE_BBP_IO_READ8_BY_REG_ID(pAd, BBP_R92, &BbpValue);
-		ASSERT((BbpValue == 0x00));
+		ASSERT((BbpValue == 0x00));// may be removed for RT35xx --
 		
 		// 5.5 GHz band selection PIN, bit1 and bit2 are complement
 		RTMP_IO_READ32(pAd, TX_BAND_CFG, &Value);
@@ -4639,17 +3157,6 @@ VOID ATEAsicSwitchChannel(
 	*/
 	RTMPusecDelay(1000);  
 
-#ifdef RTMP_RF_RW_SUPPORT
-	ATEDBGPRINT(RT_DEBUG_TRACE, ("SwitchChannel#%d(RF=%d, Pwr0=%d, Pwr1=%d, %dT), N=0x%02X, K=0x%02X, R=0x%02X\n",
-		Channel, 
-		pAd->RfIcType, 
-		TxPwer,
-		TxPwer2,
-		pAd->Antenna.field.TxPath,
-		FreqItems3020[index].N, 
-		FreqItems3020[index].K, 
-		FreqItems3020[index].R));
-#endif // RTMP_RF_RW_SUPPORT //
 #ifndef RTMP_RF_RW_SUPPORT
 	if (Channel > 14)
 	{
@@ -5026,7 +3533,7 @@ VOID ATEDisableAsicProtect(
 	// Config ASIC RTS threshold register
 	RTMP_IO_READ32(pAd, TX_RTS_CFG, &MacReg);
 	MacReg &= 0xFF0000FF;
-	MacReg |= (0xFFF << 8);
+	MacReg |= (pAd->CommonCfg.RtsThreshold << 8);
 	RTMP_IO_WRITE32(pAd, TX_RTS_CFG, MacReg);
 
 	// Initial common protection settings
@@ -5047,8 +3554,6 @@ VOID ATEDisableAsicProtect(
 	ProtCfg.field.ProtectCtrl = 0;
 	Protect[0] = ProtCfg.word;
 	Protect[1] = ProtCfg.word;
-	/* CTS-self is not used */
-	pAd->FlgCtsEnabled = 0; 
 
 	// NO PROTECT 
 	// 1.All STAs in the BSS are 20/40 MHz HT
@@ -5285,7 +3790,6 @@ static INT ATESetUpFrame(
 			pAd->ate.TxWI.TS,  pAd->ate.TxWI.AMPDU, pAd->ate.TxWI.ACK, pAd->ate.TxWI.NSEQ, 
 			pAd->ate.TxWI.BAWinSize, 0, pAd->ate.TxWI.MPDUtotalByteCount, pAd->ate.TxWI.PacketId, 0, 0,
 			pAd->ate.TxWI.txop/*IFS_HTTXOP*/, pAd->ate.TxWI.CFACK/*FALSE*/, &TxHTPhyMode);
-
 	}
 	else
 	{
@@ -5342,12 +3846,12 @@ static INT ATESetUpFrame(
 #ifdef RALINK_28xx_QA
 	if (pAd->ate.bQATxStart == TRUE) 
 	{
-		GET_OS_PKT_LEN(pPacket) = pAd->ate.DLen;
+		RTPKT_TO_OSPKT(pPacket)->len = pAd->ate.DLen;
 	}
 	else
 #endif // RALINK_28xx_QA //
 	{
-		GET_OS_PKT_LEN(pPacket) = pAd->ate.TxLength - LENGTH_802_11;
+		RTPKT_TO_OSPKT(pPacket)->len = pAd->ate.TxLength - LENGTH_802_11;
 	}
 
 	// prepare frame payload
@@ -5361,15 +3865,17 @@ static INT ATESetUpFrame(
 			
 			for (j = 0; j < pAd->ate.DLen; j+=pAd->ate.PLen)
 			{
-				memcpy(GET_OS_PKT_DATAPTR(pPacket) + j, pAd->ate.Pattern, pAd->ate.PLen);
+				memcpy(RTPKT_TO_OSPKT(pPacket)->data + j, pAd->ate.Pattern, pAd->ate.PLen);
 			}
 		}
 	}
 	else
 #endif // RALINK_28xx_QA //
 	{
-		for(j = 0; j < GET_OS_PKT_LEN(pPacket); j++)
+		for (j = 0; j < RTPKT_TO_OSPKT(pPacket)->len; j++)
+		{
 			pDest[j] = 0xA5;
+		}
 	}
 
 	/* build Tx Descriptor */
@@ -5392,7 +3898,7 @@ static INT ATESetUpFrame(
 		pTxD->SDLen0 = TXWI_SIZE + pAd->ate.HLen;
 		pTxD->LastSec0 = 0;
 		pTxD->SDPtr1 = AllocPa;
-		pTxD->SDLen1 = GET_OS_PKT_LEN(pPacket);
+		pTxD->SDLen1 = RTPKT_TO_OSPKT(pPacket)->len;
 		pTxD->LastSec1 = 1;
 
 		pDest = (PUCHAR)pTxWI;
@@ -5417,7 +3923,7 @@ static INT ATESetUpFrame(
 		pTxD->SDLen0 = TXWI_SIZE + LENGTH_802_11;
 		pTxD->LastSec0 = 0;
 		pTxD->SDPtr1 = AllocPa;
-		pTxD->SDLen1 = GET_OS_PKT_LEN(pPacket);
+		pTxD->SDLen1 = RTPKT_TO_OSPKT(pPacket)->len;
 		pTxD->LastSec1 = 1;
 	}
 
@@ -5430,8 +3936,6 @@ static INT ATESetUpFrame(
 
 	return 0;
 }
-
-
 /*=======================End of RTMP_MAC_PCI =======================*/
 #endif // RTMP_MAC_PCI //
 
@@ -5507,6 +4011,69 @@ VOID ATE_QA_Statistics(
 }
 
 
+/* command id with Cmd Type == 0x0008(for 28xx)/0x0005(for iNIC) */
+#define RACFG_CMD_RF_WRITE_ALL		0x0000
+#define RACFG_CMD_E2PROM_READ16		0x0001
+#define RACFG_CMD_E2PROM_WRITE16	0x0002
+#define RACFG_CMD_E2PROM_READ_ALL	0x0003
+#define RACFG_CMD_E2PROM_WRITE_ALL	0x0004
+#define RACFG_CMD_IO_READ			0x0005
+#define RACFG_CMD_IO_WRITE			0x0006
+#define RACFG_CMD_IO_READ_BULK		0x0007
+#define RACFG_CMD_BBP_READ8			0x0008
+#define RACFG_CMD_BBP_WRITE8		0x0009
+#define RACFG_CMD_BBP_READ_ALL		0x000a
+#define RACFG_CMD_GET_COUNTER		0x000b
+#define RACFG_CMD_CLEAR_COUNTER		0x000c
+
+#define RACFG_CMD_RSV1				0x000d
+#define RACFG_CMD_RSV2				0x000e
+#define RACFG_CMD_RSV3				0x000f
+
+#define RACFG_CMD_TX_START			0x0010
+#define RACFG_CMD_GET_TX_STATUS		0x0011
+#define RACFG_CMD_TX_STOP			0x0012
+#define RACFG_CMD_RX_START			0x0013
+#define RACFG_CMD_RX_STOP			0x0014
+#define RACFG_CMD_GET_NOISE_LEVEL	0x0015
+
+#define RACFG_CMD_ATE_START			0x0080
+#define RACFG_CMD_ATE_STOP			0x0081
+
+#define RACFG_CMD_ATE_START_TX_CARRIER		0x0100
+#define RACFG_CMD_ATE_START_TX_CONT			0x0101
+#define RACFG_CMD_ATE_START_TX_FRAME		0x0102
+#define RACFG_CMD_ATE_SET_BW	            0x0103
+#define RACFG_CMD_ATE_SET_TX_POWER0	        0x0104
+#define RACFG_CMD_ATE_SET_TX_POWER1			0x0105
+#define RACFG_CMD_ATE_SET_FREQ_OFFSET		0x0106
+#define RACFG_CMD_ATE_GET_STATISTICS		0x0107
+#define RACFG_CMD_ATE_RESET_COUNTER			0x0108
+#define RACFG_CMD_ATE_SEL_TX_ANTENNA		0x0109
+#define RACFG_CMD_ATE_SEL_RX_ANTENNA		0x010a
+#define RACFG_CMD_ATE_SET_PREAMBLE			0x010b
+#define RACFG_CMD_ATE_SET_CHANNEL			0x010c
+#define RACFG_CMD_ATE_SET_ADDR1				0x010d
+#define RACFG_CMD_ATE_SET_ADDR2				0x010e
+#define RACFG_CMD_ATE_SET_ADDR3				0x010f
+#define RACFG_CMD_ATE_SET_RATE				0x0110
+#define RACFG_CMD_ATE_SET_TX_FRAME_LEN		0x0111
+#define RACFG_CMD_ATE_SET_TX_FRAME_COUNT	0x0112
+#define RACFG_CMD_ATE_START_RX_FRAME		0x0113
+#define RACFG_CMD_ATE_E2PROM_READ_BULK	0x0114
+#define RACFG_CMD_ATE_E2PROM_WRITE_BULK	0x0115
+#define RACFG_CMD_ATE_IO_WRITE_BULK		0x0116
+#define RACFG_CMD_ATE_BBP_READ_BULK		0x0117
+#define RACFG_CMD_ATE_BBP_WRITE_BULK	0x0118
+#define RACFG_CMD_ATE_RF_READ_BULK		0x0119
+#define RACFG_CMD_ATE_RF_WRITE_BULK		0x011a
+
+
+static VOID memcpy_exl(PRTMP_ADAPTER pAd, UCHAR *dst, UCHAR *src, ULONG len);
+static VOID memcpy_exs(PRTMP_ADAPTER pAd, UCHAR *dst, UCHAR *src, ULONG len);
+static VOID RTMP_IO_READ_BULK(PRTMP_ADAPTER pAd, UCHAR *dst, UCHAR *src, UINT32 len);
+
+
 
 VOID RtmpDoAte(
 	IN	PRTMP_ADAPTER	pAdapter, 
@@ -5528,7 +4095,6 @@ VOID RtmpDoAte(
     if (copy_from_user((PUCHAR)pRaCfg, wrq->u.data.pointer, wrq->u.data.length))
 	{
 		Status = -EFAULT;
-
 		kfree(pRaCfg);
 		return;
 	}
@@ -5612,20 +4178,10 @@ VOID RtmpDoAte(
 			Status=DO_RACFG_CMD_ATE_BBP_WRITE_BULK(pAdapter,wrq,pRaCfg);
 			break;
 
-#ifdef RTMP_RF_RW_SUPPORT
-		case RACFG_CMD_ATE_RF_READ_BULK:
-			Status=DO_RACFG_CMD_ATE_RF_READ_BULK(pAdapter,wrq,pRaCfg);
-			break;
-
-		case RACFG_CMD_ATE_RF_WRITE_BULK:
-			Status=DO_RACFG_CMD_ATE_RF_WRITE_BULK(pAdapter,wrq,pRaCfg);
-			break;
-#endif // RTMP_RF_RW_SUPPORT //
 
 		case RACFG_CMD_GET_NOISE_LEVEL:
 			Status=DO_RACFG_CMD_GET_NOISE_LEVEL(pAdapter,wrq,pRaCfg);
 			break;
-
 
 		case RACFG_CMD_GET_COUNTER:
 			Status=DO_RACFG_CMD_GET_COUNTER(pAdapter,wrq,pRaCfg);
@@ -5773,7 +4329,7 @@ VOID CalNoiseLevel(PRTMP_ADAPTER pAd, UCHAR channel, INT32 RSSI[3][10])
 	INT32		RSSI0, RSSI1, RSSI2;
  	CHAR		Rssi0Offset, Rssi1Offset, Rssi2Offset;
 	UCHAR		BbpR50Rssi0 = 0, BbpR51Rssi1 = 0, BbpR52Rssi2 = 0;
-	UCHAR		Org_BBP66value = 0, Org_BBP69value = 0, Org_BBP70value = 0, data = 0, byteValue = 0;
+	UCHAR		Org_BBP66value = 0, Org_BBP69value = 0, Org_BBP70value = 0, data = 0;
 	USHORT		LNA_Gain = 0;
 	INT32       j = 0;
 	UCHAR		Org_Channel = pAd->ate.Channel;
@@ -6274,5 +4830,1261 @@ INT Set_RFWrite_Proc(
 #endif // RALINK_28xx_QA //
 
 
+
+
+#ifdef RALINK_28xx_QA
+#define	LEN_OF_ARG 16
+
+#define RESPONSE_TO_GUI(__pRaCfg, __pwrq, __Length, __Status)									\
+	(__pRaCfg)->length = htons((__Length));														\
+	(__pRaCfg)->status = htons((__Status));														\
+	(__pwrq)->u.data.length = sizeof((__pRaCfg)->magic_no) + sizeof((__pRaCfg)->command_type)	\
+							+ sizeof((__pRaCfg)->command_id) + sizeof((__pRaCfg)->length)		\
+							+ sizeof((__pRaCfg)->sequence) + ntohs((__pRaCfg)->length);			\
+	ATEDBGPRINT(RT_DEBUG_TRACE, ("wrq->u.data.length = %d\n", (__pwrq)->u.data.length));		\
+	if (copy_to_user((__pwrq)->u.data.pointer, (UCHAR *)(__pRaCfg), (__pwrq)->u.data.length))	\
+	{																							\
+		ATEDBGPRINT(RT_DEBUG_ERROR, ("copy_to_user() fail in %s\n", __FUNCTION__));				\
+		return (-EFAULT);																		\
+	}																							\
+	else																						\
+	{																							\
+		ATEDBGPRINT(RT_DEBUG_TRACE, ("%s is done !\n", __FUNCTION__));							\
+	}
+
+static inline INT 	DO_RACFG_CMD_ATE_START(
+	IN	PRTMP_ADAPTER	pAdapter,
+	IN	struct iwreq	*wrq,
+	IN  struct ate_racfghdr *pRaCfg)
+{
+	ATEDBGPRINT(RT_DEBUG_TRACE,("RACFG_CMD_ATE_START\n"));
+	
+	/* Prepare feedback as soon as we can to avoid QA timeout. */
+	RESPONSE_TO_GUI(pRaCfg, wrq, sizeof(pRaCfg->status), NDIS_STATUS_SUCCESS);
+	Set_ATE_Proc(pAdapter, "ATESTART");
+
+	return NDIS_STATUS_SUCCESS;
+}
+
+
+static inline INT DO_RACFG_CMD_ATE_STOP(
+	IN	PRTMP_ADAPTER	pAdapter,
+	IN	struct iwreq	*wrq,
+	IN  struct ate_racfghdr *pRaCfg)
+{
+	INT32 ret;
+
+	ATEDBGPRINT(RT_DEBUG_TRACE,("RACFG_CMD_ATE_STOP\n"));
+
+	/*
+		Distinguish this command came from QA(via ate agent)
+		or ate agent according to the existence of pid in payload.
+
+		No need to prepare feedback if this cmd came directly from ate agent,
+		not from QA.
+	*/
+	pRaCfg->length = ntohs(pRaCfg->length);
+
+	if (pRaCfg->length == sizeof(pAdapter->ate.AtePid))
+	{
+		/*
+			This command came from QA.
+			Get the pid of ATE agent.
+		*/
+		memcpy((UCHAR *)&pAdapter->ate.AtePid,
+						(&pRaCfg->data[0]) - 2/* == sizeof(pRaCfg->status) */,
+						sizeof(pAdapter->ate.AtePid));					
+
+		/* Prepare feedback as soon as we can to avoid QA timeout. */
+		RESPONSE_TO_GUI(pRaCfg, wrq, sizeof(pRaCfg->status), NDIS_STATUS_SUCCESS);
+
+		/*
+			Kill ATE agent when leaving ATE mode.
+
+			We must kill ATE agent first before setting ATESTOP,
+			or Microsoft will report sth. wrong. 
+		*/
+		ret = KILL_THREAD_PID(pAdapter->ate.AtePid, SIGTERM, 1);
+
+		if (ret)
+		{
+			ATEDBGPRINT(RT_DEBUG_ERROR, ("%s: unable to kill ate thread\n", pAdapter->net_dev->name));
+		}
+	}
+
+
+	/* AP/STA might have in ATE_STOP mode due to cmd from QA. */
+	if (ATE_ON(pAdapter))
+	{
+		/* Someone has killed ate agent while QA GUI is still open. */
+		Set_ATE_Proc(pAdapter, "ATESTOP");
+		ATEDBGPRINT(RT_DEBUG_TRACE, ("RACFG_CMD_AP_START is done !\n"));
+	}
+
+	return NDIS_STATUS_SUCCESS;
+}
+
+
+static inline INT DO_RACFG_CMD_RF_WRITE_ALL(
+	IN	PRTMP_ADAPTER	pAdapter,
+	IN	struct iwreq	*wrq,
+	IN  struct ate_racfghdr *pRaCfg)
+{
+	UINT32 R1, R2, R3, R4;
+	USHORT channel;
+	
+	memcpy(&R1, pRaCfg->data-2, 4);
+	memcpy(&R2, pRaCfg->data+2, 4);
+	memcpy(&R3, pRaCfg->data+6, 4);
+	memcpy(&R4, pRaCfg->data+10, 4);
+	memcpy(&channel, pRaCfg->data+14, 2);		
+	
+	pAdapter->LatchRfRegs.R1 = ntohl(R1);
+	pAdapter->LatchRfRegs.R2 = ntohl(R2);
+	pAdapter->LatchRfRegs.R3 = ntohl(R3);
+	pAdapter->LatchRfRegs.R4 = ntohl(R4);
+	pAdapter->LatchRfRegs.Channel = ntohs(channel);
+
+	RTMP_RF_IO_WRITE32(pAdapter, pAdapter->LatchRfRegs.R1);
+	RTMP_RF_IO_WRITE32(pAdapter, pAdapter->LatchRfRegs.R2);
+	RTMP_RF_IO_WRITE32(pAdapter, pAdapter->LatchRfRegs.R3);
+	RTMP_RF_IO_WRITE32(pAdapter, pAdapter->LatchRfRegs.R4);
+
+	RESPONSE_TO_GUI(pRaCfg, wrq, sizeof(pRaCfg->status), NDIS_STATUS_SUCCESS);
+
+	return  NDIS_STATUS_SUCCESS;
+}
+
+
+static inline INT DO_RACFG_CMD_E2PROM_READ16(
+	IN	PRTMP_ADAPTER	pAdapter,
+	IN	struct iwreq	*wrq,
+	IN  struct ate_racfghdr *pRaCfg)
+{
+	UINT16	offset=0, value=0;
+	USHORT  tmp=0;				
+
+	offset = ntohs(pRaCfg->status);
+
+	/* "tmp" is especially for some compilers... */
+	RT28xx_EEPROM_READ16(pAdapter, offset, tmp);
+	value = tmp;
+	value = htons(value);
+	
+	ATEDBGPRINT(RT_DEBUG_TRACE,("EEPROM Read offset = 0x%04x, value = 0x%04x\n", offset, value));
+	memcpy(pRaCfg->data, &value, 2);
+
+	RESPONSE_TO_GUI(pRaCfg, wrq, sizeof(pRaCfg->status)+2, NDIS_STATUS_SUCCESS);
+
+	return NDIS_STATUS_SUCCESS;
+}
+
+
+static inline INT DO_RACFG_CMD_E2PROM_WRITE16(
+	IN	PRTMP_ADAPTER	pAdapter,
+	IN	struct iwreq	*wrq,
+	IN  struct ate_racfghdr *pRaCfg)
+{
+	USHORT	offset, value;
+	
+	offset = ntohs(pRaCfg->status);
+	memcpy(&value, pRaCfg->data, 2);
+	value = ntohs(value);
+	RT28xx_EEPROM_WRITE16(pAdapter, offset, value);
+
+	RESPONSE_TO_GUI(pRaCfg, wrq, sizeof(pRaCfg->status), NDIS_STATUS_SUCCESS);
+
+	return NDIS_STATUS_SUCCESS;
+}
+
+
+static inline INT DO_RACFG_CMD_E2PROM_READ_ALL(
+	IN	PRTMP_ADAPTER	pAdapter,
+	IN	struct iwreq	*wrq,
+	IN  struct ate_racfghdr *pRaCfg)
+{
+	USHORT buffer[EEPROM_SIZE/2];
+
+	rt_ee_read_all(pAdapter,(USHORT *)buffer);
+	memcpy_exs(pAdapter, pRaCfg->data, (UCHAR *)buffer, EEPROM_SIZE);
+
+	RESPONSE_TO_GUI(pRaCfg, wrq, sizeof(pRaCfg->status)+EEPROM_SIZE, NDIS_STATUS_SUCCESS);
+
+	return NDIS_STATUS_SUCCESS;
+}
+
+
+static inline INT DO_RACFG_CMD_E2PROM_WRITE_ALL(
+	IN	PRTMP_ADAPTER	pAdapter,
+	IN	struct iwreq	*wrq,
+	IN  struct ate_racfghdr *pRaCfg)
+{
+	USHORT buffer[EEPROM_SIZE/2];
+
+	NdisZeroMemory((UCHAR *)buffer, EEPROM_SIZE);
+	memcpy_exs(pAdapter, (UCHAR *)buffer, (UCHAR *)&pRaCfg->status, EEPROM_SIZE);
+	rt_ee_write_all(pAdapter,(USHORT *)buffer);
+
+	RESPONSE_TO_GUI(pRaCfg, wrq, sizeof(pRaCfg->status), NDIS_STATUS_SUCCESS);
+
+	return NDIS_STATUS_SUCCESS;
+}
+
+
+static inline INT DO_RACFG_CMD_IO_READ(
+	IN	PRTMP_ADAPTER	pAdapter,
+	IN	struct iwreq	*wrq,
+	IN  struct ate_racfghdr *pRaCfg)
+{
+	UINT32	offset;
+	UINT32	value;
+	
+	memcpy(&offset, &pRaCfg->status, 4);
+	offset = ntohl(offset);
+
+	/*
+		We do not need the base address.
+		So just extract the offset out.
+	*/
+	offset &= 0x0000FFFF;
+	RTMP_IO_READ32(pAdapter, offset, &value);
+	value = htonl(value);
+	memcpy(pRaCfg->data, &value, 4);
+
+	RESPONSE_TO_GUI(pRaCfg, wrq, sizeof(pRaCfg->status)+4, NDIS_STATUS_SUCCESS);
+
+	return NDIS_STATUS_SUCCESS;
+}
+
+
+static inline INT DO_RACFG_CMD_IO_WRITE(
+	IN	PRTMP_ADAPTER	pAdapter,
+	IN	struct iwreq	*wrq,
+	IN  struct ate_racfghdr *pRaCfg)
+{
+	UINT32	offset, value;
+					
+	memcpy(&offset, pRaCfg->data-2, 4);
+	memcpy(&value, pRaCfg->data+2, 4);
+
+	offset = ntohl(offset);
+
+	/*
+		We do not need the base address.
+		So just extract the offset out.
+	*/
+	offset &= 0x0000FFFF;
+	value = ntohl(value);
+	ATEDBGPRINT(RT_DEBUG_TRACE,("RACFG_CMD_IO_WRITE: offset = %x, value = %x\n", offset, value));
+	RTMP_IO_WRITE32(pAdapter, offset, value);
+	
+	RESPONSE_TO_GUI(pRaCfg, wrq, sizeof(pRaCfg->status), NDIS_STATUS_SUCCESS);
+
+	return NDIS_STATUS_SUCCESS;
+}
+
+
+static inline INT DO_RACFG_CMD_IO_READ_BULK(
+	IN	PRTMP_ADAPTER	pAdapter,
+	IN	struct iwreq	*wrq,
+	IN  struct ate_racfghdr *pRaCfg)
+{
+	UINT32	offset;
+	USHORT	len;
+	
+	memcpy(&offset, &pRaCfg->status, 4);
+	offset = ntohl(offset);
+
+	/*
+		We do not need the base address.
+		So just extract the offset out.
+	*/
+	offset &= 0x0000FFFF;
+	memcpy(&len, pRaCfg->data+2, 2);
+	len = ntohs(len);
+
+	if (len > 371)
+	{
+		ATEDBGPRINT(RT_DEBUG_TRACE,("length requested is too large, make it smaller\n"));
+		pRaCfg->length = htons(2);
+		pRaCfg->status = htons(1);
+		return -EFAULT;
+	}
+
+	RTMP_IO_READ_BULK(pAdapter, pRaCfg->data, (UCHAR *)offset, len*4);// unit in four bytes
+
+	RESPONSE_TO_GUI(pRaCfg, wrq, sizeof(pRaCfg->status)+(len*4), NDIS_STATUS_SUCCESS);
+
+	return NDIS_STATUS_SUCCESS;
+}
+
+
+static inline INT DO_RACFG_CMD_BBP_READ8(
+	IN	PRTMP_ADAPTER	pAdapter,
+	IN	struct iwreq	*wrq,
+	IN  struct ate_racfghdr *pRaCfg)
+{
+	USHORT	offset;
+	UCHAR	value;
+	
+	value = 0;
+	offset = ntohs(pRaCfg->status);
+
+	if (ATE_ON(pAdapter))
+	{
+		ATE_BBP_IO_READ8_BY_REG_ID(pAdapter, offset, &value);
+	}
+	else
+	{
+		RTMP_BBP_IO_READ8_BY_REG_ID(pAdapter, offset, &value);	
+	}
+
+	pRaCfg->data[0] = value;
+	
+	RESPONSE_TO_GUI(pRaCfg, wrq, sizeof(pRaCfg->status)+1, NDIS_STATUS_SUCCESS);
+
+	return NDIS_STATUS_SUCCESS;
+}
+
+
+static inline INT DO_RACFG_CMD_BBP_WRITE8(
+	IN	PRTMP_ADAPTER	pAdapter,
+	IN	struct iwreq	*wrq,
+	IN  struct ate_racfghdr *pRaCfg)
+{
+	USHORT	offset;
+	UCHAR	value;
+	
+	offset = ntohs(pRaCfg->status);
+	memcpy(&value, pRaCfg->data, 1);
+
+	if (ATE_ON(pAdapter))
+	{
+		ATE_BBP_IO_WRITE8_BY_REG_ID(pAdapter, offset, value);
+	}
+	else
+	{
+		RTMP_BBP_IO_WRITE8_BY_REG_ID(pAdapter, offset, value);
+	}
+
+	if ((offset == BBP_R1) || (offset == BBP_R3))
+	{
+		SyncTxRxConfig(pAdapter, offset, value);
+	}
+	
+	RESPONSE_TO_GUI(pRaCfg, wrq, sizeof(pRaCfg->status), NDIS_STATUS_SUCCESS);
+
+	return NDIS_STATUS_SUCCESS;
+}
+
+
+static inline INT DO_RACFG_CMD_BBP_READ_ALL(
+	IN	PRTMP_ADAPTER	pAdapter,
+	IN	struct iwreq	*wrq,
+	IN  struct ate_racfghdr *pRaCfg)
+{
+	USHORT bbp_reg_index;
+	
+	for (bbp_reg_index = 0; bbp_reg_index < MAX_BBP_ID+1; bbp_reg_index++)
+	{
+		pRaCfg->data[bbp_reg_index] = 0;
+		
+		if (ATE_ON(pAdapter))
+		{
+			ATE_BBP_IO_READ8_BY_REG_ID(pAdapter, bbp_reg_index, &pRaCfg->data[bbp_reg_index]);
+		}
+		else
+		{
+			RTMP_BBP_IO_READ8_BY_REG_ID(pAdapter, bbp_reg_index, &pRaCfg->data[bbp_reg_index]);
+		}
+	}
+	
+	RESPONSE_TO_GUI(pRaCfg, wrq, sizeof(pRaCfg->status)+MAX_BBP_ID+1, NDIS_STATUS_SUCCESS);
+	
+	return NDIS_STATUS_SUCCESS;
+}
+
+
+static inline INT DO_RACFG_CMD_GET_NOISE_LEVEL(
+	IN	PRTMP_ADAPTER	pAdapter,
+	IN	struct iwreq	*wrq,
+	IN  struct ate_racfghdr *pRaCfg)
+{
+	UCHAR	channel;
+	INT32   buffer[3][10];/* 3 : RxPath ; 10 : no. of per rssi samples */
+
+	channel = (ntohs(pRaCfg->status) & 0x00FF);
+	CalNoiseLevel(pAdapter, channel, buffer);
+	memcpy_exl(pAdapter, (UCHAR *)pRaCfg->data, (UCHAR *)&(buffer[0][0]), (sizeof(INT32)*3*10));
+
+	RESPONSE_TO_GUI(pRaCfg, wrq, sizeof(pRaCfg->status)+(sizeof(INT32)*3*10), NDIS_STATUS_SUCCESS);
+
+	return NDIS_STATUS_SUCCESS;
+}
+
+
+static inline INT DO_RACFG_CMD_GET_COUNTER(
+	IN	PRTMP_ADAPTER	pAdapter,
+	IN	struct iwreq	*wrq,
+	IN  struct ate_racfghdr *pRaCfg)
+{
+	memcpy_exl(pAdapter, &pRaCfg->data[0], (UCHAR *)&pAdapter->ate.U2M, 4);
+	memcpy_exl(pAdapter, &pRaCfg->data[4], (UCHAR *)&pAdapter->ate.OtherData, 4);
+	memcpy_exl(pAdapter, &pRaCfg->data[8], (UCHAR *)&pAdapter->ate.Beacon, 4);
+	memcpy_exl(pAdapter, &pRaCfg->data[12], (UCHAR *)&pAdapter->ate.OtherCount, 4);
+	memcpy_exl(pAdapter, &pRaCfg->data[16], (UCHAR *)&pAdapter->ate.TxAc0, 4);
+	memcpy_exl(pAdapter, &pRaCfg->data[20], (UCHAR *)&pAdapter->ate.TxAc1, 4);
+	memcpy_exl(pAdapter, &pRaCfg->data[24], (UCHAR *)&pAdapter->ate.TxAc2, 4);
+	memcpy_exl(pAdapter, &pRaCfg->data[28], (UCHAR *)&pAdapter->ate.TxAc3, 4);
+	/*memcpy_exl(pAdapter, &pRaCfg->data[32], (UCHAR *)&pAdapter->ate.TxHCCA, 4);*/
+	memcpy_exl(pAdapter, &pRaCfg->data[36], (UCHAR *)&pAdapter->ate.TxMgmt, 4);
+	memcpy_exl(pAdapter, &pRaCfg->data[40], (UCHAR *)&pAdapter->ate.RSSI0, 4);
+	memcpy_exl(pAdapter, &pRaCfg->data[44], (UCHAR *)&pAdapter->ate.RSSI1, 4);
+	memcpy_exl(pAdapter, &pRaCfg->data[48], (UCHAR *)&pAdapter->ate.RSSI2, 4);
+	memcpy_exl(pAdapter, &pRaCfg->data[52], (UCHAR *)&pAdapter->ate.SNR0, 4);
+	memcpy_exl(pAdapter, &pRaCfg->data[56], (UCHAR *)&pAdapter->ate.SNR1, 4);
+	
+	RESPONSE_TO_GUI(pRaCfg, wrq, sizeof(pRaCfg->status)+60, NDIS_STATUS_SUCCESS);
+
+	return NDIS_STATUS_SUCCESS;
+}
+
+
+static inline INT DO_RACFG_CMD_CLEAR_COUNTER(
+	IN	PRTMP_ADAPTER	pAdapter,
+	IN	struct iwreq	*wrq,
+	IN  struct ate_racfghdr *pRaCfg)
+{
+	pAdapter->ate.U2M = 0;
+	pAdapter->ate.OtherData = 0;
+	pAdapter->ate.Beacon = 0;
+	pAdapter->ate.OtherCount = 0;
+	pAdapter->ate.TxAc0 = 0;
+	pAdapter->ate.TxAc1 = 0;
+	pAdapter->ate.TxAc2 = 0;
+	pAdapter->ate.TxAc3 = 0;
+	/*pAdapter->ate.TxHCCA = 0;*/
+	pAdapter->ate.TxMgmt = 0;
+	pAdapter->ate.TxDoneCount = 0;
+	
+	RESPONSE_TO_GUI(pRaCfg, wrq, sizeof(pRaCfg->status), NDIS_STATUS_SUCCESS);
+
+	return NDIS_STATUS_SUCCESS;
+}
+
+
+static inline INT DO_RACFG_CMD_TX_START(
+	IN	PRTMP_ADAPTER	pAdapter,
+	IN	struct iwreq	*wrq,
+	IN  struct ate_racfghdr *pRaCfg)
+{
+	USHORT *p;
+	USHORT	err = 1;
+	UCHAR   Bbp22Value = 0, Bbp24Value = 0;
+
+	if ((pAdapter->ate.TxStatus != 0) && (pAdapter->ate.Mode & ATE_TXFRAME))
+	{
+		ATEDBGPRINT(RT_DEBUG_TRACE,("Ate Tx is already running, to run next Tx, you must stop it first\n"));
+		err = 2; 
+		goto TX_START_ERROR;
+	}
+	else if ((pAdapter->ate.TxStatus != 0) && !(pAdapter->ate.Mode & ATE_TXFRAME))
+	{
+		int i = 0;
+
+		while ((i++ < 10) && (pAdapter->ate.TxStatus != 0))
+		{
+			RTMPusecDelay(5000);
+		}
+
+		/* force it to stop */
+		pAdapter->ate.TxStatus = 0;
+		pAdapter->ate.TxDoneCount = 0;
+		pAdapter->ate.bQATxStart = FALSE;
+	}
+
+	/*
+		If pRaCfg->length == 0, this "RACFG_CMD_TX_START"
+		is for Carrier test or Carrier Suppression.
+	*/
+	if (ntohs(pRaCfg->length) != 0)
+	{
+		/* get frame info */
+
+		NdisMoveMemory(&pAdapter->ate.TxWI, pRaCfg->data + 2, 16);						
+#ifdef RT_BIG_ENDIAN
+		RTMPWIEndianChange((PUCHAR)&pAdapter->ate.TxWI, TYPE_TXWI);
+#endif // RT_BIG_ENDIAN //
+
+		NdisMoveMemory(&pAdapter->ate.TxCount, pRaCfg->data + 18, 4);
+		pAdapter->ate.TxCount = ntohl(pAdapter->ate.TxCount);
+
+		p = (USHORT *)(&pRaCfg->data[22]);
+
+		/* always use QID_AC_BE */
+		pAdapter->ate.QID = 0;
+
+		p = (USHORT *)(&pRaCfg->data[24]);
+		pAdapter->ate.HLen = ntohs(*p);
+
+		if (pAdapter->ate.HLen > 32)
+		{
+			ATEDBGPRINT(RT_DEBUG_ERROR,("pAdapter->ate.HLen > 32\n"));
+			err = 3;
+			goto TX_START_ERROR;
+		}
+
+		NdisMoveMemory(&pAdapter->ate.Header, pRaCfg->data + 26, pAdapter->ate.HLen);
+
+		pAdapter->ate.PLen = ntohs(pRaCfg->length) - (pAdapter->ate.HLen + 28);
+
+		if (pAdapter->ate.PLen > 32)
+		{
+			ATEDBGPRINT(RT_DEBUG_ERROR,("pAdapter->ate.PLen > 32\n"));
+			err = 4;
+			goto TX_START_ERROR;
+		}
+
+		NdisMoveMemory(&pAdapter->ate.Pattern, pRaCfg->data + 26 + pAdapter->ate.HLen, pAdapter->ate.PLen);
+		pAdapter->ate.DLen = pAdapter->ate.TxWI.MPDUtotalByteCount - pAdapter->ate.HLen;
+	}
+
+	ATE_BBP_IO_READ8_BY_REG_ID(pAdapter, BBP_R22, &Bbp22Value);
+
+	switch (Bbp22Value)
+	{
+		case BBP22_TXFRAME:
+			{
+				if (pAdapter->ate.TxCount == 0)
+				{
+#ifdef RTMP_MAC_PCI
+					pAdapter->ate.TxCount = 0xFFFFFFFF;
+#endif // RTMP_MAC_PCI //
+				}
+				ATEDBGPRINT(RT_DEBUG_TRACE,("START TXFRAME\n"));
+				pAdapter->ate.bQATxStart = TRUE;
+				Set_ATE_Proc(pAdapter, "TXFRAME");
+			}
+			break;
+
+		case BBP22_TXCONT_OR_CARRSUPP:
+			{
+				ATEDBGPRINT(RT_DEBUG_TRACE,("BBP22_TXCONT_OR_CARRSUPP\n"));
+				ATE_BBP_IO_READ8_BY_REG_ID(pAdapter, BBP_R24, &Bbp24Value);
+
+				switch (Bbp24Value)
+				{
+					case BBP24_TXCONT:
+						{
+							ATEDBGPRINT(RT_DEBUG_TRACE,("START TXCONT\n"));
+							pAdapter->ate.bQATxStart = TRUE;
+							Set_ATE_Proc(pAdapter, "TXCONT");
+						}
+						break;
+
+					case BBP24_CARRSUPP:
+						{
+							ATEDBGPRINT(RT_DEBUG_TRACE,("START TXCARRSUPP\n"));
+							pAdapter->ate.bQATxStart = TRUE;
+							pAdapter->ate.Mode |= ATE_TXCARRSUPP;
+						}
+						break;
+
+					default:
+						{
+							ATEDBGPRINT(RT_DEBUG_ERROR,("Unknown TX subtype !"));
+						}
+						break;
+				}
+			}
+			break;	
+
+		case BBP22_TXCARR:
+			{
+				ATEDBGPRINT(RT_DEBUG_TRACE,("START TXCARR\n"));
+				pAdapter->ate.bQATxStart = TRUE;
+				Set_ATE_Proc(pAdapter, "TXCARR");
+			}
+			break;							
+
+		default:
+			{
+				ATEDBGPRINT(RT_DEBUG_ERROR,("Unknown Start TX subtype !"));
+			}
+			break;
+	}
+
+	if (pAdapter->ate.bQATxStart == TRUE)
+	{
+		RESPONSE_TO_GUI(pRaCfg, wrq, sizeof(pRaCfg->status), NDIS_STATUS_SUCCESS);
+		return NDIS_STATUS_SUCCESS;
+	}
+
+TX_START_ERROR:
+	RESPONSE_TO_GUI(pRaCfg, wrq, sizeof(pRaCfg->status), err);
+
+	return err;
+}
+
+
+static inline INT DO_RACFG_CMD_GET_TX_STATUS(
+	IN	PRTMP_ADAPTER	pAdapter,
+	IN	struct iwreq	*wrq,
+	IN  struct ate_racfghdr *pRaCfg)
+{
+	UINT32 count=0;
+	
+	count = htonl(pAdapter->ate.TxDoneCount);
+	NdisMoveMemory(pRaCfg->data, &count, 4);
+
+	RESPONSE_TO_GUI(pRaCfg, wrq, sizeof(pRaCfg->status)+4, NDIS_STATUS_SUCCESS);
+
+	return NDIS_STATUS_SUCCESS;
+}
+
+
+static inline INT DO_RACFG_CMD_TX_STOP(
+	IN	PRTMP_ADAPTER	pAdapter,
+	IN	struct iwreq	*wrq,
+	IN  struct ate_racfghdr *pRaCfg)
+{
+	ATEDBGPRINT(RT_DEBUG_TRACE,("RACFG_CMD_TX_STOP\n"));
+
+	Set_ATE_Proc(pAdapter, "TXSTOP");
+
+	RESPONSE_TO_GUI(pRaCfg, wrq, sizeof(pRaCfg->status), NDIS_STATUS_SUCCESS);
+
+	return NDIS_STATUS_SUCCESS;
+}
+
+
+static inline INT DO_RACFG_CMD_RX_START(
+	IN	PRTMP_ADAPTER	pAdapter,
+	IN	struct iwreq	*wrq,
+	IN  struct ate_racfghdr *pRaCfg)
+{
+	ATEDBGPRINT(RT_DEBUG_TRACE,("RACFG_CMD_RX_START\n"));
+
+	pAdapter->ate.bQARxStart = TRUE;
+	Set_ATE_Proc(pAdapter, "RXFRAME");
+
+	RESPONSE_TO_GUI(pRaCfg, wrq, sizeof(pRaCfg->status), NDIS_STATUS_SUCCESS);
+
+	return NDIS_STATUS_SUCCESS;
+}	
+
+
+static inline INT DO_RACFG_CMD_RX_STOP(
+	IN	PRTMP_ADAPTER	pAdapter,
+	IN	struct iwreq	*wrq,
+	IN  struct ate_racfghdr *pRaCfg)
+{
+	ATEDBGPRINT(RT_DEBUG_TRACE,("RACFG_CMD_RX_STOP\n"));
+
+	Set_ATE_Proc(pAdapter, "RXSTOP");
+
+	RESPONSE_TO_GUI(pRaCfg, wrq, sizeof(pRaCfg->status), NDIS_STATUS_SUCCESS);
+
+	return NDIS_STATUS_SUCCESS;
+}
+
+
+static inline INT DO_RACFG_CMD_ATE_START_TX_CARRIER(
+	IN	PRTMP_ADAPTER	pAdapter,
+	IN	struct iwreq	*wrq,
+	IN  struct ate_racfghdr *pRaCfg)
+{
+	ATEDBGPRINT(RT_DEBUG_TRACE,("RACFG_CMD_ATE_START_TX_CARRIER\n"));
+
+	Set_ATE_Proc(pAdapter, "TXCARR");
+
+	RESPONSE_TO_GUI(pRaCfg, wrq, sizeof(pRaCfg->status), NDIS_STATUS_SUCCESS);
+
+	return NDIS_STATUS_SUCCESS;
+}
+
+
+static inline INT DO_RACFG_CMD_ATE_START_TX_CONT(
+	IN	PRTMP_ADAPTER	pAdapter,
+	IN	struct iwreq	*wrq,
+	IN  struct ate_racfghdr *pRaCfg)
+{
+	ATEDBGPRINT(RT_DEBUG_TRACE,("RACFG_CMD_ATE_START_TX_CONT\n"));
+
+	Set_ATE_Proc(pAdapter, "TXCONT");
+
+	RESPONSE_TO_GUI(pRaCfg, wrq, sizeof(pRaCfg->status), NDIS_STATUS_SUCCESS);
+
+	return NDIS_STATUS_SUCCESS;
+}
+
+
+static inline INT DO_RACFG_CMD_ATE_START_TX_FRAME(
+	IN	PRTMP_ADAPTER	pAdapter,
+	IN	struct iwreq	*wrq,
+	IN  struct ate_racfghdr *pRaCfg)
+{
+	ATEDBGPRINT(RT_DEBUG_TRACE,("RACFG_CMD_ATE_START_TX_FRAME\n"));
+
+	Set_ATE_Proc(pAdapter, "TXFRAME");
+
+	RESPONSE_TO_GUI(pRaCfg, wrq, sizeof(pRaCfg->status), NDIS_STATUS_SUCCESS);
+
+	return NDIS_STATUS_SUCCESS;
+}	
+
+
+static inline INT DO_RACFG_CMD_ATE_SET_BW(
+	IN	PRTMP_ADAPTER	pAdapter,
+	IN	struct iwreq	*wrq,
+	IN  struct ate_racfghdr *pRaCfg)
+{
+	SHORT    value = 0;
+	STRING    str[LEN_OF_ARG];
+
+	NdisZeroMemory(str, LEN_OF_ARG);
+	
+	ATEDBGPRINT(RT_DEBUG_TRACE,("RACFG_CMD_ATE_SET_BW\n"));				
+
+	memcpy((PUCHAR)&value, (PUCHAR)&(pRaCfg->status), 2);
+	value = ntohs(value);
+	sprintf((char *)str, "%d", value);
+
+	Set_ATE_TX_BW_Proc(pAdapter, str);
+	
+	RESPONSE_TO_GUI(pRaCfg, wrq, sizeof(pRaCfg->status), NDIS_STATUS_SUCCESS);
+
+	return NDIS_STATUS_SUCCESS;
+}
+
+
+static inline INT DO_RACFG_CMD_ATE_SET_TX_POWER0(
+	IN	PRTMP_ADAPTER	pAdapter,
+	IN	struct iwreq	*wrq,
+	IN  struct ate_racfghdr *pRaCfg)
+{
+	SHORT    value = 0;
+	STRING    str[LEN_OF_ARG];
+
+	NdisZeroMemory(str, LEN_OF_ARG);
+
+	ATEDBGPRINT(RT_DEBUG_TRACE,("RACFG_CMD_ATE_SET_TX_POWER0\n"));				
+
+	memcpy((PUCHAR)&value, (PUCHAR)&(pRaCfg->status), 2);
+	value = ntohs(value);
+	sprintf((char *)str, "%d", value);
+	Set_ATE_TX_POWER0_Proc(pAdapter, str);
+
+	RESPONSE_TO_GUI(pRaCfg, wrq, sizeof(pRaCfg->status), NDIS_STATUS_SUCCESS);
+
+	return NDIS_STATUS_SUCCESS;
+}
+
+
+static inline INT DO_RACFG_CMD_ATE_SET_TX_POWER1(
+	IN	PRTMP_ADAPTER	pAdapter,
+	IN	struct iwreq	*wrq,
+	IN  struct ate_racfghdr *pRaCfg)
+{
+	SHORT    value = 0;
+	STRING    str[LEN_OF_ARG];
+
+	NdisZeroMemory(str, LEN_OF_ARG);
+	
+	ATEDBGPRINT(RT_DEBUG_TRACE,("RACFG_CMD_ATE_SET_TX_POWER1\n"));				
+
+	memcpy((PUCHAR)&value, (PUCHAR)&(pRaCfg->status), 2);
+	value = ntohs(value);
+	sprintf((char *)str, "%d", value);
+	Set_ATE_TX_POWER1_Proc(pAdapter, str);
+
+	RESPONSE_TO_GUI(pRaCfg, wrq, sizeof(pRaCfg->status), NDIS_STATUS_SUCCESS);
+
+	return NDIS_STATUS_SUCCESS;
+}
+
+
+static inline INT DO_RACFG_CMD_ATE_SET_FREQ_OFFSET(
+	IN	PRTMP_ADAPTER	pAdapter,
+	IN	struct iwreq	*wrq,
+	IN  struct ate_racfghdr *pRaCfg)
+{
+	SHORT    value = 0;
+	STRING    str[LEN_OF_ARG];
+
+	NdisZeroMemory(str, LEN_OF_ARG);
+
+	ATEDBGPRINT(RT_DEBUG_TRACE,("RACFG_CMD_ATE_SET_FREQ_OFFSET\n"));				
+
+	memcpy((PUCHAR)&value, (PUCHAR)&(pRaCfg->status), 2);
+	value = ntohs(value);
+	sprintf((char *)str, "%d", value);
+	Set_ATE_TX_FREQOFFSET_Proc(pAdapter, str);
+
+	RESPONSE_TO_GUI(pRaCfg, wrq, sizeof(pRaCfg->status), NDIS_STATUS_SUCCESS);
+
+	return NDIS_STATUS_SUCCESS;
+}
+
+
+static inline INT DO_RACFG_CMD_ATE_GET_STATISTICS(
+	IN	PRTMP_ADAPTER	pAdapter,
+	IN	struct iwreq	*wrq,
+	IN  struct ate_racfghdr *pRaCfg)
+{
+	ATEDBGPRINT(RT_DEBUG_TRACE,("RACFG_CMD_ATE_GET_STATISTICS\n"));
+
+	memcpy_exl(pAdapter, &pRaCfg->data[0], (UCHAR *)&pAdapter->ate.TxDoneCount, 4);
+	memcpy_exl(pAdapter, &pRaCfg->data[4], (UCHAR *)&pAdapter->WlanCounters.RetryCount.u.LowPart, 4);
+	memcpy_exl(pAdapter, &pRaCfg->data[8], (UCHAR *)&pAdapter->WlanCounters.FailedCount.u.LowPart, 4);
+	memcpy_exl(pAdapter, &pRaCfg->data[12], (UCHAR *)&pAdapter->WlanCounters.RTSSuccessCount.u.LowPart, 4);
+	memcpy_exl(pAdapter, &pRaCfg->data[16], (UCHAR *)&pAdapter->WlanCounters.RTSFailureCount.u.LowPart, 4);
+	memcpy_exl(pAdapter, &pRaCfg->data[20], (UCHAR *)&pAdapter->WlanCounters.ReceivedFragmentCount.QuadPart, 4);
+	memcpy_exl(pAdapter, &pRaCfg->data[24], (UCHAR *)&pAdapter->WlanCounters.FCSErrorCount.u.LowPart, 4);
+	memcpy_exl(pAdapter, &pRaCfg->data[28], (UCHAR *)&pAdapter->Counters8023.RxNoBuffer, 4);
+	memcpy_exl(pAdapter, &pRaCfg->data[32], (UCHAR *)&pAdapter->WlanCounters.FrameDuplicateCount.u.LowPart, 4);
+	memcpy_exl(pAdapter, &pRaCfg->data[36], (UCHAR *)&pAdapter->RalinkCounters.OneSecFalseCCACnt, 4);
+	
+	if (pAdapter->ate.RxAntennaSel == 0)
+	{
+		INT32 RSSI0 = 0;
+		INT32 RSSI1 = 0;
+		INT32 RSSI2 = 0;
+
+		RSSI0 = (INT32)(pAdapter->ate.LastRssi0 - pAdapter->BbpRssiToDbmDelta);
+		RSSI1 = (INT32)(pAdapter->ate.LastRssi1 - pAdapter->BbpRssiToDbmDelta);
+		RSSI2 = (INT32)(pAdapter->ate.LastRssi2 - pAdapter->BbpRssiToDbmDelta);
+		memcpy_exl(pAdapter, &pRaCfg->data[40], (UCHAR *)&RSSI0, 4);
+		memcpy_exl(pAdapter, &pRaCfg->data[44], (UCHAR *)&RSSI1, 4);
+		memcpy_exl(pAdapter, &pRaCfg->data[48], (UCHAR *)&RSSI2, 4);
+		RESPONSE_TO_GUI(pRaCfg, wrq, sizeof(pRaCfg->status)+52, NDIS_STATUS_SUCCESS);
+	}
+	else
+	{
+		INT32 RSSI0 = 0;
+	
+		RSSI0 = (INT32)(pAdapter->ate.LastRssi0 - pAdapter->BbpRssiToDbmDelta);
+		memcpy_exl(pAdapter, &pRaCfg->data[40], (UCHAR *)&RSSI0, 4);
+		RESPONSE_TO_GUI(pRaCfg, wrq, sizeof(pRaCfg->status)+44, NDIS_STATUS_SUCCESS);
+	}
+
+	return NDIS_STATUS_SUCCESS;
+}
+
+
+static inline INT DO_RACFG_CMD_ATE_RESET_COUNTER(
+	IN	PRTMP_ADAPTER	pAdapter,
+	IN	struct iwreq	*wrq,
+	IN  struct ate_racfghdr *pRaCfg)
+{
+	SHORT    value = 1;
+	STRING    str[LEN_OF_ARG];
+
+	NdisZeroMemory(str, LEN_OF_ARG);
+
+	ATEDBGPRINT(RT_DEBUG_TRACE,("RACFG_CMD_ATE_RESET_COUNTER\n"));				
+
+	sprintf((char *)str, "%d", value);
+	Set_ResetStatCounter_Proc(pAdapter, str);
+
+	pAdapter->ate.TxDoneCount = 0;
+
+	RESPONSE_TO_GUI(pRaCfg, wrq, sizeof(pRaCfg->status), NDIS_STATUS_SUCCESS);
+
+	return NDIS_STATUS_SUCCESS;
+}
+
+
+static inline INT DO_RACFG_CMD_ATE_SEL_TX_ANTENNA(
+	IN	PRTMP_ADAPTER	pAdapter,
+	IN	struct iwreq	*wrq,
+	IN  struct ate_racfghdr *pRaCfg)	
+{
+	SHORT    value = 0;
+	STRING    str[LEN_OF_ARG];
+
+	NdisZeroMemory(str, LEN_OF_ARG);
+	
+	ATEDBGPRINT(RT_DEBUG_TRACE,("RACFG_CMD_ATE_SEL_TX_ANTENNA\n"));				
+
+	memcpy((PUCHAR)&value, (PUCHAR)&(pRaCfg->status), 2);
+	value = ntohs(value);
+	sprintf((char *)str, "%d", value);
+	Set_ATE_TX_Antenna_Proc(pAdapter, str);
+
+	RESPONSE_TO_GUI(pRaCfg, wrq, sizeof(pRaCfg->status), NDIS_STATUS_SUCCESS);
+
+	return NDIS_STATUS_SUCCESS;
+}
+
+
+static inline INT DO_RACFG_CMD_ATE_SEL_RX_ANTENNA(
+	IN	PRTMP_ADAPTER	pAdapter,
+	IN	struct iwreq	*wrq,
+	IN  struct ate_racfghdr *pRaCfg)
+{
+	SHORT    value = 0;
+	STRING    str[LEN_OF_ARG];
+
+	NdisZeroMemory(str, LEN_OF_ARG);
+	
+	ATEDBGPRINT(RT_DEBUG_TRACE,("RACFG_CMD_ATE_SEL_RX_ANTENNA\n"));				
+
+	memcpy((PUCHAR)&value, (PUCHAR)&(pRaCfg->status), 2);
+	value = ntohs(value);
+	sprintf((char *)str, "%d", value);
+	Set_ATE_RX_Antenna_Proc(pAdapter, str);
+
+	RESPONSE_TO_GUI(pRaCfg, wrq, sizeof(pRaCfg->status), NDIS_STATUS_SUCCESS);
+
+	return NDIS_STATUS_SUCCESS;
+}
+
+
+static inline INT DO_RACFG_CMD_ATE_SET_PREAMBLE(
+	IN	PRTMP_ADAPTER	pAdapter,
+	IN	struct iwreq	*wrq,
+	IN  struct ate_racfghdr *pRaCfg)
+{
+	SHORT    value = 0;
+	STRING    str[LEN_OF_ARG];
+
+	NdisZeroMemory(str, LEN_OF_ARG);
+	
+	ATEDBGPRINT(RT_DEBUG_TRACE,("RACFG_CMD_ATE_SET_PREAMBLE\n"));				
+
+	memcpy((PUCHAR)&value, (PUCHAR)&(pRaCfg->status), 2);
+	value = ntohs(value);
+	sprintf((char *)str, "%d", value);
+	Set_ATE_TX_MODE_Proc(pAdapter, str);
+
+	RESPONSE_TO_GUI(pRaCfg, wrq, sizeof(pRaCfg->status), NDIS_STATUS_SUCCESS);
+
+	return NDIS_STATUS_SUCCESS;
+}
+
+
+static inline INT DO_RACFG_CMD_ATE_SET_CHANNEL(
+	IN	PRTMP_ADAPTER	pAdapter,
+	IN	struct iwreq	*wrq,
+	IN  struct ate_racfghdr *pRaCfg)
+{
+	SHORT    value = 0;
+	STRING    str[LEN_OF_ARG];
+
+	NdisZeroMemory(str, LEN_OF_ARG);
+	
+	ATEDBGPRINT(RT_DEBUG_TRACE,("RACFG_CMD_ATE_SET_CHANNEL\n"));				
+
+	memcpy((PUCHAR)&value, (PUCHAR)&(pRaCfg->status), 2);
+	value = ntohs(value);
+	sprintf((char *)str, "%d", value);
+	Set_ATE_CHANNEL_Proc(pAdapter, str);
+
+	RESPONSE_TO_GUI(pRaCfg, wrq, sizeof(pRaCfg->status), NDIS_STATUS_SUCCESS);
+
+	return NDIS_STATUS_SUCCESS;
+}
+
+
+static inline INT DO_RACFG_CMD_ATE_SET_ADDR1(
+	IN	PRTMP_ADAPTER	pAdapter,
+	IN	struct iwreq	*wrq,
+	IN  struct ate_racfghdr *pRaCfg)
+{
+	ATEDBGPRINT(RT_DEBUG_TRACE,("RACFG_CMD_ATE_SET_ADDR1\n"));
+
+	/*
+		Addr is an array of UCHAR,
+		so no need to perform endian swap.
+	*/
+	memcpy(pAdapter->ate.Addr1, (PUCHAR)(pRaCfg->data - 2), MAC_ADDR_LEN);
+
+	RESPONSE_TO_GUI(pRaCfg, wrq, sizeof(pRaCfg->status), NDIS_STATUS_SUCCESS);
+
+	return NDIS_STATUS_SUCCESS;
+}
+
+
+static inline INT DO_RACFG_CMD_ATE_SET_ADDR2(
+	IN	PRTMP_ADAPTER	pAdapter,
+	IN	struct iwreq	*wrq,
+	IN  struct ate_racfghdr *pRaCfg)
+{
+	ATEDBGPRINT(RT_DEBUG_TRACE,("RACFG_CMD_ATE_SET_ADDR2\n"));
+
+	/*
+		Addr is an array of UCHAR,
+		so no need to perform endian swap.
+	*/
+	memcpy(pAdapter->ate.Addr2, (PUCHAR)(pRaCfg->data - 2), MAC_ADDR_LEN);
+
+	RESPONSE_TO_GUI(pRaCfg, wrq, sizeof(pRaCfg->status), NDIS_STATUS_SUCCESS);
+
+	return NDIS_STATUS_SUCCESS;
+}
+
+
+static inline INT DO_RACFG_CMD_ATE_SET_ADDR3(
+	IN	PRTMP_ADAPTER	pAdapter,
+	IN	struct iwreq	*wrq,
+	IN  struct ate_racfghdr *pRaCfg)
+{
+	ATEDBGPRINT(RT_DEBUG_TRACE,("RACFG_CMD_ATE_SET_ADDR3\n"));
+
+	/*
+		Addr is an array of UCHAR,
+		so no need to perform endian swap.
+	*/
+	memcpy(pAdapter->ate.Addr3, (PUCHAR)(pRaCfg->data - 2), MAC_ADDR_LEN);
+
+	RESPONSE_TO_GUI(pRaCfg, wrq, sizeof(pRaCfg->status), NDIS_STATUS_SUCCESS);
+
+	return NDIS_STATUS_SUCCESS;
+}
+
+
+static inline INT DO_RACFG_CMD_ATE_SET_RATE(
+	IN	PRTMP_ADAPTER	pAdapter,
+	IN	struct iwreq	*wrq,
+	IN  struct ate_racfghdr *pRaCfg)
+{
+	SHORT    value = 0;
+	STRING    str[LEN_OF_ARG];
+
+	NdisZeroMemory(str, LEN_OF_ARG);
+	
+	ATEDBGPRINT(RT_DEBUG_TRACE,("RACFG_CMD_ATE_SET_RATE\n"));				
+
+	memcpy((PUCHAR)&value, (PUCHAR)&(pRaCfg->status), 2);
+	value = ntohs(value);
+	sprintf((char *)str, "%d", value);
+	Set_ATE_TX_MCS_Proc(pAdapter, str);
+
+	RESPONSE_TO_GUI(pRaCfg, wrq, sizeof(pRaCfg->status), NDIS_STATUS_SUCCESS);
+
+	return NDIS_STATUS_SUCCESS;
+}
+
+
+static inline INT DO_RACFG_CMD_ATE_SET_TX_FRAME_LEN(
+	IN	PRTMP_ADAPTER	pAdapter,
+	IN	struct iwreq	*wrq,
+	IN  struct ate_racfghdr *pRaCfg)
+{
+	SHORT    value = 0;
+	STRING    str[LEN_OF_ARG];
+
+	NdisZeroMemory(str, LEN_OF_ARG);
+	
+	ATEDBGPRINT(RT_DEBUG_TRACE,("RACFG_CMD_ATE_SET_TX_FRAME_LEN\n"));				
+
+	memcpy((PUCHAR)&value, (PUCHAR)&(pRaCfg->status), 2);
+	value = ntohs(value);
+	sprintf((char *)str, "%d", value);
+	Set_ATE_TX_LENGTH_Proc(pAdapter, str);
+
+	RESPONSE_TO_GUI(pRaCfg, wrq, sizeof(pRaCfg->status), NDIS_STATUS_SUCCESS);
+
+	return NDIS_STATUS_SUCCESS;
+}
+
+
+static inline INT DO_RACFG_CMD_ATE_SET_TX_FRAME_COUNT(
+	IN	PRTMP_ADAPTER	pAdapter,
+	IN	struct iwreq	*wrq,
+	IN  struct ate_racfghdr *pRaCfg)
+{
+	USHORT    value = 0;
+	STRING    str[LEN_OF_ARG];
+
+	NdisZeroMemory(str, LEN_OF_ARG);
+	
+	ATEDBGPRINT(RT_DEBUG_TRACE,("RACFG_CMD_ATE_SET_TX_FRAME_COUNT\n"));				
+
+	memcpy((PUCHAR)&value, (PUCHAR)&(pRaCfg->status), 2);
+	value = ntohs(value);
+
+#ifdef RTMP_MAC_PCI
+	/* TX_FRAME_COUNT == 0 means tx infinitely */
+	if (value == 0)
+	{
+		/* Use TxCount = 0xFFFFFFFF to approximate the infinity. */
+		pAdapter->ate.TxCount = 0xFFFFFFFF;
+		ATEDBGPRINT(RT_DEBUG_TRACE, ("Set_ATE_TX_COUNT_Proc (TxCount = %d)\n", pAdapter->ate.TxCount));
+		ATEDBGPRINT(RT_DEBUG_TRACE, ("Ralink: Set_ATE_TX_COUNT_Proc Success\n"));
+
+
+	}
+	else
+#endif // RTMP_MAC_PCI //
+	{
+		sprintf((char *)str, "%d", value);
+		Set_ATE_TX_COUNT_Proc(pAdapter, str);
+	}
+
+	RESPONSE_TO_GUI(pRaCfg, wrq, sizeof(pRaCfg->status), NDIS_STATUS_SUCCESS);
+
+	return NDIS_STATUS_SUCCESS;
+}
+
+
+static inline INT DO_RACFG_CMD_ATE_START_RX_FRAME(
+	IN	PRTMP_ADAPTER	pAdapter,
+	IN	struct iwreq	*wrq,
+	IN  struct ate_racfghdr *pRaCfg)
+{
+	ATEDBGPRINT(RT_DEBUG_TRACE,("RACFG_CMD_RX_START\n"));
+
+	Set_ATE_Proc(pAdapter, "RXFRAME");
+
+	RESPONSE_TO_GUI(pRaCfg, wrq, sizeof(pRaCfg->status), NDIS_STATUS_SUCCESS);
+
+	return NDIS_STATUS_SUCCESS;
+}
+
+
+static inline INT DO_RACFG_CMD_ATE_E2PROM_READ_BULK(
+	IN	PRTMP_ADAPTER	pAdapter,
+	IN	struct iwreq	*wrq,
+	IN  struct ate_racfghdr *pRaCfg)
+{
+	USHORT offset;
+	USHORT len;
+	USHORT buffer[EEPROM_SIZE/2];
+	
+	offset = ntohs(pRaCfg->status);
+	memcpy(&len, pRaCfg->data, 2);
+	len = ntohs(len);
+	
+	rt_ee_read_all(pAdapter, (USHORT *)buffer);
+
+	if (offset + len <= EEPROM_SIZE)
+		memcpy_exs(pAdapter, pRaCfg->data, (UCHAR *)buffer+offset, len);
+	else
+		ATEDBGPRINT(RT_DEBUG_ERROR, ("exceed EEPROM size\n"));
+
+	RESPONSE_TO_GUI(pRaCfg, wrq, sizeof(pRaCfg->status)+len, NDIS_STATUS_SUCCESS);
+
+	return NDIS_STATUS_SUCCESS;
+}
+
+
+static inline INT DO_RACFG_CMD_ATE_E2PROM_WRITE_BULK(
+	IN	PRTMP_ADAPTER	pAdapter,
+	IN	struct iwreq	*wrq,
+	IN  struct ate_racfghdr *pRaCfg)
+{
+	USHORT offset;
+	USHORT len;
+	USHORT buffer[EEPROM_SIZE/2];
+	
+	offset = ntohs(pRaCfg->status);
+	memcpy(&len, pRaCfg->data, 2);
+	len = ntohs(len);
+
+	rt_ee_read_all(pAdapter,(USHORT *)buffer);
+	memcpy_exs(pAdapter, (UCHAR *)buffer + offset, (UCHAR *)pRaCfg->data + 2, len);
+	rt_ee_write_all(pAdapter,(USHORT *)buffer);
+
+	RESPONSE_TO_GUI(pRaCfg, wrq, sizeof(pRaCfg->status), NDIS_STATUS_SUCCESS);
+
+	return NDIS_STATUS_SUCCESS;
+}
+
+
+static inline INT DO_RACFG_CMD_ATE_IO_WRITE_BULK(
+	IN	PRTMP_ADAPTER	pAdapter,
+	IN	struct iwreq	*wrq,
+	IN  struct ate_racfghdr *pRaCfg)
+{
+	UINT32 offset, i, value;
+	USHORT len;
+	
+	memcpy(&offset, &pRaCfg->status, 4);
+	offset = ntohl(offset);
+	memcpy(&len, pRaCfg->data+2, 2);
+	len = ntohs(len);
+	
+	for (i = 0; i < len; i += 4)
+	{
+		memcpy_exl(pAdapter, (UCHAR *)&value, pRaCfg->data+4+i, 4);
+		ATEDBGPRINT(RT_DEBUG_TRACE,("Write %x %x\n", offset + i, value));
+		RTMP_IO_WRITE32(pAdapter, ((offset+i) & (0xffff)), value);
+	}
+
+	RESPONSE_TO_GUI(pRaCfg, wrq, sizeof(pRaCfg->status), NDIS_STATUS_SUCCESS);
+
+	return NDIS_STATUS_SUCCESS;
+}
+
+
+static inline INT DO_RACFG_CMD_ATE_BBP_READ_BULK(
+	IN	PRTMP_ADAPTER	pAdapter,
+	IN	struct iwreq	*wrq,
+	IN  struct ate_racfghdr *pRaCfg)
+{
+	USHORT offset;
+	USHORT len;
+	USHORT j;
+	
+	offset = ntohs(pRaCfg->status);
+	memcpy(&len, pRaCfg->data, 2);
+	len = ntohs(len);
+	
+	for (j = offset; j < (offset+len); j++)
+	{
+		pRaCfg->data[j - offset] = 0;
+		
+		if (pAdapter->ate.Mode == ATE_STOP)
+		{
+			RTMP_BBP_IO_READ8_BY_REG_ID(pAdapter, j, &pRaCfg->data[j - offset]);
+		}
+		else
+		{
+			ATE_BBP_IO_READ8_BY_REG_ID(pAdapter, j, &pRaCfg->data[j - offset]);
+		}
+	}
+
+	RESPONSE_TO_GUI(pRaCfg, wrq, sizeof(pRaCfg->status)+len, NDIS_STATUS_SUCCESS);
+
+	return NDIS_STATUS_SUCCESS;
+}
+
+
+static inline INT DO_RACFG_CMD_ATE_BBP_WRITE_BULK(
+	IN	PRTMP_ADAPTER	pAdapter,
+	IN	struct iwreq	*wrq,
+	IN  struct ate_racfghdr *pRaCfg)
+{
+	USHORT offset;
+	USHORT len;
+	USHORT j;
+	UCHAR *value;
+	
+	offset = ntohs(pRaCfg->status);
+	memcpy(&len, pRaCfg->data, 2);
+	len = ntohs(len);
+					
+	for (j = offset; j < (offset+len); j++)
+	{
+		value = pRaCfg->data + 2 + (j - offset);
+		if (pAdapter->ate.Mode == ATE_STOP)
+		{
+			RTMP_BBP_IO_WRITE8_BY_REG_ID(pAdapter, j,  *value);
+		}
+		else
+		{
+			ATE_BBP_IO_WRITE8_BY_REG_ID(pAdapter, j,  *value);
+		}
+	}
+
+	RESPONSE_TO_GUI(pRaCfg, wrq, sizeof(pRaCfg->status), NDIS_STATUS_SUCCESS);
+
+	return NDIS_STATUS_SUCCESS;
+}
+
+
+#endif // RALINK_28xx_QA //
 #endif	// RALINK_ATE //
 

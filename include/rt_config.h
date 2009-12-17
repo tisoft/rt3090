@@ -49,18 +49,20 @@
 
 #include "oid.h"
 #include "mlme.h"
+#include "wpa.h"
 #include "crypt_md5.h"
 #include "crypt_sha2.h"
 #include "crypt_hmac.h"
-#include "crypt_aes.h"
-#include "crypt_arc4.h"
-#include "rtmp_cmd.h"
 #include "rtmp.h"
 #include "ap.h"
-#include "wpa.h"
 #include "dfs.h"
 #include "chlist.h"
 #include "spectrum.h"
+
+#ifdef MLME_EX
+#include	"mlme_ex_def.h"
+#include	"mlme_ex.h"
+#endif // MLME_EX //
 
 #include "eeprom.h"
 #if defined(RTMP_PCI_SUPPORT) || defined(RTMP_USB_SUPPORT)
@@ -74,9 +76,6 @@
 #undef WSC_INCLUDED
 
 
-#ifdef WMM_ACM_SUPPORT
-#include	"acm_extr.h"
-#endif // WMM_ACM_SUPPORT //
 
 #ifdef CONFIG_STA_SUPPORT
 #endif // CONFIG_STA_SUPPORT //
@@ -95,10 +94,9 @@
 
 #ifdef RALINK_28xx_QA
 #ifndef RALINK_ATE
-#error "For supporting QA GUI, please set HAS_ATE=y and HAS_QA_SUPPORT=y."
+#error "For supporting QA GUI, please set HAS_ATE=y and HAS_28xx_QA=y."
 #endif // RALINK_ATE //
 #endif // RALINK_28xx_QA //
-
 
 
 
@@ -125,7 +123,5 @@
 
 
 
-
 #endif	// __RT_CONFIG_H__
-
 
