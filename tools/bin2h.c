@@ -67,8 +67,6 @@ int main(int argc ,char *argv[])
 	    strcat(infname,"/common/rt2870.bin");
 	else if(strncmp(chipset, "3572",4)==0)
 	    strcat(infname,"/common/rt2870.bin");
-	else if(strncmp(chipset, "USB_COMBO",9)==0)
-	    strcat(infname,"/common/rt2870.bin");
     else
     	strcat(infname,"/common/rt2860.bin");
 	    

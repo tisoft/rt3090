@@ -36,31 +36,31 @@ typedef struct PACKED {
 #ifdef RT_BIG_ENDIAN
     UINT32		RDG:1;	//RDG / More PPDU
     UINT32		ACConstraint:1;	//feedback request
-    UINT32		rsv2:5;  //calibration sequence
-    UINT32		NDPAnnouce:1;	// ZLF announcement
+    UINT32		rsv:5;  //calibration sequence
+    UINT32		ZLFAnnouce:1;	// ZLF announcement
     UINT32		CSISTEERING:2;	//CSI/ STEERING
-    UINT32		rsv1:2;	// Reserved
+    UINT32		FBKReq:2;	//feedback request
     UINT32		CalSeq:2;  //calibration sequence
     UINT32		CalPos:2;	// calibration position
     UINT32		MFBorASC:7;	//Link adaptation feedback containing recommended MCS. 0x7f for no feedback or not available
-    UINT32		MFSI:3;	//SET to the received value of MRS. 0x111 for unsolicited MFB.
-    UINT32		MSI:3;	//MCS Request, MRQ Sequence identifier
+    UINT32		MFS:3;	//SET to the received value of MRS. 0x111 for unsolicited MFB.
+    UINT32		MRSorASI:3;	// MRQ Sequence identifier. unchanged during entire procedure. 0x000-0x110.
     UINT32		MRQ:1;	//MCS feedback. Request for a MCS feedback
     UINT32		TRQ:1;	//sounding request
-    UINT32		rsv:1;	// Reserved
+    UINT32		MA:1;	//management action payload exist in (QoS Null+HTC)
 #else
-    UINT32		rsv:1;	// Reserved
+    UINT32		MA:1;	//management action payload exist in (QoS Null+HTC)
     UINT32		TRQ:1;	//sounding request
     UINT32		MRQ:1;	//MCS feedback. Request for a MCS feedback
-    UINT32		MSI:3;	//MCS Request, MRQ Sequence identifier
-    UINT32		MFSI:3;	//SET to the received value of MRS. 0x111 for unsolicited MFB.
+    UINT32		MRSorASI:3;	// MRQ Sequence identifier. unchanged during entire procedure. 0x000-0x110.
+    UINT32		MFS:3;	//SET to the received value of MRS. 0x111 for unsolicited MFB.
     UINT32		MFBorASC:7;	//Link adaptation feedback containing recommended MCS. 0x7f for no feedback or not available
     UINT32		CalPos:2;	// calibration position
     UINT32		CalSeq:2;  //calibration sequence
-    UINT32		rsv1:2;	// Reserved
+    UINT32		FBKReq:2;	//feedback request
     UINT32		CSISTEERING:2;	//CSI/ STEERING
-    UINT32		NDPAnnouce:1;	// ZLF announcement
-    UINT32		rsv2:5;  //calibration sequence
+    UINT32		ZLFAnnouce:1;	// ZLF announcement
+    UINT32		rsv:5;  //calibration sequence
     UINT32		ACConstraint:1;	//feedback request
     UINT32		RDG:1;	//RDG / More PPDU
 #endif /* !RT_BIG_ENDIAN */

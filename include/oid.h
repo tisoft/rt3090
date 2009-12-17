@@ -75,10 +75,6 @@
 #define NdisMediaStateDisconnected		0
 
 #define NDIS_802_11_LENGTH_SSID         32
-
-#define	IEEE80211_ADDR_LEN		6		/* size of 802.11 address */
-#define	IEEE80211_NWID_LEN      32
-
 #define NDIS_802_11_LENGTH_RATES        8
 #define NDIS_802_11_LENGTH_RATES_EX     16
 #define MAC_ADDR_LENGTH                 6
@@ -119,10 +115,6 @@
 #define	OID_802_11_ASSOCIATION_INFORMATION			0x011E
 #define	OID_802_11_TEST								0x011F
 
-#ifdef WMM_ACM_SUPPORT
-#define RT_OID_WMM_ACM_TSPEC                        0x0450
-#define RT_OID_WMM_ACM_BandWidth                          0x0788
-#endif // WMM_ACM_SUPPORT //
 
 #define	RT_OID_802_11_COUNTRY_REGION				0x0507
 #define	OID_802_11_BSSID_LIST_SCAN					0x0508
@@ -157,13 +149,8 @@
 #define OID_802_11_MIC_FAILURE_REPORT_FRAME         0x0528
 #define OID_802_11_EAP_METHOD						0x0529
 
-/* For 802.1x daemin using */
-#define OID_802_DOT1X_CONFIGURATION					0x0540
-#define OID_802_DOT1X_PMKID_CACHE					0x0541
-#define OID_802_DOT1X_RADIUS_DATA					0x0542
-#define OID_802_DOT1X_WPA_KEY						0x0543
-#define OID_802_DOT1X_STATIC_WEP_COPY				0x0544
-#define OID_802_DOT1X_IDLE_TIMEOUT					0x0545
+// For 802.1x daemin using to require current driver configuration
+#define OID_802_11_RADIUS_QUERY_SETTING				0x0540
 
 #define	RT_OID_DEVICE_NAME							0x0607
 #define	RT_OID_VERSION_INFO							0x0608
@@ -216,112 +203,6 @@
 #define OID_802_11_SET_PSPXLINK_MODE				0x0648
 /*+++ add by woody +++*/
 #define OID_802_11_SET_PASSPHRASE				0x0649
-#define OID_802_11_QUERY_WirelessMode				0x0718
-
-
-
-
-#ifdef HOSTAPD_SUPPORT
-#define SIOCSIWGENIE	0x8B30
-#define OID_HOSTAPD_SUPPORT               0x0661
-
-#define HOSTAPD_OID_STATIC_WEP_COPY   0x0662
-#define HOSTAPD_OID_GET_1X_GROUP_KEY   0x0663
-
-#define HOSTAPD_OID_SET_STA_AUTHORIZED   0x0664
-#define HOSTAPD_OID_SET_STA_DISASSOC   0x0665
-#define HOSTAPD_OID_SET_STA_DEAUTH   0x0666
-#define HOSTAPD_OID_DEL_KEY   0x0667
-#define HOSTAPD_OID_SET_KEY   0x0668
-#define HOSTAPD_OID_SET_802_1X   0x0669
-#define HOSTAPD_OID_GET_SEQ   0x0670
-#define HOSTAPD_OID_GETWPAIE                 0x0671
-#define HOSTAPD_OID_COUNTERMEASURES 0x0672
-#define HOSTAPD_OID_SET_WPAPSK 0x0673
-#define HOSTAPD_OID_SET_WPS_BEACON_IE 0x0674
-#define HOSTAPD_OID_SET_WPS_PROBE_RESP_IE 0x0675
-
-#define	RT_HOSTAPD_OID_HOSTAPD_SUPPORT				(OID_GET_SET_TOGGLE |	OID_HOSTAPD_SUPPORT)
-#define	RT_HOSTAPD_OID_STATIC_WEP_COPY				(OID_GET_SET_TOGGLE |	HOSTAPD_OID_STATIC_WEP_COPY)
-#define	RT_HOSTAPD_OID_GET_1X_GROUP_KEY				(OID_GET_SET_TOGGLE |	HOSTAPD_OID_GET_1X_GROUP_KEY)
-#define	RT_HOSTAPD_OID_SET_STA_AUTHORIZED			(OID_GET_SET_TOGGLE |	HOSTAPD_OID_SET_STA_AUTHORIZED)
-#define	RT_HOSTAPD_OID_SET_STA_DISASSOC				(OID_GET_SET_TOGGLE |	HOSTAPD_OID_SET_STA_DISASSOC)
-#define	RT_HOSTAPD_OID_SET_STA_DEAUTH				(OID_GET_SET_TOGGLE |	HOSTAPD_OID_SET_STA_DEAUTH)
-#define	RT_HOSTAPD_OID_DEL_KEY						(OID_GET_SET_TOGGLE |	HOSTAPD_OID_DEL_KEY)
-#define	RT_HOSTAPD_OID_SET_KEY						(OID_GET_SET_TOGGLE |	HOSTAPD_OID_SET_KEY)
-#define	RT_HOSTAPD_OID_SET_802_1X						(OID_GET_SET_TOGGLE |	HOSTAPD_OID_SET_802_1X)
-#define	RT_HOSTAPD_OID_COUNTERMEASURES				(OID_GET_SET_TOGGLE |	HOSTAPD_OID_COUNTERMEASURES)
-#define	RT_HOSTAPD_OID_SET_WPAPSK				(OID_GET_SET_TOGGLE |	HOSTAPD_OID_SET_WPAPSK)
-#define	RT_HOSTAPD_OID_SET_WPS_BEACON_IE				(OID_GET_SET_TOGGLE |	HOSTAPD_OID_SET_WPS_BEACON_IE)
-#define	RT_HOSTAPD_OID_SET_WPS_PROBE_RESP_IE				(OID_GET_SET_TOGGLE |	HOSTAPD_OID_SET_WPS_PROBE_RESP_IE)
-
-
-#define IEEE80211_IS_MULTICAST(_a) (*(_a) & 0x01)
-#define	IEEE80211_KEYBUF_SIZE	16
-#define	IEEE80211_MICBUF_SIZE	(8 + 8)		/* space for both tx+rx keys */
-#define IEEE80211_TID_SIZE		17			/* total number of TIDs */
-
-#define	IEEE80211_MLME_ASSOC		    1	/* associate station */
-#define	IEEE80211_MLME_DISASSOC		    2	/* disassociate station */
-#define	IEEE80211_MLME_DEAUTH		    3	/* deauthenticate station */
-#define	IEEE80211_MLME_AUTHORIZE	    4	/* authorize station */
-#define	IEEE80211_MLME_UNAUTHORIZE	    5	/* unauthorize station */
-#define IEEE80211_MLME_CLEAR_STATS	    6	/* clear station statistic */
-#define IEEE80211_1X_COPY_KEY        	7	/* copy static-wep unicast key */
-
-#define	IEEE80211_MAX_OPT_IE	256
-#define IWEVEXPIRED	0x8C04
-
-struct ieee80211req_mlme {
-	UINT8 im_op;			    /* operation to perform */
-	UINT8 im_ssid_len;		/* length of optional ssid */
-	UINT16 im_reason;		/* 802.11 reason code */
-	UINT8 im_macaddr[IEEE80211_ADDR_LEN];
-	UINT8 im_ssid[IEEE80211_NWID_LEN];
-};
-
-struct ieee80211req_key {
-	UINT8 ik_type;		/* key/cipher type */
-	UINT8 ik_pad;
-	UINT16 ik_keyix;		/* key index */
-	UINT8 ik_keylen;		/* key length in bytes */
-	UINT8 ik_flags;
-	UINT8 ik_macaddr[IEEE80211_ADDR_LEN];
-	UINT64 ik_keyrsc;		/* key receive sequence counter */
-	UINT64 ik_keytsc;		/* key transmit sequence counter */
-	UINT8 ik_keydata[IEEE80211_KEYBUF_SIZE+IEEE80211_MICBUF_SIZE];
-	int txkey;
-};
-
-struct ieee80211req_del_key {
-	UINT8 idk_keyix;		/* key index */
-	UINT8 idk_macaddr[IEEE80211_ADDR_LEN];
-};
-
-struct default_group_key {
-	UINT16 ik_keyix;		/* key index */
-	UINT8 ik_keylen;		/* key length in bytes */
-	UINT8 ik_keydata[IEEE80211_KEYBUF_SIZE+IEEE80211_MICBUF_SIZE];
-};
-
-struct ieee80211req_wpaie {
-	UINT8	wpa_macaddr[IEEE80211_ADDR_LEN];
-	UINT8	wpa_ie[IEEE80211_MAX_OPT_IE];
-	UINT8	rsn_ie[IEEE80211_MAX_OPT_IE];
-};
-
-struct hostapd_wpa_psk {
-	struct hostapd_wpa_psk *next;
-	int group;
-	UCHAR psk[32];
-	UCHAR addr[6];
-};
-
-#endif //HOSTAPD_SUPPORT//
-
-#define RT_OID_802_11_QUERY_TDLS_PARAM			0x0676
-#define	RT_OID_802_11_QUERY_TDLS				0x0677
-
 // Ralink defined OIDs
 // Dennis Lee move to platform specific	
 
@@ -353,14 +234,6 @@ struct hostapd_wpa_psk {
 #define RT_OID_802_11_EAP_METHOD			  (OID_GET_SET_TOGGLE | OID_802_11_EAP_METHOD)
 #define RT_OID_802_11_SET_PASSPHRASE		  (OID_GET_SET_TOGGLE | OID_802_11_SET_PASSPHRASE)
 
-#define RT_OID_802_DOT1X_PMKID_CACHE		(OID_GET_SET_TOGGLE | OID_802_DOT1X_PMKID_CACHE)
-#define RT_OID_802_DOT1X_RADIUS_DATA		(OID_GET_SET_TOGGLE | OID_802_DOT1X_RADIUS_DATA)
-#define RT_OID_802_DOT1X_WPA_KEY			(OID_GET_SET_TOGGLE | OID_802_DOT1X_WPA_KEY)
-#define RT_OID_802_DOT1X_STATIC_WEP_COPY	(OID_GET_SET_TOGGLE | OID_802_DOT1X_STATIC_WEP_COPY)
-#define RT_OID_802_DOT1X_IDLE_TIMEOUT		(OID_GET_SET_TOGGLE | OID_802_DOT1X_IDLE_TIMEOUT)
-
-#define RT_OID_802_11_SET_TDLS_PARAM			(OID_GET_SET_TOGGLE | RT_OID_802_11_QUERY_TDLS_PARAM)
-#define RT_OID_802_11_SET_TDLS				(OID_GET_SET_TOGGLE | RT_OID_802_11_QUERY_TDLS)
 
 
 typedef enum _NDIS_802_11_STATUS_TYPE
@@ -492,8 +365,6 @@ typedef ULONGLONG   NDIS_802_11_KEY_RSC;
 
 #define MAX_RADIUS_SRV_NUM			2	  // 802.1x failover number
 
-/* The dot1x related structure. 
-   It's used to communicate with DOT1X daemon */
 typedef struct PACKED _RADIUS_SRV_INFO {
 	UINT32			radius_ip;
 	UINT32			radius_port;
@@ -501,7 +372,7 @@ typedef struct PACKED _RADIUS_SRV_INFO {
 	UCHAR			radius_key_len;
 } RADIUS_SRV_INFO, *PRADIUS_SRV_INFO;
 
-typedef struct PACKED _DOT1X_BSS_INFO
+typedef struct PACKED _RADIUS_KEY_INFO
 {
 	UCHAR			radius_srv_num;			
 	RADIUS_SRV_INFO	radius_srv_info[MAX_RADIUS_SRV_NUM];
@@ -509,30 +380,22 @@ typedef struct PACKED _DOT1X_BSS_INFO
     UCHAR           key_index;           
     UCHAR           key_length;          // length of key in bytes
     UCHAR           key_material[13];    
-	UCHAR			nasId[IFNAMSIZ];
-	UCHAR			nasId_len;
-} DOT1X_BSS_INFO, *PDOT1X_BSS_INFO;
+} RADIUS_KEY_INFO, *PRADIUS_KEY_INFO;
 
-typedef struct PACKED _DOT1X_CMM_CONF
+// It's used by 802.1x daemon to require relative configuration
+typedef struct PACKED _RADIUS_CONF
 {
     UINT32          Length;             // Length of this structure    
     UCHAR			mbss_num;			// indicate multiple BSS number 
 	UINT32			own_ip_addr;	
 	UINT32			retry_interval;
 	UINT32			session_timeout_interval;
-	UINT32			quiet_interval;
 	UCHAR			EAPifname[8][IFNAMSIZ];
 	UCHAR			EAPifname_len[8];
 	UCHAR 			PreAuthifname[8][IFNAMSIZ];
 	UCHAR			PreAuthifname_len[8];
-	DOT1X_BSS_INFO	Dot1xBssInfo[8];
-} DOT1X_CMM_CONF, *PDOT1X_CMM_CONF;
-
-typedef struct PACKED _DOT1X_IDLE_TIMEOUT
-{
-	UCHAR			StaAddr[6];			
-	UINT32			idle_timeout;
-} DOT1X_IDLE_TIMEOUT, *PDOT1X_IDLE_TIMEOUT;
+	RADIUS_KEY_INFO	RadiusInfo[8];
+} RADIUS_CONF, *PRADIUS_CONF;
 
 
 
@@ -629,13 +492,6 @@ typedef struct PACKED _NDIS_802_11_BSSID_LIST
    NDIS_WLAN_BSSID Bssid[1];
 } NDIS_802_11_BSSID_LIST, *PNDIS_802_11_BSSID_LIST;
 
-typedef struct {
-    BOOLEAN     bValid;                     // 1: variable contains valid value
-    USHORT      StaNum;
-    UCHAR       ChannelUtilization;
-    USHORT      RemainingAdmissionControl;  // in unit of 32-us
-} QBSS_LOAD_UI, *PQBSS_LOAD_UI;
-
 // Added Capabilities, IELength and IEs for each BSSID
 typedef struct PACKED _NDIS_WLAN_BSSID_EX
 {
@@ -650,7 +506,6 @@ typedef struct PACKED _NDIS_WLAN_BSSID_EX
     NDIS_802_11_CONFIGURATION           Configuration;
     NDIS_802_11_NETWORK_INFRASTRUCTURE  InfrastructureMode;
     NDIS_802_11_RATES_EX                SupportedRates;
-	//QBSS_LOAD_UI						QBssLoad;
     ULONG                               IELength;
     UCHAR                               IEs[1];
 } NDIS_WLAN_BSSID_EX, *PNDIS_WLAN_BSSID_EX;
@@ -829,6 +684,7 @@ typedef struct _NDIS_802_11_CAPABILITY
 #define RTPRIV_IOCTL_MAC                            (SIOCIWFIRSTPRIV + 0x05)
 
 #ifdef RTMP_RF_RW_SUPPORT
+// TODO: shiang, Need to reassign the oid number. ArchTeam use (SIOCIWFIRSTPRIV + 0x19) for this oid
 #define RTPRIV_IOCTL_RF                             (SIOCIWFIRSTPRIV + 0x13)  // edit by johnli, fix read rf register problem
 #endif // RTMP_RF_RW_SUPPORT //
 
@@ -857,14 +713,10 @@ enum {
 	RAIO_OFF = 10,
 	RAIO_ON = 11,
 #ifdef QOS_DLS_SUPPORT
-	SHOW_DLS_ENTRY_INFO = 20,
+	SHOW_DLS_ENTRY_INFO = 19,
 #endif // QOS_DLS_SUPPORT //
-	SHOW_CFG_VALUE = 21,
-	SHOW_ADHOC_ENTRY_INFO = 22,
-#ifdef WMM_ACM_SUPPORT
-	SHOW_ACM_BADNWIDTH = 23,
-	SHOW_ACM_STREAM = 24,
-#endif // WMM_ACM_SUPPORT //
+	SHOW_CFG_VALUE = 20,
+	SHOW_ADHOC_ENTRY_INFO = 21,
 };
 
 
@@ -928,8 +780,6 @@ enum {
 #define RT_OID_WSC_MODEL_NAME						0x0757
 #define RT_OID_WSC_MODEL_NO							0x0758
 #define RT_OID_WSC_SERIAL_NO						0x0759
-#define RT_OID_WSC_READ_UFD_FILE					0x075A
-#define RT_OID_WSC_WRITE_UFD_FILE					0x075B
 #define RT_OID_WSC_MAC_ADDRESS						0x0760
 
 #ifdef LLTD_SUPPORT
@@ -1234,7 +1084,6 @@ typedef enum _RT_802_11_DLS_MODE {
 } RT_802_11_DLS_MODE;
 #endif // QOS_DLS_SUPPORT //
 
-
 #ifdef WPA_SUPPLICANT_SUPPORT
 #ifndef NATIVE_WPA_SUPPLICANT_SUPPORT
 #define	RT_ASSOC_EVENT_FLAG                         0x0101
@@ -1250,14 +1099,6 @@ typedef enum _RT_802_11_DLS_MODE {
 #endif // CONFIG_STA_SUPPORT //
 
 
-#ifdef WMM_ACM_SUPPORT
-typedef struct _RT_WMM_ACM_CMD {
-    UINT    CmdID;
-    UINT16  DialogToken;
-    UCHAR   TspecCmd[128];
-    UCHAR   TclasCmd[128];
-} RT_WMM_ACM_CMD, *PRT_WMM_ACM_CMD;
-#endif // WMM_ACM_SUPPORT //
 
 
 #define MAX_CUSTOM_LEN 128 

@@ -41,11 +41,9 @@
 
 
 #define MAX_MEASURE_REQ_TAB_SIZE		32
-/* Size of hash tab must be power of 2. */
 #define MAX_HASH_MEASURE_REQ_TAB_SIZE	MAX_MEASURE_REQ_TAB_SIZE
 
 #define MAX_TPC_REQ_TAB_SIZE			32
-/* Size of hash tab must be power of 2. */
 #define MAX_HASH_TPC_REQ_TAB_SIZE		MAX_TPC_REQ_TAB_SIZE
 
 #define MIN_RCV_PWR				100		/* Negative value ((dBm) */
@@ -53,8 +51,8 @@
 #define TPC_REQ_AGE_OUT			500		/* ms */
 #define MQ_REQ_AGE_OUT			500		/* ms */
 
-#define TPC_DIALOGTOKEN_HASH_INDEX(_DialogToken)	((_DialogToken) & (MAX_HASH_TPC_REQ_TAB_SIZE - 1))
-#define MQ_DIALOGTOKEN_HASH_INDEX(_DialogToken)		((_DialogToken) & (MAX_MEASURE_REQ_TAB_SIZE - 1))
+#define TPC_DIALOGTOKEN_HASH_INDEX(_DialogToken)	((_DialogToken) % MAX_HASH_TPC_REQ_TAB_SIZE)
+#define MQ_DIALOGTOKEN_HASH_INDEX(_DialogToken)		((_DialogToken) % MAX_MEASURE_REQ_TAB_SIZE)
 
 typedef struct _MEASURE_REQ_ENTRY
 {

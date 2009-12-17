@@ -4,11 +4,10 @@ include $(RT28xx_DIR)/os/linux/config.mk
 #ifdef CONFIG_STA_SUPPORT
 ifeq ($(RT28xx_MODE), STA)
 MOD_NAME = rt$(CHIPSET)sta
-DAT_PATH = /etc/Wireless/RT2860STA
+DAT_PATH = /etc/Wireless/RT$(CHIPSET)STA
 DAT_FILE_NAME = RT2860STA.dat
 endif
 #endif // CONFIG_STA_SUPPORT //
-
 
 
 OBJ := $(MOD_NAME).o
@@ -19,8 +18,6 @@ RT28XX_STA_OBJ := \
 	$(RT28xx_DIR)/common/crypt_md5.o\
 	$(RT28xx_DIR)/common/crypt_sha2.o\
 	$(RT28xx_DIR)/common/crypt_hmac.o\
-	$(RT28xx_DIR)/common/crypt_aes.o\
-	$(RT28xx_DIR)/common/crypt_arc4.o\
 	$(RT28xx_DIR)/common/mlme.o\
 	$(RT28xx_DIR)/common/cmm_wep.o\
 	$(RT28xx_DIR)/common/action.o\
@@ -40,7 +37,6 @@ RT28XX_STA_OBJ := \
 	$(RT28xx_DIR)/common/rt_channel.o\
 	$(RT28xx_DIR)/common/cmm_profile.o\
 	$(RT28xx_DIR)/common/cmm_asic.o\
-	$(RT28xx_DIR)/common/cmm_cmd.o\
 	$(RT28xx_DIR)/sta/assoc.o\
 	$(RT28xx_DIR)/sta/auth.o\
 	$(RT28xx_DIR)/sta/auth_rsp.o\
@@ -81,7 +77,6 @@ RT28XX_STA_OBJ += $(RT28xx_DIR)/sta/dls.o
 endif
 
 
-
 #ifdef RT3090
 ifeq ($(CHIPSET),3090)
 RT28XX_STA_OBJ += \
@@ -103,18 +98,45 @@ endif
 
 
 
+#ifdef RT3370
+ifeq ($(CHIPSET),3370)
+RT28XX_STA_OBJ += \
+	$(RT28xx_DIR)/os/linux/pci_main_dev.o\
+	$(RT28xx_DIR)/os/linux/rt_pci_rbus.o\
+	$(RT28xx_DIR)/common/cmm_mac_pci.o\
+	$(RT28xx_DIR)/common/cmm_data_pci.o\
+	$(RT28xx_DIR)/common/ee_prom.o\
+	$(RT28xx_DIR)/common/ee_efuse.o\
+	$(RT28xx_DIR)/common/rtmp_mcu.o\
+	$(RT28xx_DIR)/chips/rt33xx.o\
+	$(RT28xx_DIR)/common/rt_rf.o\
+	$(RT28xx_DIR)/chips/rt3370.o
+endif
+#endif // RT3370 //
+
+#ifdef RT3390
+ifeq ($(CHIPSET),3390)
+RT28XX_STA_OBJ += \
+	$(RT28xx_DIR)/os/linux/usb_main_dev.o\
+	$(RT28xx_DIR)/os/linux/rt_usb.o\
+	$(RT28xx_DIR)/common/cmm_mac_usb.o\
+	$(RT28xx_DIR)/common/rtusb_io.o\
+	$(RT28xx_DIR)/common/rtusb_bulk.o\
+	$(RT28xx_DIR)/common/rtusb_data.o\
+	$(RT28xx_DIR)/common/cmm_data_usb.o\
+	$(RT28xx_DIR)/common/ee_prom.o\
+	$(RT28xx_DIR)/common/ee_efuse.o\
+	$(RT28xx_DIR)/common/rtmp_mcu.o\
+	$(RT28xx_DIR)/chips/rt33xx.o\
+	$(RT28xx_DIR)/common/rt_rf.o\
+	$(RT28xx_DIR)/chips/rt3390.o
+endif
+#endif // RT3390 //
 
 ifeq ($(HAS_ATE),y)
 RT28XX_STA_OBJ += $(RT28xx_DIR)/os/linux/rt_ate.o
 endif
 
-#ifdef WMM_ACM_SUPPORT
-ifeq ($(HAS_WMM_ACM_SUPPORT),y)
-RT28XX_STA_OBJ += $(RT28xx_DIR)/common/acm_edca.o\
-	$(RT28xx_DIR)/common/acm_comm.o\
-	$(RT28xx_DIR)/common/acm_iocl.o
-endif
-#endif // WMM_ACM_SUPPORT //
 
 
 

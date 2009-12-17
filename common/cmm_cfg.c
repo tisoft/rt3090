@@ -98,15 +98,21 @@ INT RT_CfgSetCountryRegion(
 	IN PSTRING			arg,
 	IN INT				band)
 {
-	LONG region;
+	LONG region, regionMax;
 	UCHAR *pCountryRegion;
 	
 	region = simple_strtol(arg, 0, 10);
 
 	if (band == BAND_24G)
+	{
 		pCountryRegion = &pAd->CommonCfg.CountryRegion;
+		regionMax = REGION_MAXIMUM_BG_BAND;
+	}
 	else
+	{
 		pCountryRegion = &pAd->CommonCfg.CountryRegionForABand;
+		regionMax = REGION_MAXIMUM_A_BAND;
+	}
 	
 	// TODO: Is it neccesay for following check???
 	// Country can be set only when EEPROM not programmed
@@ -116,12 +122,13 @@ INT RT_CfgSetCountryRegion(
 		return FALSE;
 	}
 
-	if((region >= 0) && 
-	   (((band == BAND_24G) && ((region <= REGION_MAXIMUM_BG_BAND) || (region == REGION_31_BG_BAND))) || 
-	    ((band == BAND_5G) && (region <= REGION_MAXIMUM_A_BAND) ))
-	  )
+	if((region >= 0) && (region <= REGION_MAXIMUM_BG_BAND))
 	{
 		*pCountryRegion= (UCHAR) region;
+	}
+	else if ((region == REGION_31_BG_BAND) && (band == BAND_24G))
+	{
+		*pCountryRegion = (UCHAR) region;
 	}
 	else
 	{
@@ -150,9 +157,6 @@ INT RT_CfgSetWirelessMode(
 	LONG	WirelessMode;
 	
 #ifdef DOT11_N_SUPPORT
-#ifdef RT3090
-	if(pAd->CommonCfg.DisableNmode==FALSE)
-#endif // RT3090 //
 	MaxPhyMode = PHY_11N_5G;
 #endif // DOT11_N_SUPPORT //
 		
@@ -161,11 +165,9 @@ INT RT_CfgSetWirelessMode(
 	{
 		pAd->CommonCfg.PhyMode = WirelessMode;
 		pAd->CommonCfg.DesiredPhyMode = WirelessMode;
-		printk("PhyMode=%x, DesiredPhyMode=%x\n",pAd->CommonCfg.PhyMode,pAd->CommonCfg.DesiredPhyMode);
 		return TRUE;
 	}
-	printk("PhyMode=%x, DesiredPhyMode=%x\n",pAd->CommonCfg.PhyMode,pAd->CommonCfg.DesiredPhyMode);
-
+	
 	return FALSE;
 	
 }
@@ -294,67 +296,4 @@ INT RT_CfgSetWPAPSKKey(
 	return TRUE;
 }
 
-INT	RT_CfgSetFixedTxPhyMode(
-	IN	PSTRING			arg)
-{
-	INT		fix_tx_mode = FIXED_TXMODE_HT;
-	UINT32	value;
-
-	if (strcmp(arg, "OFDM") == 0 || strcmp(arg, "ofdm") == 0)
-	{
-		fix_tx_mode = FIXED_TXMODE_OFDM;
-	}	
-	else if (strcmp(arg, "CCK") == 0 || strcmp(arg, "cck") == 0)
-	{
-	    fix_tx_mode = FIXED_TXMODE_CCK;
-	}
-	else if (strcmp(arg, "HT") == 0 || strcmp(arg, "ht") == 0)
-	{
-	    fix_tx_mode = FIXED_TXMODE_HT;
-	}
-	else
-	{
-		value = simple_strtol(arg, 0, 10);
-		// 1 : CCK
-		// 2 : OFDM
-		// otherwise : HT
-		if (value == FIXED_TXMODE_CCK || value == FIXED_TXMODE_OFDM)
-			fix_tx_mode = value;	
-		else
-			fix_tx_mode = FIXED_TXMODE_HT;
-	}
-
-	return fix_tx_mode;
-					
-}	
-
-INT	RT_CfgSetMacAddress(
-	IN 	PRTMP_ADAPTER 	pAd,
-	IN	PSTRING			arg)
-{
-	INT	i, mac_len;
-	
-	/* Mac address acceptable format 01:02:03:04:05:06 length 17 */
-	mac_len = strlen(arg);
-	if(mac_len != 17)  
-	{
-		DBGPRINT(RT_DEBUG_ERROR, ("%s : invalid length (%d)\n", __FUNCTION__, mac_len));
-		return FALSE;
-	}
-
-	if(strcmp(arg, "00:00:00:00:00:00") == 0)
-	{
-		DBGPRINT(RT_DEBUG_ERROR, ("%s : invalid mac setting \n", __FUNCTION__));
-		return FALSE;
-	}
-
-	for (i = 0; i < MAC_ADDR_LEN; i++)
-	{
-		AtoH(arg, &pAd->CurrentAddress[i], 1);
-		arg = arg + 3;
-	}	
-
-	pAd->bLocalAdminMAC = TRUE;
-	return TRUE;
-}
 

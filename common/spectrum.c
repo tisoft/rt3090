@@ -774,7 +774,6 @@ VOID InsertChannelRepIE(
 	UINT8 Len;
 	UINT8 IEId = IE_AP_CHANNEL_REPORT;
 	PUCHAR pChListPtr = NULL;
-	PDOT11_CHANNEL_SET pChannelSet = NULL;
 
 	Len = 1;
 	if (strncmp(pCountry, "US", 2) == 0)
@@ -785,7 +784,9 @@ VOID InsertChannelRepIE(
 						__FUNCTION__, RegulatoryClass));
 			return;
 		}
-		pChannelSet = &USARegulatoryInfo[RegulatoryClass].ChannelSet;
+
+		Len += USARegulatoryInfo[RegulatoryClass].ChannelSet.NumberOfChannels;
+		pChListPtr = USARegulatoryInfo[RegulatoryClass].ChannelSet.ChannelList;
 	}
 	else if (strncmp(pCountry, "JP", 2) == 0)
 	{
@@ -796,7 +797,8 @@ VOID InsertChannelRepIE(
 			return;
 		}
 
-		pChannelSet = &JapanRegulatoryInfo[RegulatoryClass].ChannelSet;
+		Len += JapanRegulatoryInfo[RegulatoryClass].ChannelSet.NumberOfChannels;
+		pChListPtr = JapanRegulatoryInfo[RegulatoryClass].ChannelSet.ChannelList;
 	}
 	else
 	{
@@ -805,28 +807,15 @@ VOID InsertChannelRepIE(
 		return;
 	}
 
-	/* no match channel set. */
-	if (pChannelSet == NULL)
-		return;
+	MakeOutgoingFrame(pFrameBuf,	&TempLen,
+					1,				&IEId,
+					1,				&Len,
+					1,				&RegulatoryClass,
+					Len -1,			pChListPtr,
+					END_OF_ARGS);
 
-	/* empty channel set. */
-	if (pChannelSet->NumberOfChannels == 0)
-		return;
+	*pFrameLen = *pFrameLen + TempLen;
 
-	Len += pChannelSet->NumberOfChannels;
-	pChListPtr = pChannelSet->ChannelList;
-
-	if (Len > 1)
-	{
-		MakeOutgoingFrame(pFrameBuf,	&TempLen,
-						1,				&IEId,
-						1,				&Len,
-						1,				&RegulatoryClass,
-						Len -1,			pChListPtr,
-						END_OF_ARGS);
-
-		*pFrameLen = *pFrameLen + TempLen;
-	}
 	return;
 }
 
@@ -2185,7 +2174,7 @@ INT Set_MeasureReq_Proc(
 	MakeMeasurementReqFrame(pAd, pOutBuffer, &FrameLen,
 		sizeof(MEASURE_REQ_INFO), CATEGORY_RM, RM_BASIC,
 		MeasureReqToken, MeasureReqMode.word,
-		MeasureReqType, 1);
+		MeasureReqType, 0);
 
 	MeasureReq.ChNum = MeasureCh;
 	MeasureReq.MeasureStartTime = cpu2le64(MeasureStartTime);

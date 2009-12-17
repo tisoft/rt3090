@@ -53,7 +53,7 @@ static void ac0_dma_done_tasklet(unsigned long data);
 static void ac1_dma_done_tasklet(unsigned long data);
 static void ac2_dma_done_tasklet(unsigned long data);
 static void ac3_dma_done_tasklet(unsigned long data);
-static void hcca_dma_done_tasklet(unsigned long data);
+/*static void hcca_dma_done_tasklet(unsigned long data);*/
 static void fifo_statistic_full_tasklet(unsigned long data);
 
 
@@ -255,6 +255,64 @@ VOID Invalid_Remaining_Packet(
 }
 
 
+int RtmpOSIRQRequest(IN struct net_device *net_dev)
+{
+	PRTMP_ADAPTER pAd = (PRTMP_ADAPTER)(RTMP_OS_NETDEV_GET_PRIV(net_dev));
+	int retval = 0;
+
+	ASSERT(pAd);
+	
+	if (pAd->infType != RTMP_DEV_INF_RBUS)
+	{
+		POS_COOKIE _pObj = (POS_COOKIE)(pAd->OS_Cookie);
+		RTMP_MSI_ENABLE(pAd);	
+		retval = request_irq(_pObj->pci_dev->irq,  rt2860_interrupt, SA_SHIRQ, (net_dev)->name, (net_dev));
+		if (retval != 0) 
+			printk("RT2860: request_irq  ERROR(%d)\n", retval);
+	}
+	else
+	{
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,22)
+		if ((retval = request_irq(net_dev->irq, rt2860_interrupt, IRQF_SHARED, net_dev->name ,net_dev))) 
+#else
+		if ((retval = request_irq(net_dev->irq,rt2860_interrupt, SA_INTERRUPT, net_dev->name ,net_dev))) 
+#endif
+		{
+			printk("RT2860: request_irq  ERROR(%d)\n", retval);
+		}
+	}
+
+	return retval; 
+	
+}
+
+
+int RtmpOSIRQRelease(IN struct net_device *net_dev)
+{
+	PRTMP_ADAPTER pAd = (PRTMP_ADAPTER)(RTMP_OS_NETDEV_GET_PRIV(net_dev));
+
+	ASSERT(pAd);
+	if (pAd->infType != RTMP_DEV_INF_RBUS)
+	{ 
+		POS_COOKIE pObj = (POS_COOKIE)(pAd->OS_Cookie);
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,5,0)
+		synchronize_irq(pObj->pci_dev->irq);
+#endif
+		free_irq(pObj->pci_dev->irq, (net_dev));
+		RTMP_MSI_DISABLE(pAd);
+	}
+	else
+	{
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,5,0)
+		synchronize_irq(net_dev->irq);
+#endif
+		free_irq(net_dev->irq, (net_dev));
+	}
+
+	return 0;
+}
+
+
 NDIS_STATUS RtmpNetTaskInit(IN RTMP_ADAPTER *pAd)
 {
 	POS_COOKIE pObj;
@@ -267,7 +325,7 @@ NDIS_STATUS RtmpNetTaskInit(IN RTMP_ADAPTER *pAd)
 	tasklet_init(&pObj->ac1_dma_done_task, ac1_dma_done_tasklet, (unsigned long)pAd);
 	tasklet_init(&pObj->ac2_dma_done_task, ac2_dma_done_tasklet, (unsigned long)pAd);
 	tasklet_init(&pObj->ac3_dma_done_task, ac3_dma_done_tasklet, (unsigned long)pAd);
-	tasklet_init(&pObj->hcca_dma_done_task, hcca_dma_done_tasklet, (unsigned long)pAd);
+	/*tasklet_init(&pObj->hcca_dma_done_task, hcca_dma_done_tasklet, (unsigned long)pAd);*/
 	tasklet_init(&pObj->tbtt_task, tbtt_tasklet, (unsigned long)pAd);
 	tasklet_init(&pObj->fifo_statistic_full_task, fifo_statistic_full_tasklet, (unsigned long)pAd);
 
@@ -287,7 +345,7 @@ void RtmpNetTaskExit(IN RTMP_ADAPTER *pAd)
 	tasklet_kill(&pObj->ac1_dma_done_task);
 	tasklet_kill(&pObj->ac2_dma_done_task);
 	tasklet_kill(&pObj->ac3_dma_done_task);
-	tasklet_kill(&pObj->hcca_dma_done_task);
+	/*tasklet_kill(&pObj->hcca_dma_done_task);*/
 	tasklet_kill(&pObj->tbtt_task);
 	tasklet_kill(&pObj->fifo_statistic_full_task);
 }
@@ -295,19 +353,6 @@ void RtmpNetTaskExit(IN RTMP_ADAPTER *pAd)
 
 NDIS_STATUS RtmpMgmtTaskInit(IN RTMP_ADAPTER *pAd)
 {
-	RTMP_OS_TASK *pTask;
-	NDIS_STATUS status;
-
-
-	/* Creat Command Thread */
-	pTask = &pAd->cmdQTask;
-	RtmpOSTaskInit(pTask, "RtmpCmdQTask", pAd);
-	status = RtmpOSTaskAttach(pTask, RTPCICmdThread, pTask);
-	if (status == NDIS_STATUS_FAILURE) 
-	{
-		printk (KERN_WARNING "%s: unable to start RTPCICmdThread\n", RTMP_OS_NETDEV_GET_DEVNAME(pAd->net_dev));
-		return NDIS_STATUS_FAILURE;
-	}
 
 
 	return NDIS_STATUS_SUCCESS;
@@ -331,31 +376,6 @@ Note:
 VOID RtmpMgmtTaskExit(
 	IN RTMP_ADAPTER *pAd)
 {
-	INT			ret;
-	RTMP_OS_TASK	*pTask;
-
-	/* Terminate cmdQ thread */
-	pTask = &pAd->cmdQTask;
-#ifdef KTHREAD_SUPPORT
-	if (pTask->kthread_task)
-#else
-	CHECK_PID_LEGALITY(pTask->taskPID)
-#endif
-	{
-		mb();
-		NdisAcquireSpinLock(&pAd->CmdQLock);
-		pAd->CmdQ.CmdQState = RTMP_TASK_STAT_STOPED;
-		NdisReleaseSpinLock(&pAd->CmdQLock);
-		mb();
-		//RTUSBCMDUp(pAd);
-		ret = RtmpOSTaskKill(pTask);
-		if (ret == NDIS_STATUS_FAILURE)
-		{
-			DBGPRINT(RT_DEBUG_ERROR, ("%s: kill task(%s) failed!\n", 
-					RTMP_OS_NETDEV_GET_DEVNAME(pAd->net_dev), pTask->taskName));
-		}
-		pAd->CmdQ.CmdQState = RTMP_TASK_STAT_UNKNOWN;
-	}
 
 
 	return;
@@ -521,42 +541,6 @@ void fifo_statistic_full_tasklet(unsigned long data)
 }
 
 
-static void hcca_dma_done_tasklet(unsigned long data)
-{
-	unsigned long flags;
-	PRTMP_ADAPTER pAd = (PRTMP_ADAPTER) data;
-    INT_SOURCE_CSR_STRUC	IntSource;
-	POS_COOKIE pObj;
-	
-	// Do nothing if the driver is starting halt state.
-	// This might happen when timer already been fired before cancel timer with mlmehalt
-	if (RTMP_TEST_FLAG(pAd, fRTMP_ADAPTER_HALT_IN_PROGRESS | fRTMP_ADAPTER_NIC_NOT_EXIST))
-		return;
-	
-    pObj = (POS_COOKIE) pAd->OS_Cookie;
-
-
-	IntSource.word = 0;
-	IntSource.field.HccaDmaDone = 1;
-	pAd->int_pending &= ~INT_HCCA_DLY;
-
-	RTMPHandleTxRingDmaDoneInterrupt(pAd, IntSource);
-
-	RTMP_INT_LOCK(&pAd->irq_lock, flags);
-	/*
-	 * double check to avoid lose of interrupts
-	 */
-	if (pAd->int_pending & INT_HCCA_DLY)
-	{
-		tasklet_hi_schedule(&pObj->hcca_dma_done_task);
-		RTMP_INT_UNLOCK(&pAd->irq_lock, flags);    
-		return;
-	}
-
-	/* enable TxDataInt again */
-	rt2860_int_enable(pAd, INT_HCCA_DLY);
-	RTMP_INT_UNLOCK(&pAd->irq_lock, flags);    
-}
 
 
 static void ac3_dma_done_tasklet(unsigned long data)
@@ -733,12 +717,10 @@ rt2860_interrupt(int irq, void *dev_instance, struct pt_regs *regs)
 #endif
 {
 	struct net_device *net_dev = (struct net_device *) dev_instance;
-	PRTMP_ADAPTER pAd = NULL;
+	PRTMP_ADAPTER pAd = (PRTMP_ADAPTER) RTMP_OS_NETDEV_GET_PRIV(net_dev);
 	INT_SOURCE_CSR_STRUC	IntSource;
 	POS_COOKIE pObj;
 	
-	GET_PAD_FROM_NET_DEV(pAd, net_dev);
-
 	pObj = (POS_COOKIE) pAd->OS_Cookie;
 
 
@@ -865,17 +847,6 @@ rt2860_interrupt(int irq, void *dev_instance, struct pt_regs *regs)
 		pAd->int_pending |= INT_RX; 		
 	}
 
-	if (IntSource.word & INT_HCCA_DLY)
-	{
-
-		if ((pAd->int_disable_mask & INT_HCCA_DLY) == 0) 
-		{
-			/* mask TxDataInt */
-			rt2860_int_disable(pAd, INT_HCCA_DLY);
-			tasklet_hi_schedule(&pObj->hcca_dma_done_task);
-		}
-		pAd->int_pending |= INT_HCCA_DLY;						
-	}
 
 	if (IntSource.word & INT_AC3_DLY)
 	{
@@ -1013,164 +984,7 @@ void linux_pci_unmap_single(void *handle, dma_addr_t dma_addr, size_t size, int 
 	pAd=(PRTMP_ADAPTER)handle;
 	pObj = (POS_COOKIE)pAd->OS_Cookie;
 	
-	if (size > 0)
-		pci_unmap_single(pObj->pci_dev, dma_addr, size, direction);
+	pci_unmap_single(pObj->pci_dev, dma_addr, size, direction);
 	
-}
-
-
-/*
-========================================================================
-Routine Description:
-    PCI command kernel thread.
-
-Arguments:
-	*Context			the pAd, driver control block pointer
-
-Return Value:
-    0					close the thread
-
-Note:
-========================================================================
-*/
-INT RTPCICmdThread(
-	IN void * Context)
-{
-	RTMP_ADAPTER *pAd;
-	RTMP_OS_TASK *pTask;
-	int status;
-	status = 0;
-
-	pTask = (RTMP_OS_TASK *)Context;
-	pAd = (PRTMP_ADAPTER)pTask->priv;
-	
-	RtmpOSTaskCustomize(pTask);
-
-	NdisAcquireSpinLock(&pAd->CmdQLock);
-	pAd->CmdQ.CmdQState = RTMP_TASK_STAT_RUNNING;
-	NdisReleaseSpinLock(&pAd->CmdQLock);
-
-	while (pAd && pAd->CmdQ.CmdQState == RTMP_TASK_STAT_RUNNING)
-	{
-#ifdef KTHREAD_SUPPORT
-		RTMP_WAIT_EVENT_INTERRUPTIBLE(pAd, pTask);
-#else
-		/* lock the device pointers */
-		RTMP_SEM_EVENT_WAIT(&(pTask->taskSema), status);
-
-		if (status != 0)
-		{
-			RTMP_SET_FLAG(pAd, fRTMP_ADAPTER_HALT_IN_PROGRESS);
-			break;
-		}
-#endif
-
-		if (pAd->CmdQ.CmdQState == RTMP_TASK_STAT_STOPED)
-			break;
-
-		if (!pAd->PM_FlgSuspend)
-			CMDHandler(pAd);
-	}
-
-	if (pAd && !pAd->PM_FlgSuspend)
-	{	// Clear the CmdQElements.
-		CmdQElmt	*pCmdQElmt = NULL;
-
-		NdisAcquireSpinLock(&pAd->CmdQLock);
-		pAd->CmdQ.CmdQState = RTMP_TASK_STAT_STOPED;
-		while(pAd->CmdQ.size)
-		{
-			RTThreadDequeueCmd(&pAd->CmdQ, &pCmdQElmt);
-			if (pCmdQElmt)
-			{
-				if (pCmdQElmt->CmdFromNdis == TRUE)
-				{
-					if (pCmdQElmt->buffer != NULL)
-						os_free_mem(pAd, pCmdQElmt->buffer);
-					os_free_mem(pAd, (PUCHAR)pCmdQElmt);
-				}
-				else
-				{
-					if ((pCmdQElmt->buffer != NULL) && (pCmdQElmt->bufferlength != 0))
-						os_free_mem(pAd, pCmdQElmt->buffer);
-					os_free_mem(pAd, (PUCHAR)pCmdQElmt);
-				}
-			}
-		}
-
-		NdisReleaseSpinLock(&pAd->CmdQLock);
-	}
-	/* notify the exit routine that we're actually exiting now 
-	 *
-	 * complete()/wait_for_completion() is similar to up()/down(),
-	 * except that complete() is safe in the case where the structure
-	 * is getting deleted in a parallel mode of execution (i.e. just
-	 * after the down() -- that's necessary for the thread-shutdown
-	 * case.
-	 *
-	 * complete_and_exit() goes even further than this -- it is safe in
-	 * the case that the thread of the caller is going away (not just
-	 * the structure) -- this is necessary for the module-remove case.
-	 * This is important in preemption kernels, which transfer the flow
-	 * of execution immediately upon a complete().
-	 */
-	DBGPRINT(RT_DEBUG_TRACE,( "<---RTPCICmdThread\n"));
-
-#ifndef KTHREAD_SUPPORT
-	pTask->taskPID = THREAD_PID_INIT_VALUE;
-	complete_and_exit (&pTask->taskComplete, 0);
-#endif
-	return 0;
-
-}
-
-
-VOID CMDHandler(                                                                                                                                                
-    IN PRTMP_ADAPTER pAd)                                                                                                                                       
-{                                                                                                                                                               
-	PCmdQElmt		cmdqelmt;                                                                                                                                       
-	PUCHAR			pData;                                                                                                                                          
-	NDIS_STATUS		NdisStatus = NDIS_STATUS_SUCCESS;                                                                                                               
-//	ULONG			Now = 0;
-	NTSTATUS		ntStatus;
-//	unsigned long	IrqFlags;
-	
-	while (pAd && pAd->CmdQ.size > 0)	
-	{                                                                                                                                                           
-		NdisStatus = NDIS_STATUS_SUCCESS;
-		                                                                                                                      
-		NdisAcquireSpinLock(&pAd->CmdQLock);
-		RTThreadDequeueCmd(&pAd->CmdQ, &cmdqelmt);
-		NdisReleaseSpinLock(&pAd->CmdQLock);
-		                                                                                                        
-		if (cmdqelmt == NULL)                                                                                                                                   
-			break; 
-			                                                                                                                                             
-		pData = cmdqelmt->buffer;                                      
-		                                                                                         
-		if(!(RTMP_TEST_FLAG(pAd, fRTMP_ADAPTER_NIC_NOT_EXIST) || RTMP_TEST_FLAG(pAd, fRTMP_ADAPTER_HALT_IN_PROGRESS)))
-		{
-			switch (cmdqelmt->command)
-			{
-
-				default:
-					DBGPRINT(RT_DEBUG_ERROR, ("--> Control Thread !! ERROR !! Unknown(cmdqelmt->command=0x%x) !! \n", cmdqelmt->command));
-					break;
-			}
-		}
-
-		if (cmdqelmt->CmdFromNdis == TRUE)
-		{
-			if (cmdqelmt->buffer != NULL)
-				os_free_mem(pAd, cmdqelmt->buffer);
-			os_free_mem(pAd, cmdqelmt);
-		}
-		else
-		{
-			if ((cmdqelmt->buffer != NULL) && (cmdqelmt->bufferlength != 0))
-				os_free_mem(pAd, cmdqelmt->buffer);
-			os_free_mem(pAd, cmdqelmt);
-		}
-	}	/* end of while */
 }
 

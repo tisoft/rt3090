@@ -810,199 +810,157 @@ VOID RTMPTkipMixKey(
 // TRUE: Success!
 // FALSE: Decrypt Error!
 //
-//
-// TRUE: Success!
-// FALSE: Decrypt Error!
-//
 BOOLEAN RTMPSoftDecryptTKIP(
-	IN 		PRTMP_ADAPTER 	pAd,
-	IN 		PUCHAR			pHdr,
-	IN 		UCHAR    		UserPriority,
-	IN 		PCIPHER_KEY		pKey,
-	INOUT 	PUCHAR			pData,
-	IN 		UINT16			*DataByteCnt)
+	IN PRTMP_ADAPTER pAd,
+	IN PUCHAR	pData,
+	IN ULONG	DataByteCnt, 
+	IN UCHAR    UserPriority,
+	IN PCIPHER_KEY	pWpaKey)
 {
-	PHEADER_802_11	pFrame;		
+	UCHAR			KeyID;
+	UINT			HeaderLen;
+    UCHAR			fc0;
+	UCHAR			fc1;
+	USHORT			fc;
+	UINT			frame_type;
+	UINT			frame_subtype;
     UINT			from_ds;
     UINT			to_ds;
 	INT				a4_exists;
 	INT				qc_exists;
+	USHORT			duration;
+	USHORT			seq_control;
+	USHORT			qos_control;
 	UCHAR			TA[MAC_ADDR_LEN];
 	UCHAR			DA[MAC_ADDR_LEN];
-	UCHAR			SA[MAC_ADDR_LEN];	
+	UCHAR			SA[MAC_ADDR_LEN];
 	UCHAR			RC4Key[16];
 	UINT			p1k[5]; //for mix_key;
 	ULONG			pnl;/* Least significant 16 bits of PN */
 	ULONG			pnh;/* Most significant 32 bits of PN */ 
-	ARC4_CTX_STRUC 	ARC4_CTX;
-	PUCHAR			plaintext_ptr;
-	UINT32			plaintext_len;
-	PUCHAR			ciphertext_ptr;
-	UINT32			ciphertext_len;
+	UINT			num_blocks;
+	UINT			payload_remainder;
+	ARCFOURCONTEXT 	ArcFourContext;
 	UINT			crc32 = 0;
 	UINT			trailfcs = 0;
 	UCHAR			MIC[8];
 	UCHAR			TrailMIC[8];
 
 #ifdef RT_BIG_ENDIAN
-	RTMPFrameEndianChange(pAd, pHdr, DIR_READ, FALSE);
+	RTMPFrameEndianChange(pAd, (PUCHAR)pData, DIR_READ, FALSE);
 #endif
 
-	if (pKey->KeyLen == 0)
+	fc0 = *pData;
+	fc1 = *(pData + 1);
+
+	fc = *((PUSHORT)pData);	
+	
+	frame_type = ((fc0 >> 2) & 0x03);
+	frame_subtype = ((fc0 >> 4) & 0x0f);	
+
+    from_ds = (fc1 & 0x2) >> 1;
+    to_ds = (fc1 & 0x1);
+
+    a4_exists = (from_ds & to_ds);
+    qc_exists = ((frame_subtype == 0x08) ||    /* Assumed QoS subtypes */
+                  (frame_subtype == 0x09) ||   /* Likely to change.    */
+                  (frame_subtype == 0x0a) || 
+                  (frame_subtype == 0x0b)
+                 );
+
+	HeaderLen = 24;
+	if (a4_exists)
+		HeaderLen += 6;
+
+	KeyID = *((PUCHAR)(pData+ HeaderLen + 3));	
+	KeyID = KeyID >> 6;
+
+	if (pWpaKey[KeyID].KeyLen == 0)
 	{
-		DBGPRINT(RT_DEBUG_ERROR, ("%s : the key is empty)\n", __FUNCTION__));
+		DBGPRINT(RT_DEBUG_TRACE, ("RTMPSoftDecryptTKIP failed!(KeyID[%d] Length can not be 0)\n", KeyID));
 		return FALSE;
 	}
 
-	/* pointer to 802.11 header */
-	pFrame = (PHEADER_802_11)pHdr;
+	duration = *((PUSHORT)(pData+2));	
 
-	from_ds = pFrame->FC.FrDs;
-	to_ds = pFrame->FC.ToDs;
-
-	/* decide if the Address 4 exist or QoS exist */
-	a4_exists = (from_ds & to_ds);
-	qc_exists = ((pFrame->FC.SubType == SUBTYPE_QDATA) || 
-				 (pFrame->FC.SubType == SUBTYPE_QDATA_CFACK) ||
-				 (pFrame->FC.SubType == SUBTYPE_QDATA_CFPOLL) ||
-				 (pFrame->FC.SubType == SUBTYPE_QDATA_CFACK_CFPOLL));
-
-	/* Assign DA, SA and TA for TKIP calculation */
+	seq_control = *((PUSHORT)(pData+22));
+	
+	if (qc_exists)
+	{
+		if (a4_exists)
+		{
+			qos_control = *((PUSHORT)(pData+30));
+		}
+		else
+		{
+			qos_control = *((PUSHORT)(pData+24));
+		}
+	}
+	
 	if (to_ds == 0 && from_ds == 1)
 	{
-		NdisMoveMemory(DA, pFrame->Addr1, MAC_ADDR_LEN);
-		NdisMoveMemory(TA, pFrame->Addr2, MAC_ADDR_LEN);  //BSSID		
-		NdisMoveMemory(SA, pFrame->Addr3, MAC_ADDR_LEN);
+		NdisMoveMemory(DA, pData+4, MAC_ADDR_LEN);
+		NdisMoveMemory(SA, pData+16, MAC_ADDR_LEN);
+		NdisMoveMemory(TA, pData+10, MAC_ADDR_LEN);  //BSSID
 	}	
 	else if (to_ds == 0 && from_ds == 0 )
 	{
-		NdisMoveMemory(DA, pFrame->Addr1, MAC_ADDR_LEN);
-		NdisMoveMemory(TA, pFrame->Addr2, MAC_ADDR_LEN);		
-		NdisMoveMemory(SA, pFrame->Addr2, MAC_ADDR_LEN);
+		NdisMoveMemory(TA, pData+10, MAC_ADDR_LEN);
+		NdisMoveMemory(DA, pData+4, MAC_ADDR_LEN);
+		NdisMoveMemory(SA, pData+10, MAC_ADDR_LEN);
 	}
 	else if (to_ds == 1 && from_ds == 0)
 	{
-		NdisMoveMemory(SA, pFrame->Addr2, MAC_ADDR_LEN);
-		NdisMoveMemory(TA, pFrame->Addr2, MAC_ADDR_LEN);
-		NdisMoveMemory(DA, pFrame->Addr3, MAC_ADDR_LEN);
+		NdisMoveMemory(SA, pData+10, MAC_ADDR_LEN);
+		NdisMoveMemory(TA, pData+10, MAC_ADDR_LEN);
+		NdisMoveMemory(DA, pData+16, MAC_ADDR_LEN);
 	}
 	else if (to_ds == 1 && from_ds == 1)
 	{
-		NdisMoveMemory(TA, pFrame->Addr2, MAC_ADDR_LEN);
-		NdisMoveMemory(DA, pFrame->Addr3, MAC_ADDR_LEN);
-		NdisMoveMemory(SA, pFrame->Octet, MAC_ADDR_LEN);
+		NdisMoveMemory(TA, pData+10, MAC_ADDR_LEN);
+		NdisMoveMemory(DA, pData+16, MAC_ADDR_LEN);
+		NdisMoveMemory(SA, pData+22, MAC_ADDR_LEN);
 	}
 
-	pnl = (*(pData)) << 8 | (*(pData + 2));	
-	pnh = *((PULONG)(pData + 4));
+	num_blocks = (DataByteCnt - 16) / 16;
+	payload_remainder = (DataByteCnt - 16) % 16;
+
+	pnl = (*(pData + HeaderLen)) * 256 + *(pData + HeaderLen + 2);	
+	pnh = *((PULONG)(pData + HeaderLen + 4));
 	pnh = cpu2le32(pnh);	
-	RTMPTkipMixKey(pKey->Key, TA, pnl, pnh, RC4Key, p1k);
+	RTMPTkipMixKey(pWpaKey[KeyID].Key, TA, pnl, pnh, RC4Key, p1k);
 
-	/* skip 8-bytes TKIP IV/EIV header */
-	ciphertext_ptr = pData + LEN_TKIP_IV_HDR;
-	ciphertext_len = *DataByteCnt - LEN_TKIP_IV_HDR;
+	ARCFOUR_INIT(&ArcFourContext, RC4Key, 16); 
 
-	/* WEP Decapsulation */
-	/* Generate an RC4 key stream */
-	ARC4_INIT(&ARC4_CTX, RC4Key, 16);
-
-	/* Decrypt the TKIP MPDU by ARC4. 
-	   It shall include plaintext, MIC and ICV.
-	   The result output would overwrite the original TKIP IV/EIV header position */
-	ARC4_Compute(&ARC4_CTX, ciphertext_ptr, ciphertext_len, pData);
-
-	/* Point to the decrypted data frame and its length shall exclude ICV length */
-	plaintext_ptr = pData;
-	plaintext_len = ciphertext_len - LEN_ICV;
-
-	/* Extract peer's ICV */	
-	NdisMoveMemory(&trailfcs, plaintext_ptr + plaintext_len, LEN_ICV);
-	
-	/* Re-computes the ICV and 
-	   bit-wise compares with the peer's ICV. */
-	crc32 = RTMP_CALC_FCS32(PPPINITFCS32, plaintext_ptr, plaintext_len);
+	ARCFOUR_DECRYPT(&ArcFourContext, pData + HeaderLen, pData + HeaderLen + 8, DataByteCnt - HeaderLen - 8);
+	NdisMoveMemory(&trailfcs, pData + DataByteCnt - 8 - 4, 4);
+	crc32 = RTMP_CALC_FCS32(PPPINITFCS32, pData + HeaderLen, DataByteCnt - HeaderLen - 8 - 4);  //Skip IV+EIV 8 bytes & Skip last 4 bytes(FCS).
 	crc32 ^= 0xffffffff;             /* complement */
 
     if(crc32 != cpu2le32(trailfcs))
-    {
-		DBGPRINT(RT_DEBUG_ERROR, ("! WEP Data CRC Error !\n"));	 //CRC error.
-		return FALSE;
-	}
-
-	/* Extract peer's MIC and subtract MIC length from total data length */
-	plaintext_len -= LEN_TKIP_MIC;
-	NdisMoveMemory(TrailMIC, plaintext_ptr + plaintext_len, LEN_TKIP_MIC);
-	RTMPInitMICEngine(pAd, pKey->Key, DA, SA, UserPriority, pKey->RxMic);
-	RTMPTkipAppend(&pAd->PrivateInfo.Tx, plaintext_ptr, plaintext_len);
-	RTMPTkipGetMIC(&pAd->PrivateInfo.Tx);
-	NdisMoveMemory(MIC, pAd->PrivateInfo.Tx.MIC, LEN_TKIP_MIC);
-
-	if (!NdisEqualMemory(MIC, TrailMIC, LEN_TKIP_MIC))
 	{
-		DBGPRINT(RT_DEBUG_ERROR, ("! TKIP MIC Error !\n"));	 //MIC error.
-		//RTMPReportMicError(pAd, &pWpaKey[KeyID]);	// marked by AlbertY @ 20060630 
-		return FALSE;		
+		DBGPRINT(RT_DEBUG_TRACE, ("RTMPSoftDecryptTKIP, WEP Data ICV Error !\n"));	 //ICV error.
+
+		return (FALSE);
 	}
 
-	/* Update the total data length */
-	*DataByteCnt = plaintext_len;
+	NdisMoveMemory(TrailMIC, pData + DataByteCnt - 8 - 8 - 4, 8);
+	RTMPInitMICEngine(pAd, pWpaKey[KeyID].Key, DA, SA, UserPriority, pWpaKey[KeyID].RxMic);
+	RTMPTkipAppend(&pAd->PrivateInfo.Tx, pData + HeaderLen, DataByteCnt - HeaderLen - 8 - 12);
+	RTMPTkipGetMIC(&pAd->PrivateInfo.Tx);
+	NdisMoveMemory(MIC, pAd->PrivateInfo.Tx.MIC, 8);
+
+	if (!NdisEqualMemory(MIC, TrailMIC, 8))
+	{
+		DBGPRINT(RT_DEBUG_ERROR, ("RTMPSoftDecryptTKIP, WEP Data MIC Error !\n"));	 //MIC error.
+		//RTMPReportMicError(pAd, &pWpaKey[KeyID]);	// marked by AlbertY @ 20060630 
+		return (FALSE);		
+	}
 
 #ifdef RT_BIG_ENDIAN
-	RTMPFrameEndianChange(pAd, pHdr, DIR_READ, FALSE);
-#endif	
+	RTMPFrameEndianChange(pAd, (PUCHAR)pData, DIR_READ, FALSE);
+#endif
+	//DBGPRINT(RT_DEBUG_TRACE, "RTMPSoftDecryptTKIP Decript done!!\n");
 	return TRUE;
-}
-
- 
-/*
-	========================================================================
-	
-	Routine Description:
-		Use RC4 to protect the Key Data field of EAPoL frame. 
-		It's defined in IEEE 802.11i-2004 p.84 
-
-	Arguments:
-		
-	Return Value:
-		None
-		
-	Note:
-		
-	========================================================================
-*/
-VOID TKIP_GTK_KEY_WRAP( 
-    IN UCHAR    *key,
-    IN UCHAR	*iv,
-    IN UCHAR    *input_text,
-    IN UINT32    input_len,
-    OUT UCHAR   *output_text)
-{	
-	UCHAR	ekey[LEN_KEY_DESC_IV + LEN_PTK_KEK];	
-	ARC4_CTX_STRUC ARC4_CTX;
-	
-	/* The encryption key is generated by concatenating the
-	   EAPOL-Key IV field and the KEK. */
-	NdisMoveMemory(ekey, iv, LEN_KEY_DESC_IV);
-	NdisMoveMemory(&ekey[LEN_KEY_DESC_IV], key, LEN_PTK_KEK);
-
-	/* RC4 stream cipher initialization with the KEK */	
-	ARC4_INIT(&ARC4_CTX, ekey, LEN_KEY_DESC_IV + LEN_PTK_KEK);
-
-	/* The first 256 octets of the RC4 key stream shall be discarded */
-	ARC4_Discard_KeyLength(&ARC4_CTX, 256);
-
-	/* encryption begins using the 257th key stream octet */
-	ARC4_Compute(&ARC4_CTX, input_text, input_len, output_text);
-	
-}
-
-VOID TKIP_GTK_KEY_UNWRAP( 
-    IN UCHAR    *key,
-    IN UCHAR	*iv,
-    IN UCHAR    *input_text,
-    IN UINT32    input_len,
-    OUT UCHAR   *output_text)
-{
-	TKIP_GTK_KEY_WRAP(key, iv, input_text, input_len, output_text);
 }
 

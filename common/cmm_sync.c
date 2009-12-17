@@ -425,7 +425,7 @@ VOID ScanNextChannel(
 	{
 		if ((pAd->CommonCfg.BBPCurrentBW == BW_40)
 #ifdef CONFIG_STA_SUPPORT
-			&& (INFRA_ON(pAd) || ADHOC_ON(pAd)
+			&& (INFRA_ON(pAd)
 				|| (pAd->OpMode == OPMODE_AP))
 #endif // CONFIG_STA_SUPPORT //
 			)
@@ -448,19 +448,6 @@ VOID ScanNextChannel(
 #ifdef CONFIG_STA_SUPPORT
 		IF_DEV_CONFIG_OPMODE_ON_STA(pAd)
 		{
-
-			/*
-				If all peer Ad-hoc clients leave, driver would do LinkDown and LinkUp.
-				In LinkUp, CommonCfg.Ssid would copy SSID from MlmeAux. 
-				To prevent SSID is zero or wrong in Beacon, need to recover MlmeAux.SSID here.
-			*/
-			if (ADHOC_ON(pAd))
-			{
-				NdisZeroMemory(pAd->MlmeAux.Ssid, MAX_LEN_OF_SSID);
-				pAd->MlmeAux.SsidLen = pAd->CommonCfg.SsidLen;
-				NdisMoveMemory(pAd->MlmeAux.Ssid, pAd->CommonCfg.Ssid, pAd->CommonCfg.SsidLen);
-			}
-		
 			//
 			// To prevent data lost.
 			// Send an NULL data with turned PSM bit on to current associated AP before SCAN progress.
@@ -487,12 +474,12 @@ VOID ScanNextChannel(
 
 			pAd->Mlme.SyncMachine.CurrState = SYNC_IDLE;
 			Status = MLME_SUCCESS;
-			MlmeEnqueue(pAd, MLME_CNTL_STATE_MACHINE, MT2_SCAN_CONF, 2, &Status, 0);
+			MlmeEnqueue(pAd, MLME_CNTL_STATE_MACHINE, MT2_SCAN_CONF, 2, &Status);
 		}
 #endif // CONFIG_STA_SUPPORT //
 
 
-
+		RTMP_CLEAR_FLAG(pAd, fRTMP_ADAPTER_BSS_SCAN_IN_PROGRESS);
 	} 
 	else 
 	{
@@ -576,7 +563,7 @@ VOID ScanNextChannel(
 				{
 					pAd->Mlme.SyncMachine.CurrState = SYNC_IDLE;
 					Status = MLME_FAIL_NO_RESOURCE;
-					MlmeEnqueue(pAd, MLME_CNTL_STATE_MACHINE, MT2_SCAN_CONF, 2, &Status, 0);
+					MlmeEnqueue(pAd, MLME_CNTL_STATE_MACHINE, MT2_SCAN_CONF, 2, &Status);
 				}
 #endif // CONFIG_STA_SUPPORT //
 
@@ -711,33 +698,6 @@ VOID ScanNextChannel(
 
 
 			MiniportMMRequest(pAd, 0, pOutBuffer, FrameLen);
-
-#ifdef CONFIG_STA_SUPPORT
-			IF_DEV_CONFIG_OPMODE_ON_STA(pAd)
-			{
-				//
-				// To prevent data lost.
-				// Send an NULL data with turned PSM bit on to current associated AP when SCAN in the channel where
-				//  associated AP located.
-				//
-				if (OPSTATUS_TEST_FLAG(pAd, fOP_STATUS_MEDIA_STATE_CONNECTED) && 
-					(INFRA_ON(pAd)) &&
-					(pAd->CommonCfg.Channel == pAd->MlmeAux.Channel))
-				{
-					NdisZeroMemory(pOutBuffer, MGMT_DMA_BUFFER_SIZE);
-					pHdr80211 = (PHEADER_802_11) pOutBuffer;
-					MgtMacHeaderInit(pAd, pHdr80211, SUBTYPE_NULL_FUNC, 1, pAd->CommonCfg.Bssid, pAd->CommonCfg.Bssid);
-					pHdr80211->Duration = 0;
-					pHdr80211->FC.Type = BTYPE_DATA;
-					pHdr80211->FC.PwrMgmt = PWR_ACTIVE;
-
-					// Send using priority queue
-					MiniportMMRequest(pAd, 0, pOutBuffer, sizeof(HEADER_802_11));
-					DBGPRINT(RT_DEBUG_TRACE, ("ScanNextChannel():Send PWA NullData frame to notify the associated AP!\n"));
-				}
-			}
-#endif // CONFIG_STA_SUPPORT //
-
 			MlmeFreeMemory(pAd, pOutBuffer);
 		}
 

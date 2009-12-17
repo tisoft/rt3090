@@ -1,0 +1,679 @@
+#
+# Release file for AP Mode
+#
+include $(RT28xx_DIR)/os/linux/config.mk
+
+ifeq ($(CHIPSET),2860)
+RELEASE_FILE = $(RT28xx_DIR)/build/common/cmm_mac_pci.c\
+	$(RT28xx_DIR)/build/common/cmm_data_pci.c\
+	$(RT28xx_DIR)/build/include/chip/rt2860.h\
+	$(RT28xx_DIR)/build/include/chip/mac_pci.h\
+	$(RT28xx_DIR)/build/include/iface/rtmp_pci.h\
+	$(RT28xx_DIR)/build/os/linux/pci_main_dev.c\
+	$(RT28xx_DIR)/build/os/linux/rt_pci_rbus.c
+BIN_FILE = $(RT28xx_DIR)/build/common/rt2860.bin
+DAT_FILE = $(RT28xx_DIR)/build/RT2860$(RT28xx_MODE).dat
+DAT_FILE2 = $(RT28xx_DIR)/build/RT2860$(RT28xx_MODE)Card.dat
+endif
+
+ifeq ($(CHIPSET),2870)
+RELEASE_FILE = $(RT28xx_DIR)/build/common/cmm_mac_usb.c \
+	$(RT28xx_DIR)/build/common/cmm_data_usb.c \
+	$(RT28xx_DIR)/build/common/rtusb_bulk.c \
+	$(RT28xx_DIR)/build/common/rtusb_data.c \
+	$(RT28xx_DIR)/build/common/rtusb_io.c \
+	$(RT28xx_DIR)/build/include/rtusb_io.h\
+	$(RT28xx_DIR)/build/include/chip/rt2870.h\
+	$(RT28xx_DIR)/build/include/chip/mac_usb.h\
+	$(RT28xx_DIR)/build/include/iface/rtmp_usb.h\
+	$(RT28xx_DIR)/build/os/linux/usb_main_dev.c\
+	$(RT28xx_DIR)/build/os/linux/rt_usb.c
+BIN_FILE = $(RT28xx_DIR)/build/common/rt2870.bin
+DAT_FILE = $(RT28xx_DIR)/build/RT2870$(RT28xx_MODE).dat
+DAT_FILE2 = $(RT28xx_DIR)/build/RT2870$(RT28xx_MODE)Card.dat
+endif
+
+ifeq ($(CHIPSET),2070)
+RELEASE_FILE = $(RT28xx_DIR)/build/common/cmm_mac_usb.c \
+	$(RT28xx_DIR)/build/common/cmm_data_usb.c \
+	$(RT28xx_DIR)/build/common/rtusb_bulk.c \
+	$(RT28xx_DIR)/build/common/rtusb_data.c \
+	$(RT28xx_DIR)/build/common/rtusb_io.c \
+	$(RT28xx_DIR)/build/common/rt_rf.c \
+	$(RT28xx_DIR)/build/common/ee_efuse.c \
+	$(RT28xx_DIR)/build/chips/rt30xx.c\
+	$(RT28xx_DIR)/build/chips/rt3070.c\
+	$(RT28xx_DIR)/build/include/rtusb_io.h\
+	$(RT28xx_DIR)/build/include/chip/rt2870.h\
+	$(RT28xx_DIR)/build/include/chip/rt30xx.h\
+	$(RT28xx_DIR)/build/include/chip/rt3070.h\
+	$(RT28xx_DIR)/build/include/chip/mac_usb.h\
+	$(RT28xx_DIR)/build/include/iface/rtmp_usb.h\
+	$(RT28xx_DIR)/build/os/linux/usb_main_dev.c\
+	$(RT28xx_DIR)/build/os/linux/rt_usb.c
+BIN_FILE = $(RT28xx_DIR)/build/common/rt2870.bin
+DAT_FILE = $(RT28xx_DIR)/build/RT2870$(RT28xx_MODE).dat
+DAT_FILE2 = $(RT28xx_DIR)/build/RT2870$(RT28xx_MODE)Card.dat
+endif
+
+ifeq ($(CHIPSET),3070)
+RELEASE_FILE = $(RT28xx_DIR)/build/common/cmm_mac_usb.c \
+	$(RT28xx_DIR)/build/common/cmm_data_usb.c \
+	$(RT28xx_DIR)/build/common/rtusb_bulk.c \
+	$(RT28xx_DIR)/build/common/rtusb_data.c \
+	$(RT28xx_DIR)/build/common/rtusb_io.c \
+	$(RT28xx_DIR)/build/common/rt_rf.c \
+	$(RT28xx_DIR)/build/common/ee_efuse.c \
+	$(RT28xx_DIR)/build/chips/rt30xx.c\
+	$(RT28xx_DIR)/build/chips/rt3070.c\
+	$(RT28xx_DIR)/build/include/rtusb_io.h\
+	$(RT28xx_DIR)/build/include/chip/rt2870.h\
+	$(RT28xx_DIR)/build/include/chip/rt30xx.h\
+	$(RT28xx_DIR)/build/include/chip/rt3070.h\
+	$(RT28xx_DIR)/build/include/chip/mac_usb.h\
+	$(RT28xx_DIR)/build/include/iface/rtmp_usb.h\
+	$(RT28xx_DIR)/build/os/linux/usb_main_dev.c\
+	$(RT28xx_DIR)/build/os/linux/rt_usb.c
+BIN_FILE = $(RT28xx_DIR)/build/common/rt2870.bin
+DAT_FILE = $(RT28xx_DIR)/build/RT2870$(RT28xx_MODE).dat
+DAT_FILE2 = $(RT28xx_DIR)/build/RT2870$(RT28xx_MODE)Card.dat
+endif
+
+ifeq ($(CHIPSET),3090)
+RELEASE_FILE = $(RT28xx_DIR)/build/common/cmm_mac_pci.c\
+	$(RT28xx_DIR)/build/common/cmm_data_pci.c\
+	$(RT28xx_DIR)/build/common/rt_rf.c \
+	$(RT28xx_DIR)/build/chips/rt30xx.c\
+	$(RT28xx_DIR)/build/chips/rt3090.c\
+	$(RT28xx_DIR)/build/include/chip/rt2860.h\
+	$(RT28xx_DIR)/build/include/chip/rt30xx.h\
+	$(RT28xx_DIR)/build/include/chip/rt3090.h\
+	$(RT28xx_DIR)/build/include/chip/mac_pci.h\
+	$(RT28xx_DIR)/build/include/iface/rtmp_pci.h\
+	$(RT28xx_DIR)/build/os/linux/pci_main_dev.c\
+	$(RT28xx_DIR)/build/os/linux/rt_pci_rbus.c
+BIN_FILE = $(RT28xx_DIR)/build/common/rt2860.bin
+DAT_FILE = $(RT28xx_DIR)/build/RT2860$(RT28xx_MODE).dat
+DAT_FILE2 = $(RT28xx_DIR)/build/RT2860$(RT28xx_MODE)Card.dat
+endif
+
+ifeq ($(CHIPSET),3370)
+RELEASE_FILE = $(RT28xx_DIR)/build/common/cmm_mac_usb.c \
+	$(RT28xx_DIR)/build/common/cmm_data_usb.c \
+	$(RT28xx_DIR)/build/common/rtusb_bulk.c \
+	$(RT28xx_DIR)/build/common/rtusb_data.c \
+	$(RT28xx_DIR)/build/common/rtusb_io.c \
+	$(RT28xx_DIR)/build/common/rt_rf.c \
+	$(RT28xx_DIR)/build/common/ee_efuse.c \
+	$(RT28xx_DIR)/build/chips/rt33xx.c\
+	$(RT28xx_DIR)/build/chips/rt3370.c\
+	$(RT28xx_DIR)/build/include/rtusb_io.h\
+	$(RT28xx_DIR)/build/include/chip/rt2870.h\
+	$(RT28xx_DIR)/build/include/chip/rt33xx.h\
+	$(RT28xx_DIR)/build/include/chip/rt3370.h\
+	$(RT28xx_DIR)/build/include/chip/mac_usb.h\
+	$(RT28xx_DIR)/build/include/iface/rtmp_usb.h\
+	$(RT28xx_DIR)/build/os/linux/usb_main_dev.c\
+	$(RT28xx_DIR)/build/os/linux/rt_usb.c
+BIN_FILE = $(RT28xx_DIR)/build/common/rt2870.bin
+DAT_FILE = $(RT28xx_DIR)/build/RT2870$(RT28xx_MODE).dat
+DAT_FILE2 = $(RT28xx_DIR)/build/RT2870$(RT28xx_MODE)Card.dat
+endif
+
+ifeq ($(CHIPSET),3390)
+RELEASE_FILE = $(RT28xx_DIR)/build/common/cmm_mac_pci.c\
+	$(RT28xx_DIR)/build/common/cmm_data_pci.c\
+	$(RT28xx_DIR)/build/common/rt_rf.c \
+	$(RT28xx_DIR)/build/chips/rt33xx.c\
+	$(RT28xx_DIR)/build/chips/rt3390.c\
+	$(RT28xx_DIR)/build/include/chip/rt2860.h\
+	$(RT28xx_DIR)/build/include/chip/rt33xx.h\
+	$(RT28xx_DIR)/build/include/chip/rt3390.h\
+	$(RT28xx_DIR)/build/include/chip/mac_pci.h\
+	$(RT28xx_DIR)/build/include/iface/rtmp_pci.h\
+	$(RT28xx_DIR)/build/os/linux/pci_main_dev.c\
+	$(RT28xx_DIR)/build/os/linux/rt_pci_rbus.c
+BIN_FILE = $(RT28xx_DIR)/build/common/rt2860.bin
+DAT_FILE = $(RT28xx_DIR)/build/RT2860$(RT28xx_MODE).dat
+DAT_FILE2 = $(RT28xx_DIR)/build/RT2860$(RT28xx_MODE)Card.dat
+endif
+
+ifeq ($(RT28xx_MODE),AP)
+RELEASE_FILE += $(RT28xx_DIR)/build/common/mlme.c\
+	$(RT28xx_DIR)/build/common/cmm_wep.c\
+	$(RT28xx_DIR)/build/common/action.c\
+	$(RT28xx_DIR)/build/common/ba_action.c\
+	$(RT28xx_DIR)/build/common/cmm_data.c\
+	$(RT28xx_DIR)/build/common/rtmp_init.c\
+	$(RT28xx_DIR)/build/common/cmm_tkip.c\
+	$(RT28xx_DIR)/build/common/cmm_aes.c\
+	$(RT28xx_DIR)/build/common/cmm_sync.c\
+	$(RT28xx_DIR)/build/common/eeprom.c\
+	$(RT28xx_DIR)/build/common/cmm_sanity.c\
+	$(RT28xx_DIR)/build/common/cmm_info.c\
+	$(RT28xx_DIR)/build/common/cmm_cfg.c\
+	$(RT28xx_DIR)/build/common/cmm_wpa.c\
+	$(RT28xx_DIR)/build/common/dfs.c\
+	$(RT28xx_DIR)/build/common/spectrum.c\
+	$(RT28xx_DIR)/build/common/rt_channel.c\
+	$(RT28xx_DIR)/build/common/cmm_profile.c\
+	$(RT28xx_DIR)/build/common/cmm_asic.c\
+	$(RT28xx_DIR)/build/common/ee_prom.c\
+	$(RT28xx_DIR)/build/common/rtmp_mcu.c\
+	$(RT28xx_DIR)/build/common/rtmp_timer.c\
+	$(RT28xx_DIR)/build/ap/ap.c\
+	$(RT28xx_DIR)/build/ap/ap_assoc.c\
+	$(RT28xx_DIR)/build/ap/ap_auth.c\
+	$(RT28xx_DIR)/build/ap/ap_connect.c\
+	$(RT28xx_DIR)/build/ap/ap_mlme.c\
+	$(RT28xx_DIR)/build/ap/ap_sanity.c\
+	$(RT28xx_DIR)/build/ap/ap_sync.c\
+	$(RT28xx_DIR)/build/ap/ap_wpa.c\
+	$(RT28xx_DIR)/build/ap/ap_data.c\
+	$(RT28xx_DIR)/build/ap/ap_uapsd.c\
+	$(RT28xx_DIR)/build/ap/ap_mbss.c\
+	$(RT28xx_DIR)/build/ap/ap_autoChSel.c\
+	$(RT28xx_DIR)/build/ap/ap_ids.c\
+	$(RT28xx_DIR)/build/ap/ap_dls.c\
+	$(RT28xx_DIR)/build/ap/ap_qload.c\
+	$(RT28xx_DIR)/build/ap/ap_cfg.c\
+	$(RT28xx_DIR)/build/os/linux/rt_linux.c\
+	$(RT28xx_DIR)/build/os/linux/rt_profile.c\
+	$(RT28xx_DIR)/build/os/linux/ap_ioctl.c\
+	$(RT28xx_DIR)/build/os/linux/rt_main_dev.c\
+	$(RT28xx_DIR)/build/os/linux/rt_ate.c\
+	$(RT28xx_DIR)/build/os/linux/vr_ikans.c\
+	$(RT28xx_DIR)/build/common/wsc.c\
+	$(RT28xx_DIR)/build/common/wsc_tlv.c\
+	$(RT28xx_DIR)/build/common/dh_key.c\
+	$(RT28xx_DIR)/build/common/evp_enc.c\
+	$(RT28xx_DIR)/build/common/cmm_mat.c\
+	$(RT28xx_DIR)/build/common/cmm_mat_iparp.c\
+	$(RT28xx_DIR)/build/common/cmm_mat_pppoe.c\
+	$(RT28xx_DIR)/build/common/cmm_mat_ipv6.c\
+	$(RT28xx_DIR)/build/common/igmp_snoop.c\
+	$(RT28xx_DIR)/build/common/mlme_ex.c\
+	$(RT28xx_DIR)/build/common/crypt_aes.c\
+	$(RT28xx_DIR)/build/common/crypt_biginteger.c\
+	$(RT28xx_DIR)/build/common/crypt_dh.c\
+	$(RT28xx_DIR)/build/common/crypt_hmac.c\
+	$(RT28xx_DIR)/build/common/crypt_md5.c\
+	$(RT28xx_DIR)/build/common/crypt_sha2.c\
+	$(RT28xx_DIR)/build/common/netif_block.c\
+	$(RT28xx_DIR)/build/ap/ap_wds.c\
+	$(RT28xx_DIR)/build/ap/ap_apcli.c\
+	$(RT28xx_DIR)/build/ap/apcli_assoc.c\
+	$(RT28xx_DIR)/build/ap/apcli_auth.c\
+	$(RT28xx_DIR)/build/ap/apcli_ctrl.c\
+	$(RT28xx_DIR)/build/ap/apcli_sync.c\
+	$(RT28xx_DIR)/build/include/action.h\
+	$(RT28xx_DIR)/build/include/ap_autoChSel.h\
+	$(RT28xx_DIR)/build/include/ap_autoChSel_cmm.h\
+	$(RT28xx_DIR)/build/include/ap_ids.h\
+	$(RT28xx_DIR)/build/include/ap.h\
+	$(RT28xx_DIR)/build/include/ap_mbss.h\
+	$(RT28xx_DIR)/build/include/ap_uapsd.h\
+	$(RT28xx_DIR)/build/include/rt_ate.h\
+	$(RT28xx_DIR)/build/include/dh_key.h\
+	$(RT28xx_DIR)/build/include/evp_enc.h\
+	$(RT28xx_DIR)/build/include/firmware.h\
+	$(RT28xx_DIR)/build/include/mlme.h\
+	$(RT28xx_DIR)/build/include/rtmp_chip.h\
+    $(RT28xx_DIR)/build/include/rt_config.h\
+    $(RT28xx_DIR)/build/include/rtmp_def.h\
+    $(RT28xx_DIR)/build/include/rtmp.h\
+	$(RT28xx_DIR)/build/include/oid.h\
+	$(RT28xx_DIR)/build/include/rtmp_type.h\
+	$(RT28xx_DIR)/build/include/crypt_aes.h\
+	$(RT28xx_DIR)/build/include/crypt_biginteger.h\
+	$(RT28xx_DIR)/build/include/crypt_dh.h\
+	$(RT28xx_DIR)/build/include/crypt_hmac.h\
+	$(RT28xx_DIR)/build/include/crypt_md5.h\
+	$(RT28xx_DIR)/build/include/crypt_sha2.h\
+	$(RT28xx_DIR)/build/include/rtmp_dot11.h\
+	$(RT28xx_DIR)/build/include/rtmp_iface.h\
+	$(RT28xx_DIR)/build/include/rtmp_mcu.h\
+	$(RT28xx_DIR)/build/include/rtmp_os.h\
+	$(RT28xx_DIR)/build/include/rtmp_timer.h\
+	$(RT28xx_DIR)/build/include/wpa.h\
+	$(RT28xx_DIR)/build/include/wsc.h\
+	$(RT28xx_DIR)/build/include/wsc_tlv.h\
+	$(RT28xx_DIR)/build/include/ap_wds.h\
+	$(RT28xx_DIR)/build/include/ap_apcli.h\
+	$(RT28xx_DIR)/build/include/mat.h\
+	$(RT28xx_DIR)/build/include/link_list.h\
+	$(RT28xx_DIR)/build/include/netif_block.h\
+	$(RT28xx_DIR)/build/include/igmp_snoop.h\
+	$(RT28xx_DIR)/build/include/dfs.h\
+	$(RT28xx_DIR)/build/include/ipv6.h\
+	$(RT28xx_DIR)/build/include/chlist.h\
+	$(RT28xx_DIR)/build/include/mlme_ex.h\
+	$(RT28xx_DIR)/build/include/mlme_ex_def.h\
+	$(RT28xx_DIR)/build/include/spectrum.h\
+	$(RT28xx_DIR)/build/include/spectrum_def.h\
+	$(RT28xx_DIR)/build/include/vr_ikans.h\
+	$(RT28xx_DIR)/build/include/ap_cfg.h\
+	$(RT28xx_DIR)/build/include/eeprom.h\
+	$(RT28xx_DIR)/build/include/chip/rtmp_mac.h\
+	$(RT28xx_DIR)/build/include/chip/rtmp_phy.h\
+	$(RT28xx_DIR)/build/include/os/rt_linux.h
+
+
+
+release:
+	echo "MAKE Linux AP Code Release DPA"
+	rm -rf $(RT28xx_DIR)/DPA
+	mkdir $(RT28xx_DIR)/DPA
+	mkdir $(RT28xx_DIR)/DPA/ap
+	mkdir $(RT28xx_DIR)/DPA/common
+	mkdir $(RT28xx_DIR)/DPA/include
+	mkdir $(RT28xx_DIR)/DPA/os
+	mkdir $(RT28xx_DIR)/DPA/os/linux
+
+	for strip_file in $(RELEASE_FILE) ; do sed '/#ifdef NINTENDO_AP/,/#endif \/\/ NINTENDO_AP \/\//d'  $$strip_file > $$strip_file.tmp ;\
+										   sed '/#ifdef GEMTEK_ATE/,/#endif \/\/ GEMTEK_ATE \/\//d'  $$strip_file.tmp > $$strip_file.tmp1 ;\
+										   sed '/#ifdef MESH_SUPPORT/,/#endif \/\/ MESH_SUPPORT \/\//d'  $$strip_file.tmp1 > $$strip_file.tmp2 ;\
+										   sed '/#ifdef WPA_SUPPLICANT_SUPPORT/,/#endif \/\/ WPA_SUPPLICANT_SUPPORT \/\//d'  $$strip_file.tmp2 > $$strip_file.tmp3 ;\
+										   sed '/#ifdef NATIVE_WPA_SUPPLICANT_SUPPORT/,/#endif \/\/ NATIVE_WPA_SUPPLICANT_SUPPORT \/\//d'  $$strip_file.tmp3 > $$strip_file.strip ;done;
+
+	sed '/#ifdef NINTENDO_AP/,/#endif \/\/ NINTENDO_AP \/\//d'  $(RT28xx_DIR)/build/os/linux/Makefile.4 > $(RT28xx_DIR)/build/os/linux/Makefile.4.tmp ;
+	sed '/#ifdef MESH_SUPPORT/,/#endif \/\/ MESH_SUPPORT \/\//d'  $(RT28xx_DIR)/build/os/linux/Makefile.4.tmp > $(RT28xx_DIR)/build/os/linux/Makefile.4.strip_ ;
+
+	sed '/#ifdef NINTENDO_AP/,/#endif \/\/ NINTENDO_AP \/\//d'  $(RT28xx_DIR)/build/os/linux/Makefile.6 > $(RT28xx_DIR)/build/os/linux/Makefile.6.tmp ;
+	sed '/#ifdef MESH_SUPPORT/,/#endif \/\/ MESH_SUPPORT \/\//d'  $(RT28xx_DIR)/build/os/linux/Makefile.6.tmp > $(RT28xx_DIR)/build/os/linux/Makefile.6.strip_ ;
+
+	sed '/#ifdef NINTENDO_AP/,/#endif \/\/ NINTENDO_AP \/\//d'  $(RT28xx_DIR)/build/os/linux/config.mk > $(RT28xx_DIR)/build/os/linux/config.mk.tmp ;
+	sed '/#ifdef GEMTEK_ATE/,/#endif \/\/ GEMTEK_ATE \/\//d'  $(RT28xx_DIR)/build/os/linux/config.mk.tmp > $(RT28xx_DIR)/build/os/linux/config.mk.tmp1 ;
+	sed '/#ifdef MESH_SUPPORT/,/#endif \/\/ MESH_SUPPORT \/\//d'  $(RT28xx_DIR)/build/os/linux/config.mk.tmp1 > $(RT28xx_DIR)/build/os/linux/config.mk.tmp2 ;
+	sed '/#ifdef WPA_SUPPLICANT_SUPPORT/,/#endif \/\/ WPA_SUPPLICANT_SUPPORT \/\//d'  $(RT28xx_DIR)/build/os/linux/config.mk.tmp2 > $(RT28xx_DIR)/build/os/linux/config.mk.tmp3 ;
+	sed '/#ifdef NATIVE_WPA_SUPPLICANT_SUPPORT/,/#endif \/\/ NATIVE_WPA_SUPPLICANT_SUPPORT \/\//d'  $(RT28xx_DIR)/build/os/linux/config.mk.tmp3 > $(RT28xx_DIR)/build/os/linux/config.mk.strip_ ;
+
+	cd $(RT28xx_DIR)/build/ap ;mv -f *.strip $(RT28xx_DIR)/DPA/ap/
+	cd $(RT28xx_DIR)/DPA/ap; ls | awk -F. '{print "mv",$$0,$$1".c"}'|sh
+	cd $(RT28xx_DIR)/build/include ;mv -f *.strip $(RT28xx_DIR)/DPA/include/
+	cd $(RT28xx_DIR)/DPA/include; ls | awk -F. '{print "mv",$$0,$$1".h"}'|sh
+	mkdir $(RT28xx_DIR)/DPA/include/chip
+	mkdir $(RT28xx_DIR)/DPA/include/iface
+	mkdir $(RT28xx_DIR)/DPA/include/os
+	cd $(RT28xx_DIR)/build/include/chip ;mv -f *.strip $(RT28xx_DIR)/DPA/include/chip/
+	cd $(RT28xx_DIR)/DPA/include/chip; ls | awk -F. '{print "mv",$$0,$$1".h"}'|sh
+	cd $(RT28xx_DIR)/build/include/iface ;mv -f *.strip $(RT28xx_DIR)/DPA/include/iface/
+	cd $(RT28xx_DIR)/DPA/include/iface; ls | awk -F. '{print "mv",$$0,$$1".h"}'|sh
+	cd $(RT28xx_DIR)/build/include/os ;mv -f *.strip $(RT28xx_DIR)/DPA/include/os/
+	cd $(RT28xx_DIR)/DPA/include/os; ls | awk -F. '{print "mv",$$0,$$1".h"}'|sh
+	cd $(RT28xx_DIR)/build/os/linux ;mv -f *.strip $(RT28xx_DIR)/DPA/os/linux/
+	cd $(RT28xx_DIR)/DPA/os/linux; ls | awk -F. '{print "mv",$$0,$$1".c"}'|sh
+	cd $(RT28xx_DIR)/build/common; mv -f *.strip $(RT28xx_DIR)/DPA/common/
+	cd $(RT28xx_DIR)/DPA/common; ls | awk -F. '{print "mv",$$0,$$1".c"}'|sh
+ifneq ($(CHIPSET),2860)
+ifneq ($(CHIPSET),2870)
+	mkdir $(RT28xx_DIR)/DPA/chips
+	cd $(RT28xx_DIR)/build/chips; mv -f *.strip $(RT28xx_DIR)/DPA/chips/
+	cd $(RT28xx_DIR)/DPA/chips; ls | awk -F. '{print "mv",$$0,$$1".c"}'|sh
+endif
+endif
+	cd $(RT28xx_DIR)/build;\
+	cp Makefile $(RT28xx_DIR)/DPA; \
+	cp $(BIN_FILE) $(RT28xx_DIR)/DPA/common;\
+	cp $(RT28xx_DIR)/build/os/linux/Makefile.4.strip_ $(RT28xx_DIR)/DPA/os/linux/Makefile.4;\
+	cp $(RT28xx_DIR)/build/os/linux/Makefile.6.strip_ $(RT28xx_DIR)/DPA/os/linux/Makefile.6;\
+	cp $(RT28xx_DIR)/build/os/linux/config.mk.strip_ $(RT28xx_DIR)/DPA/os/linux/config.mk;\
+	cp $(DAT_FILE) $(RT28xx_DIR)/DPA/;\
+	cp $(DAT_FILE2) $(RT28xx_DIR)/DPA/;\
+	cp -rf tools $(RT28xx_DIR)/DPA
+endif
+
+
+#
+# Release file for Station Mode
+#
+ifeq ($(RT28xx_MODE),STA)
+RELEASE_FILE += $(RT28xx_DIR)/build/common/mlme.c\
+    $(RT28xx_DIR)/build/common/cmm_wep.c\
+    $(RT28xx_DIR)/build/common/action.c\
+    $(RT28xx_DIR)/build/common/ba_action.c\
+    $(RT28xx_DIR)/build/common/cmm_data.c\
+    $(RT28xx_DIR)/build/common/rtmp_init.c\
+    $(RT28xx_DIR)/build/common/cmm_tkip.c\
+	$(RT28xx_DIR)/build/common/cmm_aes.c\
+    $(RT28xx_DIR)/build/common/cmm_sync.c\
+	$(RT28xx_DIR)/build/common/eeprom.c\
+	$(RT28xx_DIR)/build/common/cmm_sanity.c\
+	$(RT28xx_DIR)/build/common/cmm_info.c\
+	$(RT28xx_DIR)/build/common/cmm_cfg.c\
+	$(RT28xx_DIR)/build/common/cmm_wpa.c\
+	$(RT28xx_DIR)/build/common/netif_block.c\
+	$(RT28xx_DIR)/build/common/wsc.c\
+	$(RT28xx_DIR)/build/common/wsc_tlv.c\
+	$(RT28xx_DIR)/build/common/dh_key.c\
+	$(RT28xx_DIR)/build/common/evp_enc.c\
+	$(RT28xx_DIR)/build/common/dfs.c\
+	$(RT28xx_DIR)/build/common/mlme_ex.c\
+	$(RT28xx_DIR)/build/common/spectrum.c\
+	$(RT28xx_DIR)/build/common/rt_channel.c\
+	$(RT28xx_DIR)/build/common/cmm_profile.c\
+	$(RT28xx_DIR)/build/common/cmm_asic.c\
+	$(RT28xx_DIR)/build/common/ee_prom.c\
+	$(RT28xx_DIR)/build/common/rtmp_mcu.c\
+	$(RT28xx_DIR)/build/common/rtmp_timer.c\
+	$(RT28xx_DIR)/build/common/crypt_aes.c\
+	$(RT28xx_DIR)/build/common/crypt_biginteger.c\
+	$(RT28xx_DIR)/build/common/crypt_dh.c\
+	$(RT28xx_DIR)/build/common/crypt_hmac.c\
+	$(RT28xx_DIR)/build/common/crypt_md5.c\
+	$(RT28xx_DIR)/build/common/crypt_sha2.c\
+	$(RT28xx_DIR)/build/common/netif_block.c\
+    $(RT28xx_DIR)/build/sta/assoc.c\
+    $(RT28xx_DIR)/build/sta/auth.c\
+    $(RT28xx_DIR)/build/sta/auth_rsp.c\
+    $(RT28xx_DIR)/build/sta/sync.c\
+    $(RT28xx_DIR)/build/sta/sanity.c\
+    $(RT28xx_DIR)/build/sta/rtmp_data.c\
+    $(RT28xx_DIR)/build/sta/connect.c\
+    $(RT28xx_DIR)/build/sta/wpa.c\
+	$(RT28xx_DIR)/build/sta/dls.c\
+    $(RT28xx_DIR)/build/os/linux/rt_linux.c\
+    $(RT28xx_DIR)/build/os/linux/rt_main_dev.c\
+	$(RT28xx_DIR)/build/os/linux/rt_profile.c\
+	$(RT28xx_DIR)/build/os/linux/sta_ioctl.c\
+	$(RT28xx_DIR)/build/os/linux/rt_ate.c\
+	$(RT28xx_DIR)/build/include/action.h\
+	$(RT28xx_DIR)/build/include/ap_autoChSel.h\
+	$(RT28xx_DIR)/build/include/ap_autoChSel_cmm.h\
+	$(RT28xx_DIR)/build/include/ap.h\
+	$(RT28xx_DIR)/build/include/ap_mbss.h\
+	$(RT28xx_DIR)/build/include/ap_uapsd.h\
+	$(RT28xx_DIR)/build/include/rt_ate.h\
+	$(RT28xx_DIR)/build/include/dh_key.h\
+	$(RT28xx_DIR)/build/include/evp_enc.h\
+	$(RT28xx_DIR)/build/include/firmware.h\
+	$(RT28xx_DIR)/build/include/mlme.h\
+	$(RT28xx_DIR)/build/include/rtmp_chip.h\
+	$(RT28xx_DIR)/build/include/rt_config.h\
+	$(RT28xx_DIR)/build/include/rtmp_def.h\
+	$(RT28xx_DIR)/build/include/rtmp.h\
+	$(RT28xx_DIR)/build/include/oid.h\
+	$(RT28xx_DIR)/build/include/rtmp_type.h\
+	$(RT28xx_DIR)/build/include/crypt_aes.h\
+	$(RT28xx_DIR)/build/include/crypt_biginteger.h\
+	$(RT28xx_DIR)/build/include/crypt_dh.h\
+	$(RT28xx_DIR)/build/include/crypt_hmac.h\
+	$(RT28xx_DIR)/build/include/crypt_md5.h\
+	$(RT28xx_DIR)/build/include/crypt_sha2.h\
+	$(RT28xx_DIR)/build/include/rtmp_dot11.h\
+	$(RT28xx_DIR)/build/include/rtmp_iface.h\
+	$(RT28xx_DIR)/build/include/rtmp_mcu.h\
+	$(RT28xx_DIR)/build/include/rtmp_os.h\
+	$(RT28xx_DIR)/build/include/rtmp_timer.h\
+	$(RT28xx_DIR)/build/include/wpa.h\
+	$(RT28xx_DIR)/build/include/wsc.h\
+	$(RT28xx_DIR)/build/include/wsc_tlv.h\
+	$(RT28xx_DIR)/build/include/link_list.h\
+	$(RT28xx_DIR)/build/include/netif_block.h\
+	$(RT28xx_DIR)/build/include/dfs.h\
+	$(RT28xx_DIR)/build/include/chlist.h\
+	$(RT28xx_DIR)/build/include/mlme_ex.h\
+	$(RT28xx_DIR)/build/include/mlme_ex_def.h\
+	$(RT28xx_DIR)/build/include/spectrum.h\
+	$(RT28xx_DIR)/build/include/spectrum_def.h\
+	$(RT28xx_DIR)/build/include/eeprom.h\
+	$(RT28xx_DIR)/build/include/chip/rtmp_mac.h\
+	$(RT28xx_DIR)/build/include/chip/rtmp_phy.h\
+	$(RT28xx_DIR)/build/include/os/rt_linux.h
+
+
+release:
+	echo "MAKE Linux STA Code Release DPA"
+	echo "Support WPS"
+	rm -rf $(RT28xx_DIR)/DPA
+	mkdir $(RT28xx_DIR)/DPA
+	mkdir $(RT28xx_DIR)/DPA/sta
+	mkdir $(RT28xx_DIR)/DPA/common
+	mkdir $(RT28xx_DIR)/DPA/include
+	mkdir $(RT28xx_DIR)/DPA/os
+	mkdir $(RT28xx_DIR)/DPA/os/linux
+
+	for strip_file in $(RELEASE_FILE) ; do sed '/#ifdef ETH_CONVERT_SUPPORT/,/#endif \/\/ ETH_CONVERT_SUPPORT \/\//d'  $$strip_file > $$strip_file.tmp ;\
+										   sed '/#ifdef APCLI_SUPPORT/,/#endif \/\/ APCLI_SUPPORT \/\//d'  $$strip_file.tmp > $$strip_file.tmp1 ;\
+										   sed '/#ifdef MAT_SUPPORT/,/#endif \/\/ MAT_SUPPORT \/\//d'  $$strip_file.tmp1 > $$strip_file.tmp2 ;\
+										   sed '/#ifdef MESH_SUPPORT/,/#endif \/\/ MESH_SUPPORT \/\//d'  $$strip_file.tmp2 > $$strip_file.strip ;done;
+
+	sed '/#ifdef ETH_CONVERT/,/#endif \/\/ ETH_CONVERT \/\//d'  $(RT28xx_DIR)/build/os/linux/Makefile.4 > $(RT28xx_DIR)/build/os/linux/Makefile.4.tmp ;
+	sed '/#ifdef APCLI_SUPPORT/,/#endif \/\/ APCLI_SUPPORT \/\//d'  $(RT28xx_DIR)/build/os/linux/Makefile.4.tmp > $(RT28xx_DIR)/build/os/linux/Makefile.4.tmp1 ;
+	sed '/#ifdef MAT_SUPPORT/,/#endif \/\/ MAT_SUPPORT \/\//d'  $(RT28xx_DIR)/build/os/linux/Makefile.4.tmp1 > $(RT28xx_DIR)/build/os/linux/Makefile.4.tmp2 ;
+	sed '/#ifdef MESH_SUPPORT/,/#endif \/\/ MESH_SUPPORT \/\//d'  $(RT28xx_DIR)/build/os/linux/Makefile.4.tmp2 > $(RT28xx_DIR)/build/os/linux/Makefile.4.strip_ ;
+
+	sed '/#ifdef ETH_CONVERT/,/#endif \/\/ ETH_CONVERT \/\//d'  $(RT28xx_DIR)/build/os/linux/Makefile.6 > $(RT28xx_DIR)/build/os/linux/Makefile.6.tmp ;
+	sed '/#ifdef APCLI_SUPPORT/,/#endif \/\/ APCLI_SUPPORT \/\//d'  $(RT28xx_DIR)/build/os/linux/Makefile.6.tmp > $(RT28xx_DIR)/build/os/linux/Makefile.6.tmp1 ;
+	sed '/#ifdef MAT_SUPPORT/,/#endif \/\/ MAT_SUPPORT \/\//d'  $(RT28xx_DIR)/build/os/linux/Makefile.6.tmp1 > $(RT28xx_DIR)/build/os/linux/Makefile.6.tmp2 ;
+	sed '/#ifdef MESH_SUPPORT/,/#endif \/\/ MESH_SUPPORT \/\//d'  $(RT28xx_DIR)/build/os/linux/Makefile.6.tmp2 > $(RT28xx_DIR)/build/os/linux/Makefile.6.strip_ ;
+
+	sed '/#ifdef ETH_CONVERT/,/#endif \/\/ ETH_CONVERT \/\//d'  $(RT28xx_DIR)/build/os/linux/config.mk > $(RT28xx_DIR)/build/os/linux/config.mk.tmp;
+	sed '/#ifdef APCLI_SUPPORT/,/#endif \/\/ APCLI_SUPPORT \/\//d'  $(RT28xx_DIR)/build/os/linux/config.mk.tmp > $(RT28xx_DIR)/build/os/linux/config.mk.tmp1;
+	sed '/#ifdef MAT_SUPPORT/,/#endif \/\/ MAT_SUPPORT \/\//d'  $(RT28xx_DIR)/build/os/linux/config.mk.tmp1 > $(RT28xx_DIR)/build/os/linux/config.mk.tmp2;
+	sed '/#ifdef MESH_SUPPORT/,/#endif \/\/ MESH_SUPPORT \/\//d'  $(RT28xx_DIR)/build/os/linux/config.mk.tmp2 > $(RT28xx_DIR)/build/os/linux/config.mk.strip_ ;
+
+	cd $(RT28xx_DIR)/build/sta ;mv -f *.strip $(RT28xx_DIR)/DPA/sta/
+	cd $(RT28xx_DIR)/DPA/sta; ls | awk -F. '{print "mv",$$0,$$1".c"}'|sh
+	cd $(RT28xx_DIR)/build/include ;mv -f *.strip $(RT28xx_DIR)/DPA/include/
+	cd $(RT28xx_DIR)/DPA/include; ls | awk -F. '{print "mv",$$0,$$1".h"}'|sh
+	mkdir $(RT28xx_DIR)/DPA/include/chip
+	mkdir $(RT28xx_DIR)/DPA/include/iface
+	mkdir $(RT28xx_DIR)/DPA/include/os
+	cd $(RT28xx_DIR)/build/include/chip ;mv -f *.strip $(RT28xx_DIR)/DPA/include/chip/
+	cd $(RT28xx_DIR)/DPA/include/chip; ls | awk -F. '{print "mv",$$0,$$1".h"}'|sh
+	cd $(RT28xx_DIR)/build/include/iface ;mv -f *.strip $(RT28xx_DIR)/DPA/include/iface/
+	cd $(RT28xx_DIR)/DPA/include/iface; ls | awk -F. '{print "mv",$$0,$$1".h"}'|sh
+	cd $(RT28xx_DIR)/build/include/os ;mv -f *.strip $(RT28xx_DIR)/DPA/include/os/
+	cd $(RT28xx_DIR)/DPA/include/os; ls | awk -F. '{print "mv",$$0,$$1".h"}'|sh
+	cd $(RT28xx_DIR)/build/os/linux ;mv -f *.strip $(RT28xx_DIR)/DPA/os/linux/
+	cd $(RT28xx_DIR)/DPA/os/linux; ls | awk -F. '{print "mv",$$0,$$1".c"}'|sh
+	cd $(RT28xx_DIR)/build/common ;mv -f *.strip $(RT28xx_DIR)/DPA/common/
+	cd $(RT28xx_DIR)/DPA/common; ls | awk -F. '{print "mv",$$0,$$1".c"}'|sh
+ifneq ($(CHIPSET),2860)
+ifneq ($(CHIPSET),2870)
+	mkdir $(RT28xx_DIR)/DPA/chips
+	cd $(RT28xx_DIR)/build/chips; mv -f *.strip $(RT28xx_DIR)/DPA/chips/
+	cd $(RT28xx_DIR)/DPA/chips; ls | awk -F. '{print "mv",$$0,$$1".c"}'|sh
+endif
+endif
+	cp $(RT28xx_DIR)/Makefile $(RT28xx_DIR)/DPA; \
+	cp $(RT28xx_DIR)/iwpriv_usage.txt $(RT28xx_DIR)/DPA; \
+	cp $(RT28xx_DIR)/wps_iwpriv_usage.txt $(RT28xx_DIR)/DPA; \
+	cp $(RT28xx_DIR)/sta_ate_iwpriv_usage.txt $(RT28xx_DIR)/DPA; \
+	cp $(RT28xx_DIR)/README_STA $(RT28xx_DIR)/DPA;\
+	cp $(BIN_FILE) $(RT28xx_DIR)/DPA/common;\
+	cp $(RT28xx_DIR)/build/os/linux/Makefile.4.strip_ $(RT28xx_DIR)/DPA/os/linux/Makefile.4;\
+	cp $(RT28xx_DIR)/build/os/linux/Makefile.6.strip_ $(RT28xx_DIR)/DPA/os/linux/Makefile.6;\
+	cp $(RT28xx_DIR)/build/os/linux/config.mk.strip_ $(RT28xx_DIR)/DPA/os/linux/config.mk;\
+	cp $(DAT_FILE) $(RT28xx_DIR)/DPA/;\
+	cp $(DAT_FILE2) $(RT28xx_DIR)/DPA/;\
+	cp -rf $(RT28xx_DIR)/tools $(RT28xx_DIR)/DPA
+
+endif
+
+#
+# Release file for APSTA Mode
+#
+ifeq ($(RT28xx_MODE),APSTA)
+RELEASE_FILE += $(RT28xx_DIR)/build/common/mlme.c\
+	$(RT28xx_DIR)/build/common/cmm_wep.c\
+	$(RT28xx_DIR)/build/common/action.c\
+	$(RT28xx_DIR)/build/common/ba_action.c\
+	$(RT28xx_DIR)/build/common/cmm_data.c\
+	$(RT28xx_DIR)/build/common/rtmp_init.c\
+	$(RT28xx_DIR)/build/common/cmm_tkip.c\
+	$(RT28xx_DIR)/build/common/cmm_aes.c\	
+	$(RT28xx_DIR)/build/common/cmm_sync.c\
+	$(RT28xx_DIR)/build/common/eeprom.c\
+	$(RT28xx_DIR)/build/common/cmm_sanity.c\
+	$(RT28xx_DIR)/build/common/cmm_info.c\
+	$(RT28xx_DIR)/build/common/cmm_cfg.c\
+	$(RT28xx_DIR)/build/common/cmm_wpa.c\
+	$(RT28xx_DIR)/build/common/dfs.c\
+	$(RT28xx_DIR)/build/common/spectrum.c\
+	$(RT28xx_DIR)/build/common/rt_channel.c\
+	$(RT28xx_DIR)/build/common/cmm_profile.c\
+	$(RT28xx_DIR)/build/common/cmm_asic.c\
+	$(RT28xx_DIR)/build/common/ee_prom.c\
+	$(RT28xx_DIR)/build/common/rtmp_mcu.c\
+	$(RT28xx_DIR)/build/common/rtmp_timer.c\
+	$(RT28xx_DIR)/build/ap/ap.c\
+	$(RT28xx_DIR)/build/ap/ap_assoc.c\
+	$(RT28xx_DIR)/build/ap/ap_auth.c\
+	$(RT28xx_DIR)/build/ap/ap_connect.c\
+	$(RT28xx_DIR)/build/ap/ap_mlme.c\
+	$(RT28xx_DIR)/build/ap/ap_sanity.c\
+	$(RT28xx_DIR)/build/ap/ap_sync.c\
+	$(RT28xx_DIR)/build/ap/ap_wpa.c\
+	$(RT28xx_DIR)/build/ap/ap_data.c\
+	$(RT28xx_DIR)/build/ap/ap_uapsd.c\
+	$(RT28xx_DIR)/build/ap/ap_mbss.c\
+	$(RT28xx_DIR)/build/ap/ap_autoChSel.c\
+	$(RT28xx_DIR)/build/ap/ap_ids.c\
+	$(RT28xx_DIR)/build/ap/ap_dls.c\
+	$(RT28xx_DIR)/build/ap/ap_qload.c\
+	$(RT28xx_DIR)/build/ap/ap_cfg.c\
+	$(RT28xx_DIR)/build/sta/assoc.c\
+	$(RT28xx_DIR)/build/sta/auth.c\
+	$(RT28xx_DIR)/build/sta/auth_rsp.c\
+	$(RT28xx_DIR)/build/sta/sync.c\
+	$(RT28xx_DIR)/build/sta/sanity.c\
+	$(RT28xx_DIR)/build/sta/rtmp_data.c\
+	$(RT28xx_DIR)/build/sta/connect.c\
+	$(RT28xx_DIR)/build/sta/wpa.c\
+	$(RT28xx_DIR)/build/os/linux/rt_linux.c\
+	$(RT28xx_DIR)/build/os/linux/rt_profile.c\
+	$(RT28xx_DIR)/build/os/linux/ap_ioctl.c\
+	$(RT28xx_DIR)/build/os/linux/sta_ioctl.c\
+	$(RT28xx_DIR)/build/os/linux/rt_main_dev.c\
+	$(RT28xx_DIR)/build/os/linux/rt_ate.c\
+	$(RT28xx_DIR)/build/common/wsc.c\
+	$(RT28xx_DIR)/build/common/wsc_tlv.c\
+	$(RT28xx_DIR)/build/common/dh_key.c\
+	$(RT28xx_DIR)/build/common/evp_enc.c\
+	$(RT28xx_DIR)/build/common/cmm_mat.c\
+	$(RT28xx_DIR)/build/common/cmm_mat_iparp.c\
+	$(RT28xx_DIR)/build/common/cmm_mat_pppoe.c\
+	$(RT28xx_DIR)/build/common/cmm_mat_ipv6.c\
+	$(RT28xx_DIR)/build/common/igmp_snoop.c\
+	$(RT28xx_DIR)/build/common/crypt_aes.c\
+	$(RT28xx_DIR)/build/common/crypt_biginteger.c\
+	$(RT28xx_DIR)/build/common/crypt_dh.c\
+	$(RT28xx_DIR)/build/common/crypt_hmac.c\
+	$(RT28xx_DIR)/build/common/crypt_md5.c\
+	$(RT28xx_DIR)/build/common/crypt_sha2.c\
+	$(RT28xx_DIR)/build/common/netif_block.c\
+	$(RT28xx_DIR)/build/ap/ap_wds.c\
+	$(RT28xx_DIR)/build/ap/ap_apcli.c\
+	$(RT28xx_DIR)/build/ap/apcli_assoc.c\
+	$(RT28xx_DIR)/build/ap/apcli_auth.c\
+	$(RT28xx_DIR)/build/ap/apcli_ctrl.c\
+	$(RT28xx_DIR)/build/ap/apcli_sync.c\
+	$(RT28xx_DIR)/build/include/action.h\
+	$(RT28xx_DIR)/build/include/ap_autoChSel.h\
+	$(RT28xx_DIR)/build/include/ap_autoChSel_cmm.h\
+	$(RT28xx_DIR)/build/include/ap_ids.h\
+	$(RT28xx_DIR)/build/include/ap.h\
+	$(RT28xx_DIR)/build/include/ap_mbss.h\
+	$(RT28xx_DIR)/build/include/ap_uapsd.h\
+	$(RT28xx_DIR)/build/include/rt_ate.h\
+	$(RT28xx_DIR)/build/include/dh_key.h\
+	$(RT28xx_DIR)/build/include/evp_enc.h\
+	$(RT28xx_DIR)/build/include/firmware.h\
+	$(RT28xx_DIR)/build/include/mlme.h\
+	$(RT28xx_DIR)/build/include/rtmp_chip.h\
+	$(RT28xx_DIR)/build/include/rt_config.h\
+	$(RT28xx_DIR)/build/include/rtmp_def.h\
+	$(RT28xx_DIR)/build/include/rtmp.h\
+	$(RT28xx_DIR)/build/include/oid.h\
+	$(RT28xx_DIR)/build/include/rtmp_type.h\
+	$(RT28xx_DIR)/build/include/crypt_aes.h\
+	$(RT28xx_DIR)/build/include/crypt_biginteger.h\
+	$(RT28xx_DIR)/build/include/crypt_dh.h\
+	$(RT28xx_DIR)/build/include/crypt_hmac.h\
+	$(RT28xx_DIR)/build/include/crypt_md5.h\
+	$(RT28xx_DIR)/build/include/crypt_sha2.h\
+	$(RT28xx_DIR)/build/include/rtmp_dot11.h\
+	$(RT28xx_DIR)/build/include/rtmp_iface.h\
+	$(RT28xx_DIR)/build/include/rtmp_mcu.h\
+	$(RT28xx_DIR)/build/include/rtmp_os.h\
+	$(RT28xx_DIR)/build/include/rtmp_timer.h\
+	$(RT28xx_DIR)/build/include/wpa.h\
+	$(RT28xx_DIR)/build/include/wsc.h\
+	$(RT28xx_DIR)/build/include/wsc_tlv.h\
+	$(RT28xx_DIR)/build/include/ap_wds.h\
+	$(RT28xx_DIR)/build/include/ap_apcli.h\
+	$(RT28xx_DIR)/build/include/mat.h\
+	$(RT28xx_DIR)/build/include/link_list.h\
+	$(RT28xx_DIR)/build/include/netif_block.h\
+	$(RT28xx_DIR)/build/include/igmp_snoop.h\
+	$(RT28xx_DIR)/build/include/dfs.h\
+	$(RT28xx_DIR)/build/include/ipv6.h\
+	$(RT28xx_DIR)/build/include/chlist.h\
+	$(RT28xx_DIR)/build/include/spectrum.h\
+	$(RT28xx_DIR)/build/include/spectrum_def.h\
+	$(RT28xx_DIR)/build/include/ap_cfg.h\
+	$(RT28xx_DIR)/build/include/eeprom.h\
+	$(RT28xx_DIR)/build/include/chip/rtmp_mac.h\
+	$(RT28xx_DIR)/build/include/chip/rtmp_phy.h\
+	$(RT28xx_DIR)/build/include/os/rt_linux.h
+
+
+release:
+	echo "MAKE Linux APSTA Code Release DPA"
+	rm -rf $(RT28xx_DIR)/DPA
+	mkdir $(RT28xx_DIR)/DPA
+	mkdir $(RT28xx_DIR)/DPA/ap
+	mkdir $(RT28xx_DIR)/DPA/common
+	mkdir $(RT28xx_DIR)/DPA/include
+	mkdir $(RT28xx_DIR)/DPA/os
+	mkdir $(RT28xx_DIR)/DPA/os/linux
+	mkdir $(RT28xx_DIR)/DPA/sta
+
+	for strip_file in $(RELEASE_FILE) ; do sed '/#ifdef NINTENDO_AP/,/#endif \/\/ NINTENDO_AP \/\//d'  $$strip_file > $$strip_file.tmp ;\
+										   sed '/#ifdef GEMTEK_ATE/,/#endif \/\/ GEMTEK_ATE \/\//d'  $$strip_file.tmp > $$strip_file.tmp1 ;\
+										   sed '/#ifdef MULTIPLE_CARD_SUPPORT/,/#endif \/\/ MULTIPLE_CARD_SUPPORT \/\//d'  $$strip_file.tmp1 > $$strip_file.tmp2;\
+										   sed '/#ifdef ETH_CONVERT_SUPPORT/,/#endif \/\/ ETH_CONVERT_SUPPORT \/\//d'  $$strip_file.tmp2 > $$strip_file.strip ;done;
+
+	sed '/#ifdef NINTENDO_AP/,/#endif \/\/ NINTENDO_AP \/\//d'  $(RT28xx_DIR)/build/os/linux/Makefile.4 > $(RT28xx_DIR)/build/os/linux/Makefile.4.tmp ;
+	sed '/#ifdef ETH_CONVERT/,/#endif \/\/ ETH_CONVERT \/\//d'  $(RT28xx_DIR)/build/os/linux/Makefile.4.tmp > $(RT28xx_DIR)/build/os/linux/Makefile.4.strip_ ;
+
+	sed '/#ifdef NINTENDO_AP/,/#endif \/\/ NINTENDO_AP \/\//d'  $(RT28xx_DIR)/build/os/linux/Makefile.6 > $(RT28xx_DIR)/build/os/linux/Makefile.6.tmp ;
+	sed '/#ifdef ETH_CONVERT/,/#endif \/\/ ETH_CONVERT \/\//d'  $(RT28xx_DIR)/build/os/linux/Makefile.6.tmp > $(RT28xx_DIR)/build/os/linux/Makefile.6.strip_ ;
+
+	sed '/#ifdef NINTENDO_AP/,/#endif \/\/ NINTENDO_AP \/\//d'  $(RT28xx_DIR)/build/os/linux/config.mk > $(RT28xx_DIR)/build/os/linux/config.mk.tmp ;
+	sed '/#ifdef GEMTEK_ATE/,/#endif \/\/ GEMTEK_ATE \/\//d'  $(RT28xx_DIR)/build/os/linux/config.mk.tmp > $(RT28xx_DIR)/build/os/linux/config.mk.tmp1 ;
+	sed '/#ifdef ETH_CONVERT/,/#endif \/\/ ETH_CONVERT \/\//d'  $(RT28xx_DIR)/build/os/linux/config.mk.tmp1 > $(RT28xx_DIR)/build/os/linux/config.mk.tmp2 ;
+	sed '/#ifdef MULTI_CARD/,/#endif \/\/ MULTI_CARD \/\//d'  $(RT28xx_DIR)/build/os/linux/config.mk.tmp2 > $(RT28xx_DIR)/build/os/linux/config.mk.strip_ ;
+
+	cd $(RT28xx_DIR)/build/ap ;mv -f *.strip $(RT28xx_DIR)/DPA/ap/
+	cd $(RT28xx_DIR)/DPA/ap; ls | awk -F. '{print "mv",$$0,$$1".c"}'|sh
+	cd $(RT28xx_DIR)/build/include ;mv -f *.strip $(RT28xx_DIR)/DPA/include/
+	cd $(RT28xx_DIR)/DPA/include; ls | awk -F. '{print "mv",$$0,$$1".h"}'|sh
+	mkdir $(RT28xx_DIR)/DPA/include/chip
+	mkdir $(RT28xx_DIR)/DPA/include/iface
+	mkdir $(RT28xx_DIR)/DPA/include/os
+	cd $(RT28xx_DIR)/build/include/chip ;mv -f *.strip $(RT28xx_DIR)/DPA/include/chip/
+	cd $(RT28xx_DIR)/DPA/include/chip; ls | awk -F. '{print "mv",$$0,$$1".h"}'|sh
+	cd $(RT28xx_DIR)/build/include/iface ;mv -f *.strip $(RT28xx_DIR)/DPA/include/iface/
+	cd $(RT28xx_DIR)/DPA/include/iface; ls | awk -F. '{print "mv",$$0,$$1".h"}'|sh
+	cd $(RT28xx_DIR)/build/include/os ;mv -f *.strip $(RT28xx_DIR)/DPA/include/os/
+	cd $(RT28xx_DIR)/DPA/include/os; ls | awk -F. '{print "mv",$$0,$$1".h"}'|sh
+	cd $(RT28xx_DIR)/build/os/linux ;mv -f *.strip $(RT28xx_DIR)/DPA/os/linux/
+	cd $(RT28xx_DIR)/DPA/os/linux; ls | awk -F. '{print "mv",$$0,$$1".c"}'|sh
+	cd $(RT28xx_DIR)/build/common; mv -f *.strip $(RT28xx_DIR)/DPA/common/
+	cd $(RT28xx_DIR)/DPA/common; ls | awk -F. '{print "mv",$$0,$$1".c"}'|sh
+	cd $(RT28xx_DIR)/build/sta; mv -f *.strip $(RT28xx_DIR)/DPA/sta/
+	cd $(RT28xx_DIR)/DPA/sta; ls | awk -F. '{print "mv",$$0,$$1".c"}'|sh
+	cd $(RT28xx_DIR)/build;\
+	cp Makefile $(RT28xx_DIR)/DPA; \
+	cp $(BIN_FILE) $(RT28xx_DIR)/DPA/common;\
+	cp $(RT28xx_DIR)/build/os/linux/Makefile.4.strip_ $(RT28xx_DIR)/DPA/os/linux/Makefile.4;\
+	cp $(RT28xx_DIR)/build/os/linux/Makefile.6.strip_ $(RT28xx_DIR)/DPA/os/linux/Makefile.6;\
+	cp $(RT28xx_DIR)/build/os/linux/config.mk.strip_ $(RT28xx_DIR)/DPA/os/linux/config.mk;\
+	cp RT$(CHIPSET)AP.dat $(RT28xx_DIR)/DPA/;\
+	cp RT$(CHIPSET)STA.dat $(RT28xx_DIR)/DPA/;\
+	cp -rf tools $(RT28xx_DIR)/DPA
+endif
+

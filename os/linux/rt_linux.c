@@ -50,12 +50,8 @@ char const *pWirelessSysEventText[IW_SYS_EVENT_TYPE_NUM] = {
 	"set key done in WPA2/WPA2PSK",                         /* IW_SET_KEY_DONE_WPA2_EVENT_FLAG */ 
 	"connects with our wireless client",                    /* IW_STA_LINKUP_EVENT_FLAG */ 
 	"disconnects with our wireless client",                 /* IW_STA_LINKDOWN_EVENT_FLAG */
-	"scan completed",										/* IW_SCAN_COMPLETED_EVENT_FLAG */
-	"scan terminate!! Busy!! Enqueue fail!!",				/* IW_SCAN_ENQUEUE_FAIL_EVENT_FLAG */
-	"channel switch to ",									/* IW_CHANNEL_CHANGE_EVENT_FLAG */
-	"wireless mode is not support",							/* IW_STA_MODE_EVENT_FLAG */
-	"blacklisted in MAC filter list",						/* IW_MAC_FILTER_LIST_EVENT_FLAG */
-	"Authentication rejected because of challenge failure"	/* IW_AUTH_REJECT_CHALLENGE_FAILURE */
+	"scan completed"										/* IW_SCAN_COMPLETED_EVENT_FLAG */
+	"scan terminate!! Busy!! Enqueue fail!!"				/* IW_SCAN_ENQUEUE_FAIL_EVENT_FLAG */
 	};
 
 // for wireless IDS_spoof_attack event message
@@ -101,12 +97,9 @@ VOID RTMP_OS_Init_Timer(
 	IN	TIMER_FUNCTION function,
 	IN	PVOID data)
 {
-	if (!timer_pending(pTimer))
-	{
-		init_timer(pTimer);
-		pTimer->data = (unsigned long)data;
-		pTimer->function = function;		
-	}
+	init_timer(pTimer);
+    pTimer->data = (unsigned long)data;
+    pTimer->function = function;		
 }
 
 
@@ -577,38 +570,6 @@ PNDIS_PACKET duplicate_pkt_with_TKIP_MIC(
 
 
 
-PNDIS_PACKET ExpandPacket(
-	IN	PRTMP_ADAPTER	pAd,
-	IN	PNDIS_PACKET	pPacket,
-	IN	UINT32			ext_head_len,
-	IN	UINT32			ext_tail_len)
-{
-	struct sk_buff	*skb, *newskb;
-	
-
-	skb = RTPKT_TO_OSPKT(pPacket);
-	//printk("original skb_headroom(%d)/skb_tailroom(%d)\n", skb_headroom(skb), skb_tailroom(skb));
-	if (skb_cloned(skb) || (skb_headroom(skb) < ext_head_len) || (skb_tailroom(skb) < ext_tail_len))
-	{
-		UINT32 head_len = (skb_headroom(skb) < ext_head_len) ? ext_head_len : skb_headroom(skb);
-		UINT32 tail_len = (skb_tailroom(skb) < ext_tail_len) ? ext_tail_len : skb_tailroom(skb);
-	
-		// alloc a new skb and copy the packet
-		newskb = skb_copy_expand(skb, head_len, tail_len, GFP_ATOMIC);
-		dev_kfree_skb_any(skb);
-		if (newskb == NULL)
-		{
-			DBGPRINT(RT_DEBUG_ERROR, ("Extend Tx buffer for WPI failed!, dropping packet!\n"));
-			return NULL;
-		}
-		skb = newskb;
-		//printk("new skb_headroom(%d)/skb_tailroom(%d)\n", skb_headroom(skb), skb_tailroom(skb));
-	}
-
-	return OSPKT_TO_RTPKT(skb);
-	
-}
-
 PNDIS_PACKET ClonePacket(
 	IN	PRTMP_ADAPTER	pAd, 
 	IN	PNDIS_PACKET	pPacket,	
@@ -709,15 +670,17 @@ void announce_802_3_packet(
 #ifdef IKANOS_VX_1X0
 	IKANOS_DataFrameRx(pAd, pRxPkt->dev, pRxPkt, pRxPkt->len);
 #else
-
-// mark for bridge fast path, 2009/06/22
-//	pRxPkt->protocol = eth_type_trans(pRxPkt, pRxPkt->dev);
+#ifdef INF_AMAZON_SE
+#ifdef BG_FT_SUPPORT
+            BG_FTPH_PacketFromApHandle(pRxPkt);
+            return;
+#endif // BG_FT_SUPPORT //
+#endif // INF_AMAZON_SE //
+	pRxPkt->protocol = eth_type_trans(pRxPkt, pRxPkt->dev);
 
 #ifdef INF_AMAZON_PPA
 	if (ppa_hook_directpath_send_fn && pAd->PPAEnable==TRUE ) 
 	{
-		pRxPkt->protocol = eth_type_trans(pRxPkt, pRxPkt->dev);
-
 		memset(pRxPkt->head,0,pRxPkt->data-pRxPkt->head-14);
 		DBGPRINT(RT_DEBUG_TRACE, ("ppa_hook_directpath_send_fn rx :ret:%d headroom:%d dev:%s pktlen:%d<===\n",ret,skb_headroom(pRxPkt)
 			,pRxPkt->dev->name,pRxPkt->len));
@@ -734,8 +697,6 @@ void announce_802_3_packet(
 //#endif
 
 	{
-
-		pRxPkt->protocol = eth_type_trans(pRxPkt, pRxPkt->dev);
 		netif_rx(pRxPkt);
 	}
 
@@ -852,14 +813,7 @@ VOID RTMPSendWirelessEvent(
 			pBufPtr += sprintf(pBufPtr, "(RT2860) ");
 
 		if (type == IW_SYS_EVENT_FLAG_START)
-        {
 			pBufPtr += sprintf(pBufPtr, "%s", pWirelessSysEventText[event]);
-		    
-            if (Event_flag == IW_CHANNEL_CHANGE_EVENT_FLAG)
-		  	{
-			 	pBufPtr += sprintf(pBufPtr, "%3d", Rssi);
-			}			
-		}
 		else if (type == IW_SPOOF_EVENT_FLAG_START)
 			pBufPtr += sprintf(pBufPtr, "%s (RSSI=%d)", pWirelessSpoofEventText[event], Rssi);
 		else if (type == IW_FLOOD_EVENT_FLAG_START)
@@ -1058,63 +1012,6 @@ err_free_sk_buff:
 }
 #endif // CONFIG_STA_SUPPORT //
 
-
-/*******************************************************************************
-
-	Device IRQ related functions.
-	
- *******************************************************************************/
-int RtmpOSIRQRequest(IN PNET_DEV pNetDev)
-{
-	struct net_device *net_dev = pNetDev;
-	PRTMP_ADAPTER pAd = NULL;
-	int retval = 0;
-	
-	GET_PAD_FROM_NET_DEV(pAd, pNetDev);	
-	
-	ASSERT(pAd);
-	
-#ifdef RTMP_PCI_SUPPORT
-	if (pAd->infType == RTMP_DEV_INF_PCI||pAd->infType == RTMP_DEV_INF_PCIE)
-	{
-		POS_COOKIE _pObj = (POS_COOKIE)(pAd->OS_Cookie);
-		RTMP_MSI_ENABLE(pAd);	
-		retval = request_irq(_pObj->pci_dev->irq,  rt2860_interrupt, SA_SHIRQ, (net_dev)->name, (net_dev));
-		if (retval != 0) 
-			printk("RT2860: request_irq  ERROR(%d)\n", retval);
-	}
-#endif // RTMP_PCI_SUPPORT //
-
-
-	return retval; 
-	
-}
-
-
-int RtmpOSIRQRelease(IN PNET_DEV pNetDev)
-{
-	struct net_device *net_dev = pNetDev;
-	PRTMP_ADAPTER pAd = NULL;
-
-	GET_PAD_FROM_NET_DEV(pAd, net_dev);	
-	
-	ASSERT(pAd);
-	
-#ifdef RTMP_PCI_SUPPORT
-	if (pAd->infType == RTMP_DEV_INF_PCI||pAd->infType == RTMP_DEV_INF_PCIE)
-	{ 
-		POS_COOKIE pObj = (POS_COOKIE)(pAd->OS_Cookie);
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,5,0)
-		synchronize_irq(pObj->pci_dev->irq);
-#endif
-		free_irq(pObj->pci_dev->irq, (net_dev));
-		RTMP_MSI_DISABLE(pAd);
-	}
-#endif // RTMP_PCI_SUPPORT //
-
-
-	return 0;
-}
 
 
 /*******************************************************************************
@@ -1422,7 +1319,7 @@ int RtmpOSWrielessEventSend(
 	
        memset(&wrqu, 0, sizeof(wrqu));
 	   
-	if (flags > -1)
+	if (flags>-1)
 	       wrqu.data.flags = flags;
 
 	if (pSrcMac)
@@ -1444,7 +1341,8 @@ int RtmpOSNetDevAddrSet(
 	RTMP_ADAPTER *pAd;
 		
 	net_dev = pNetDev;
-	GET_PAD_FROM_NET_DEV(pAd, net_dev);	
+	//pAd = (RTMP_ADAPTER *)net_dev->priv;
+	pAd=RTMP_OS_NETDEV_GET_PRIV(pNetDev);
 	
 #ifdef CONFIG_STA_SUPPORT
 	// work-around for the SuSE due to it has it's own interface name management system.
@@ -1507,9 +1405,6 @@ static int RtmpOSNetDevRequestName(
 	
 	if(ifNameIdx < 32)
 	{
-#ifdef HOSTAPD_SUPPORT
-		pAd->IoctlIF=ifNameIdx;
-#endif//HOSTAPD_SUPPORT//
 		strcpy(&dev->name[0], &desiredName[0]);
 		Status = NDIS_STATUS_SUCCESS;
 	} 
@@ -1640,9 +1535,8 @@ int RtmpOSNetDevAttach(
 	// If we need hook some callback function to the net device structrue, now do it.
 	if (pDevOpHook)
 	{
-		PRTMP_ADAPTER pAd = NULL;
+		PRTMP_ADAPTER pAd = RTMP_OS_NETDEV_GET_PRIV(pNetDev);
 	
-		GET_PAD_FROM_NET_DEV(pAd, pNetDev);	
 		pNetDev->open			= pDevOpHook->open;
 		pNetDev->stop			= pDevOpHook->stop;
 		pNetDev->hard_start_xmit	= (HARD_START_XMIT_FUNC)(pDevOpHook->xmit);

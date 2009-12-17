@@ -124,7 +124,7 @@ void Announce_Reordering_Packet(IN PRTMP_ADAPTER			pAd,
 
 	if (mpdu->bAMSDU)
 	{
-		//ASSERT(0);
+		ASSERT(0);
 		BA_Reorder_AMSDU_Annnounce(pAd, pPacket);
 	}
 	else
@@ -649,13 +649,11 @@ BOOLEAN BARecSessionAdd(
 		BAWinSize = 64;
 	}
 
-	// get software BA rec array index, Idx
 	Idx = pEntry->BARecWcidArray[TID];
 
 
 	if (Idx == 0)
 	{
-		// allocate new array entry for the new session
 		pBAEntry = BATableAllocRecEntry(pAd, &Idx);     
 	}
 	else
@@ -726,10 +724,10 @@ BA_REC_ENTRY *BATableAllocRecEntry(
 
 	NdisAcquireSpinLock(&pAd->BATabLock);
 
-	if (pAd->BATable.numAsRecipient >= (MAX_LEN_OF_BA_REC_TABLE - 1))
+	if (pAd->BATable.numAsRecipient >= MAX_BARECI_SESSION)
 	{
 		DBGPRINT(RT_DEBUG_OFF, ("BA Recipeint Session (%ld) > %d\n", 
-							pAd->BATable.numAsRecipient, (MAX_LEN_OF_BA_REC_TABLE - 1)));
+							pAd->BATable.numAsRecipient, MAX_BARECI_SESSION));
 		goto done;
 	}
 
@@ -761,7 +759,7 @@ BA_ORI_ENTRY *BATableAllocOriEntry(
 
 	NdisAcquireSpinLock(&pAd->BATabLock);
 
-	if (pAd->BATable.numAsOriginator >= (MAX_LEN_OF_BA_ORI_TABLE - 1))
+	if (pAd->BATable.numAsOriginator >= (MAX_LEN_OF_BA_ORI_TABLE))
 	{
 		goto done;
 	}
@@ -1099,21 +1097,7 @@ VOID BAOriSessionSetupTimeout(
 	if ((pBAEntry->ORI_BA_Status == Originator_WaitRes) && (pBAEntry->Token < ORI_SESSION_MAX_RETRY))
 	{
 		MLME_ADDBA_REQ_STRUCT    AddbaReq;  
-
-#ifdef CONFIG_STA_SUPPORT
-		IF_DEV_CONFIG_OPMODE_ON_STA(pAd)
-		{
-			if (INFRA_ON(pAd) && 
-				RTMP_TEST_FLAG(pAd, fRTMP_ADAPTER_BSS_SCAN_IN_PROGRESS) &&
-				(OPSTATUS_TEST_FLAG(pAd, fOP_STATUS_MEDIA_STATE_CONNECTED)))
-			{
-				/* In scan progress and have no chance to send out, just re-schedule to another time period */
-				RTMPSetTimer(&pBAEntry->ORIBATimer, ORI_BA_SESSION_TIMEOUT);
-				return;
-			}
-		}
-#endif // CONFIG_STA_SUPPORT //
-
+	
 		NdisZeroMemory(&AddbaReq, sizeof(AddbaReq));
 		COPY_MAC_ADDR(AddbaReq.pAddr, pEntry->Addr);
 		AddbaReq.Wcid = (UCHAR)(pEntry->Aid);
@@ -1121,7 +1105,7 @@ VOID BAOriSessionSetupTimeout(
 		AddbaReq.BaBufSize = pAd->CommonCfg.BACapability.field.RxBAWinLimit;
 		AddbaReq.TimeOutValue = 0;
 		AddbaReq.Token = pBAEntry->Token;       
-		MlmeEnqueue(pAd, ACTION_STATE_MACHINE, MT2_MLME_ADD_BA_CATE, sizeof(MLME_ADDBA_REQ_STRUCT), (PVOID)&AddbaReq, 0);
+		MlmeEnqueue(pAd, ACTION_STATE_MACHINE, MT2_MLME_ADD_BA_CATE, sizeof(MLME_ADDBA_REQ_STRUCT), (PVOID)&AddbaReq);
 		RTMP_MLME_HANDLER(pAd);
 		DBGPRINT(RT_DEBUG_TRACE,("BA Ori Session Timeout(%d) : Send ADD BA again\n", pBAEntry->Token));
 
@@ -1226,7 +1210,7 @@ VOID PeerAddBAReqAction(
 		}
 	}
 
-	if (IS_ENTRY_CLIENT(&pAd->MacTab.Content[Elem->Wcid]))
+	if (pAd->MacTab.Content[Elem->Wcid].ValidAsCLI)
 		ASSERT(pAd->MacTab.Content[Elem->Wcid].Sst == SST_ASSOC);
 
 	pAddreqFrame = (PFRAME_ADDBA_REQ)(&Elem->Msg[0]);
@@ -1243,14 +1227,15 @@ VOID PeerAddBAReqAction(
 #ifdef CONFIG_STA_SUPPORT
 	IF_DEV_CONFIG_OPMODE_ON_STA(pAd)
 	{
-		if (ADHOC_ON(pAd)
-#ifdef QOS_DLS_SUPPORT
-			|| (IS_ENTRY_DLS(&pAd->MacTab.Content[Elem->Wcid]))
-#endif // QOS_DLS_SUPPORT //
-			)
+		if (ADHOC_ON(pAd))
 			ActHeaderInit(pAd, &ADDframe.Hdr, pAddr, pAd->CurrentAddress, pAd->CommonCfg.Bssid);
 		else
-			ActHeaderInit(pAd, &ADDframe.Hdr, pAd->CommonCfg.Bssid, pAd->CurrentAddress, pAddr);
+#ifdef QOS_DLS_SUPPORT
+		if (pAd->MacTab.Content[Elem->Wcid].ValidAsDls)
+			ActHeaderInit(pAd, &ADDframe.Hdr, pAddr, pAd->CurrentAddress, pAd->CommonCfg.Bssid);
+		else
+#endif // QOS_DLS_SUPPORT //
+		ActHeaderInit(pAd, &ADDframe.Hdr, pAd->CommonCfg.Bssid, pAd->CurrentAddress, pAddr);
 	}
 #endif // CONFIG_STA_SUPPORT //
 	ADDframe.Category = CATEGORY_BA;

@@ -44,11 +44,6 @@ static VOID ReservedAction(
 	IN PRTMP_ADAPTER pAd, 
 	IN MLME_QUEUE_ELEM *Elem);
 
-#ifdef WMM_ACM_SUPPORT
-VOID PeerWMMAction(
-	IN PRTMP_ADAPTER pAd,
-	IN MLME_QUEUE_ELEM *Elem);
-#endif // WMM_ACM_SUPPORT //
 
 /*  
     ==========================================================================
@@ -97,12 +92,6 @@ VOID ActionStateMachineInit(
 	StateMachineSetAction(S, ACT_IDLE, MT2_MLME_DLS_CATE, (STATE_MACHINE_FUNC)MlmeDLSAction);
 	StateMachineSetAction(S, ACT_IDLE, MT2_ACT_INVALID, (STATE_MACHINE_FUNC)MlmeInvalidAction);
 
-#ifdef WMM_ACM_SUPPORT
-	StateMachineSetAction(S, ACT_IDLE, MT2_PEER_RESV_15, (STATE_MACHINE_FUNC)MlmeInvalidAction);
-	StateMachineSetAction(S, ACT_IDLE, MT2_PEER_RESV_16, (STATE_MACHINE_FUNC)MlmeInvalidAction);
-	StateMachineSetAction(S, ACT_IDLE, MT2_PEER_WMM, (STATE_MACHINE_FUNC)PeerWMMAction);
-#endif // WMM_ACM_SUPPORT //
-
 
 }
 
@@ -148,14 +137,16 @@ VOID MlmeADDBAAction(
 #ifdef CONFIG_STA_SUPPORT
 		IF_DEV_CONFIG_OPMODE_ON_STA(pAd)
 		{
-			if (ADHOC_ON(pAd)
-#ifdef QOS_DLS_SUPPORT
-				|| (IS_ENTRY_DLS(&pAd->MacTab.Content[pInfo->Wcid]))
-#endif // QOS_DLS_SUPPORT //
-				)
+			if (ADHOC_ON(pAd))
 				ActHeaderInit(pAd, &Frame.Hdr, pInfo->pAddr, pAd->CurrentAddress, pAd->CommonCfg.Bssid);
 			else
-				ActHeaderInit(pAd, &Frame.Hdr, pAd->CommonCfg.Bssid, pAd->CurrentAddress, pInfo->pAddr);
+#ifdef QOS_DLS_SUPPORT
+			if (pAd->MacTab.Content[pInfo->Wcid].ValidAsDls)
+				ActHeaderInit(pAd, &Frame.Hdr, pInfo->pAddr, pAd->CurrentAddress, pAd->CommonCfg.Bssid);
+			else
+#endif // QOS_DLS_SUPPORT //
+			ActHeaderInit(pAd, &Frame.Hdr, pAd->CommonCfg.Bssid, pAd->CurrentAddress, pInfo->pAddr);
+
 		}
 #endif // CONFIG_STA_SUPPORT // 
 
@@ -259,14 +250,15 @@ VOID MlmeDELBAAction(
 #ifdef CONFIG_STA_SUPPORT
 		IF_DEV_CONFIG_OPMODE_ON_STA(pAd)
 		{
-			if (ADHOC_ON(pAd)
-#ifdef QOS_DLS_SUPPORT
-				|| (IS_ENTRY_DLS(&pAd->MacTab.Content[pInfo->Wcid]))
-#endif // QOS_DLS_SUPPORT //
-				)
+			if (ADHOC_ON(pAd))
 				ActHeaderInit(pAd, &Frame.Hdr, pAd->MacTab.Content[pInfo->Wcid].Addr, pAd->CurrentAddress, pAd->CommonCfg.Bssid);
 			else
-				ActHeaderInit(pAd, &Frame.Hdr,  pAd->CommonCfg.Bssid, pAd->CurrentAddress, pAd->MacTab.Content[pInfo->Wcid].Addr);
+#ifdef QOS_DLS_SUPPORT
+			if (pAd->MacTab.Content[pInfo->Wcid].ValidAsDls)
+				ActHeaderInit(pAd, &Frame.Hdr, pAd->MacTab.Content[pInfo->Wcid].Addr, pAd->CurrentAddress, pAd->CommonCfg.Bssid);
+			else
+#endif // QOS_DLS_SUPPORT //
+			ActHeaderInit(pAd, &Frame.Hdr,  pAd->CommonCfg.Bssid, pAd->CurrentAddress, pAd->MacTab.Content[pInfo->Wcid].Addr);
 		}
 #endif // CONFIG_STA_SUPPORT //
 		Frame.Category = CATEGORY_BA;
@@ -346,24 +338,6 @@ VOID PeerDLSAction(
 }
 #endif // QOS_DLS_SUPPORT //
 
-#ifdef WMM_ACM_SUPPORT
-VOID PeerWMMAction(
-	IN PRTMP_ADAPTER pAd,
-	IN MLME_QUEUE_ELEM *Elem)
-{
-	MAC_TABLE_ENTRY	*pEntry;
-
-#ifdef CONFIG_STA_SUPPORT
-	pEntry = &pAd->MacTab.Content[BSSID_WCID];
-#endif // CONFIG_STA_SUPPORT //
-
-	DBGPRINT(RT_DEBUG_TRACE,
-				("11e_msg> Receive a action frame from a device!\n"));
-
-	ACMP_ManagementHandle(pAd, pEntry, ACMR_SUBTYPE_ACTION,
-						Elem->Msg, Elem->MsgLen, 1000000);
-}
-#endif // WMM_ACM_SUPPORT //
 
 
 #ifdef DOT11_N_SUPPORT
@@ -408,7 +382,7 @@ VOID StaPublicAction(
 		pAd->CommonCfg.BSSCoexist2040.field.BSS20WidthReq = 0;
 		// Fill out stuff for scan request
 		ScanParmFill(pAd, &ScanReq, ZeroSsid, 0, BSS_ANY, SCAN_2040_BSS_COEXIST);
-		MlmeEnqueue(pAd, SYNC_STATE_MACHINE, MT2_MLME_SCAN_REQ, sizeof(MLME_SCAN_REQ_STRUCT), &ScanReq, 0);
+		MlmeEnqueue(pAd, SYNC_STATE_MACHINE, MT2_MLME_SCAN_REQ, sizeof(MLME_SCAN_REQ_STRUCT), &ScanReq);
 		pAd->Mlme.CntlMachine.CurrState = CNTL_WAIT_OID_LIST_SCAN;
 	}
 }

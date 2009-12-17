@@ -61,8 +61,10 @@
 typedef	struct	PACKED _TXWI_STRUC {
 	// Word 0
 	UINT32		PHYMODE:2;
-	UINT32		rsv2:2;
-	UINT32		Ifs:1;
+	UINT32		TxBF:1;	// 3*3
+	UINT32		rsv2:1;
+//	UINT32		rsv2:2;
+	UINT32		Ifs:1;	// 
 	UINT32		STBC:2;	//channel bandwidth 20MHz or 40 MHz
 	UINT32		ShortGI:1;
 	UINT32		BW:1;	//channel bandwidth 20MHz or 40 MHz
@@ -107,8 +109,10 @@ typedef	struct	PACKED _TXWI_STRUC {
 	UINT32		BW:1;	//channel bandwidth 20MHz or 40 MHz
 	UINT32		ShortGI:1;
 	UINT32		STBC:2;	// 1: STBC support MCS =0-7,   2,3 : RESERVE
-	UINT32		Ifs:1;
-	UINT32		rsv2:2;	//channel bandwidth 20MHz or 40 MHz
+	UINT32		Ifs:1;	// 
+//	UINT32		rsv2:2;	//channel bandwidth 20MHz or 40 MHz
+	UINT32		rsv2:1;
+	UINT32		TxBF:1;	// 3*3
 	UINT32		PHYMODE:2;  
 	// Word1
 	// ex:  1c ff 38 00 means ACK=0, BAWinSize=7, MPDUtotalByteCount = 0x38
@@ -962,7 +966,6 @@ typedef	union	_BCN_TIME_CFG_STRUC	{
 #define INT_TIMER_EN             	0x112c  		//  GP-timer and pre-tbtt Int enable
 #define CH_IDLE_STA              	0x1130  		//  channel idle time
 #define CH_BUSY_STA              	0x1134  		//  channle busy time
-#define CH_BUSY_STA_SEC				0x1138			//  channel busy time for secondary channel
 //
 //  4.2 MAC POWER  configuration registers (offset:0x1200)
 //
@@ -1754,36 +1757,48 @@ typedef	union	_MPDU_DEN_CNT_STRUC	{
 #define SHAREDKEYTABLE			0
 #define PAIRWISEKEYTABLE			1
 
-/* This resgiser is ONLY be supported for RT3883 or later.
-   It conflicted with BCN#0 offset of previous chipset. */
-#define WAPI_PN_TABLE_BASE			0x7800		
-#define WAPI_PN_ENTRY_SIZE   		8
 
 #ifdef RT_BIG_ENDIAN
 typedef	union	_SHAREDKEY_MODE_STRUC	{
 	struct	{
-		UINT32       Bss1Key3CipherAlg:4;
-		UINT32       Bss1Key2CipherAlg:4;
-		UINT32       Bss1Key1CipherAlg:4;
-		UINT32       Bss1Key0CipherAlg:4;
-		UINT32       Bss0Key3CipherAlg:4;
-		UINT32       Bss0Key2CipherAlg:4;
-		UINT32       Bss0Key1CipherAlg:4;
-		UINT32       Bss0Key0CipherAlg:4;
+		UINT32       :1;
+		UINT32       Bss1Key3CipherAlg:3;
+		UINT32       :1;
+		UINT32       Bss1Key2CipherAlg:3;
+		UINT32       :1;
+		UINT32       Bss1Key1CipherAlg:3;
+		UINT32       :1;
+		UINT32       Bss1Key0CipherAlg:3;
+		UINT32       :1;
+		UINT32       Bss0Key3CipherAlg:3;
+		UINT32       :1;
+		UINT32       Bss0Key2CipherAlg:3;
+		UINT32       :1;
+		UINT32       Bss0Key1CipherAlg:3;
+		UINT32       :1;
+		UINT32       Bss0Key0CipherAlg:3;
 	}	field;
 	UINT32			word;
 }	SHAREDKEY_MODE_STRUC, *PSHAREDKEY_MODE_STRUC;
 #else
 typedef	union	_SHAREDKEY_MODE_STRUC	{
 	struct	{
-		UINT32       Bss0Key0CipherAlg:4;
-		UINT32       Bss0Key1CipherAlg:4;
-		UINT32       Bss0Key2CipherAlg:4;
-		UINT32       Bss0Key3CipherAlg:4;
-		UINT32       Bss1Key0CipherAlg:4;
-		UINT32       Bss1Key1CipherAlg:4;
-		UINT32       Bss1Key2CipherAlg:4;
-		UINT32       Bss1Key3CipherAlg:4;
+		UINT32       Bss0Key0CipherAlg:3;
+		UINT32       :1;
+		UINT32       Bss0Key1CipherAlg:3;
+		UINT32       :1;
+		UINT32       Bss0Key2CipherAlg:3;
+		UINT32       :1;
+		UINT32       Bss0Key3CipherAlg:3;
+		UINT32       :1;
+		UINT32       Bss1Key0CipherAlg:3;
+		UINT32       :1;
+		UINT32       Bss1Key1CipherAlg:3;
+		UINT32       :1;
+		UINT32       Bss1Key2CipherAlg:3;
+		UINT32       :1;
+		UINT32       Bss1Key3CipherAlg:3;
+		UINT32       :1;
 	}	field;
 	UINT32			word;
 }	SHAREDKEY_MODE_STRUC, *PSHAREDKEY_MODE_STRUC;
@@ -1815,39 +1830,23 @@ typedef struct _HW_KEY_ENTRY {          // 32-byte per entry
 
 //8.1.2	IV/EIV  format  : 2DW
 
-// RX attribute entry format  : 1DW
+//8.1.3	RX attribute entry format  : 1DW
 #ifdef RT_BIG_ENDIAN
-typedef	union	_WCID_ATTRIBUTE_STRUC {
-	struct {
-		UINT32		WAPIKeyIdx:8;
-		UINT32		WAPI_rsv:8;
-		UINT32		WAPI_MCBC:1;
-		UINT32		rsv:3;
-		UINT32		BSSIdxExt:1;
-		UINT32		PairKeyModeExt:1;
-		UINT32		RXWIUDF:3;
-		UINT32		BSSIdx:3; //multipleBSS index for the WCID
-		UINT32		PairKeyMode:3;
-		UINT32		KeyTab:1;	// 0 for shared key table.  1 for pairwise key table
-	}   field;
-    UINT32           word;
-}	WCID_ATTRIBUTE_STRUC, *PWCID_ATTRIBUTE_STRUC;
+typedef	struct	_MAC_ATTRIBUTE_STRUC {
+	UINT32		rsv:22;
+	UINT32		RXWIUDF:3;
+	UINT32		BSSIDIdx:3; //multipleBSS index for the WCID
+	UINT32		PairKeyMode:3;
+	UINT32		KeyTab:1;	// 0 for shared key table.  1 for pairwise key table
+}	MAC_ATTRIBUTE_STRUC, *PMAC_ATTRIBUTE_STRUC;
 #else
-typedef	union	_WCID_ATTRIBUTE_STRUC {
-	struct {
-		UINT32		KeyTab:1;	// 0 for shared key table.  1 for pairwise key table
-		UINT32		PairKeyMode:3;
-		UINT32		BSSIdx:3; 		//multipleBSS index for the WCID
-		UINT32		RXWIUDF:3;
-		UINT32		PairKeyModeExt:1;
-		UINT32		BSSIdxExt:1;
-		UINT32		rsv:3;
-		UINT32		WAPI_MCBC:1;
-		UINT32		WAPI_rsv:8;
-		UINT32		WAPIKeyIdx:8;
-	}   field;
-    UINT32           word;
-}	WCID_ATTRIBUTE_STRUC, *PWCID_ATTRIBUTE_STRUC;
+typedef	struct	_MAC_ATTRIBUTE_STRUC {
+	UINT32		KeyTab:1;	// 0 for shared key table.  1 for pairwise key table
+	UINT32		PairKeyMode:3;
+	UINT32		BSSIDIdx:3; //multipleBSS index for the WCID
+	UINT32		RXWIUDF:3;
+	UINT32		rsv:22;
+}	MAC_ATTRIBUTE_STRUC, *PMAC_ATTRIBUTE_STRUC;
 #endif
 
 
@@ -2296,7 +2295,8 @@ typedef	union	_RF_CSR_CFG_STRUC	{
 #define QID_AC_VI               2
 #define QID_AC_VO               3
 #define QID_HCCA                4
-#define NUM_OF_TX_RING          5
+//#define NUM_OF_TX_RING          5
+#define NUM_OF_TX_RING          4
 #define QID_MGMT                13
 #define QID_RX                  14
 #define QID_OTHER               15

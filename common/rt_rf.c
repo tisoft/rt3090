@@ -169,6 +169,16 @@ VOID RtmpChipOpsRFHook(
 	pChipOps->AsicRfTurnOff = NULL;
 	pChipOps->AsicReverseRfFromSleepMode = NULL;
 	pChipOps->AsicHaltAction = NULL;
+#ifdef RT33xx
+if (IS_RT3390(pAd) && (pAd->infType == RTMP_DEV_INF_PCI))
+		{
+			pChipOps->pRFRegTable = RFRegTableOverRT3390;
+			pChipOps->AsicHaltAction = RT33xxHaltAction;
+			pChipOps->AsicRfTurnOff = RT33xxLoadRFSleepModeSetup;		
+			pChipOps->AsicRfInit = NICInitRT3390RFRegisters;
+			pChipOps->AsicReverseRfFromSleepMode = RT33xxReverseRFSleepModeSetup;
+		}
+#else // RT33xx //
 	/* We depends on RfICType and MACVersion to assign the corresponding operation callbacks. */
 
 #ifdef RT30xx
@@ -177,7 +187,7 @@ VOID RtmpChipOpsRFHook(
 		pChipOps->pRFRegTable = RT30xx_RFRegTable;
 		pChipOps->AsicHaltAction = RT30xxHaltAction;
 #ifdef RT3090
-		if (IS_RT3090(pAd) && (pAd->infType == RTMP_DEV_INF_PCI||pAd->infType == RTMP_DEV_INF_PCIE))
+		if (IS_RT3090(pAd) && (pAd->infType == RTMP_DEV_INF_PCI))
 		{
 			pChipOps->AsicRfTurnOff = RT30xxLoadRFSleepModeSetup;		
 			pChipOps->AsicRfInit = NICInitRT3090RFRegisters;
@@ -186,6 +196,7 @@ VOID RtmpChipOpsRFHook(
 #endif // RT3090 //
 	}
 #endif // RT30xx //
+#endif // RT33xx //
 }
 
 #endif // RTMP_RF_RW_SUPPORT //

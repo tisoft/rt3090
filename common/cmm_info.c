@@ -89,7 +89,7 @@ INT	Show_HtGi_Proc(
 INT	Show_HtOpMode_Proc(
 	IN	PRTMP_ADAPTER	pAd, 
 	OUT	PSTRING			pBuf);
-
+	
 INT	Show_HtExtcha_Proc(
 	IN	PRTMP_ADAPTER	pAd, 
 	OUT	PSTRING			pBuf);
@@ -182,26 +182,6 @@ INT	Show_WPAPSK_Proc(
 	IN	PRTMP_ADAPTER	pAd, 
 	OUT	PSTRING			pBuf);
 
-extern INT	Set_AP_WscConfStatus_Proc(
-	IN	PRTMP_ADAPTER	pAd, 
-	IN	PSTRING			arg);
-
-extern INT	Set_AP_AuthMode_Proc(
-	IN	PRTMP_ADAPTER	pAd, 
-	IN	PSTRING			arg);
-
-extern INT	Set_AP_EncrypType_Proc(
-	IN	PRTMP_ADAPTER	pAd, 
-	IN	PSTRING			arg);
-
-extern INT	Set_AP_SSID_Proc(
-	IN	PRTMP_ADAPTER	pAd, 
-	IN	PSTRING			arg);
-
-extern INT	Set_AP_WPAPSK_Proc(
-	IN	PRTMP_ADAPTER	pAd, 
-	IN	PSTRING			arg);
-
 static struct {
 	PSTRING name;
 	INT (*show_proc)(PRTMP_ADAPTER pAdapter, PSTRING arg);
@@ -269,6 +249,7 @@ INT Set_DriverVersion_Proc(
 	IF_DEV_CONFIG_OPMODE_ON_STA(pAd)
 		DBGPRINT(RT_DEBUG_TRACE, ("Driver version-%s\n", STA_DRIVER_VERSION));
 #endif // CONFIG_STA_SUPPORT //
+
 
     return TRUE;
 }
@@ -359,11 +340,6 @@ INT	Set_WirelessMode_Proc(
 		IF_DEV_CONFIG_OPMODE_ON_STA(pAd)
 		{
 			LONG	WirelessMode = pAd->CommonCfg.PhyMode;
-
-			/* clean up previous SCAN result */
-			BssTableInit(&pAd->ScanTab);
-			if (pAd->StaCfg.LastScanTime > 10 * OS_HZ)
-				pAd->StaCfg.LastScanTime -= (10 * OS_HZ);
 			
 			RTMPSetPhyMode(pAd, WirelessMode);
 #ifdef DOT11_N_SUPPORT
@@ -1273,9 +1249,7 @@ VOID	RTMPWPARemoveAllKeys(
 	UCHAR 	i;
 	
 	DBGPRINT(RT_DEBUG_TRACE,("RTMPWPARemoveAllKeys(AuthMode=%d, WepStatus=%d)\n", pAd->StaCfg.AuthMode, pAd->StaCfg.WepStatus));
-#ifdef PCIE_PS_SUPPORT
 	RTMP_CLEAR_PSFLAG(pAd, fRTMP_PS_CAN_GO_SLEEP);
-#endif // PCIE_PS_SUPPORT //
 	// For WEP/CKIP, there is no need to remove it, since WinXP won't set it again after
 	// Link up. And it will be replaced if user changed it.
 	if (pAd->StaCfg.AuthMode < Ndis802_11AuthModeWPA)
@@ -1287,7 +1261,7 @@ VOID	RTMPWPARemoveAllKeys(
 		return;
 
 	// set BSSID wcid entry of the Pair-wise Key table as no-security mode
-	AsicRemovePairwiseKeyEntry(pAd, BSSID_WCID);
+	AsicRemovePairwiseKeyEntry(pAd, BSS0, BSSID_WCID);
 
 	// set all shared key mode as no-security. 
 	for (i = 0; i < SHARE_KEY_NUM; i++)
@@ -1297,9 +1271,7 @@ VOID	RTMPWPARemoveAllKeys(
 
 		AsicRemoveSharedKeyEntry(pAd, BSS0, i);
 	}
-#ifdef PCIE_PS_SUPPORT
 	RTMP_SET_PSFLAG(pAd, fRTMP_PS_CAN_GO_SLEEP);
-#endif // PCIE_PS_SUPPORT //
 
 }
 #endif // CONFIG_STA_SUPPORT //	
@@ -1656,11 +1628,7 @@ VOID	RTMPSetHT(
 	}
 	
 	// We support link adaptation for unsolicit MCS feedback, set to 2.
-#ifdef RT2883_TEMP_PATCH
-	pAd->CommonCfg.HtCapability.ExtHtCapInfo.MCSFeedback = MCSFBK_MRQ; //MCSFBK_UNSOLICIT;
-#else
 	pAd->CommonCfg.HtCapability.ExtHtCapInfo.MCSFeedback = MCSFBK_NONE; //MCSFBK_UNSOLICIT;
-#endif // RT2883_TEMP_PATCH //
 	pAd->CommonCfg.AddHTInfo.ControlChan = pAd->CommonCfg.Channel;
 	// 1, the extension channel above the control channel. 
 	
@@ -1691,10 +1659,6 @@ VOID	RTMPSetHT(
 	AsicSetEdcaParm(pAd, &pAd->CommonCfg.APEdcaParm);
 	
 
-#ifdef RT2883_TEMP_PATCH
-	pAd->CommonCfg.HtCapability.TxBFCap.TxSoundCapable =  TRUE;
-#endif // RT2883_TEMP_PATCH //
-
 #ifdef CONFIG_STA_SUPPORT
 	IF_DEV_CONFIG_OPMODE_ON_STA(pAd)
 		{
@@ -1723,7 +1687,6 @@ VOID	RTMPSetIndividualHT(
 	PRT_HT_PHY_INFO		pDesired_ht_phy = NULL;
 	UCHAR	TxStream = pAd->CommonCfg.TxStream;		
 	UCHAR	DesiredMcs	= MCS_AUTO;
-	UCHAR	encrypt_mode = Ndis802_11EncryptionDisabled;
 						
 	do
 	{
@@ -1733,7 +1696,6 @@ VOID	RTMPSetIndividualHT(
 		{		
 			pDesired_ht_phy = &pAd->StaCfg.DesiredHtPhyInfo;					
 			DesiredMcs = pAd->StaCfg.DesiredTransmitSetting.field.MCS;
-			encrypt_mode = pAd->StaCfg.WepStatus;
 			//pAd->StaCfg.bAutoTxRateSwitch = (DesiredMcs == MCS_AUTO) ? TRUE : FALSE;
 				break;
 		}	
@@ -1761,17 +1723,6 @@ VOID	RTMPSetIndividualHT(
 		DesiredMcs = MCS_0;		
 	}
 	   		
-	/* 	
-		WFA recommend to restrict the encryption type in 11n-HT mode.
-	 	So, the WEP and TKIP are not allowed in HT rate. 
-	*/
-	if (pAd->CommonCfg.HT_DisallowTKIP && IS_INVALID_HT_SECURITY(encrypt_mode))
-	{
-		DBGPRINT(RT_DEBUG_WARN, ("%s : Use legacy rate in WEP/TKIP encryption mode (apidx=%d)\n", 
-									__FUNCTION__, apidx));
-		return;
-	}
-			
 	pDesired_ht_phy->bHtEnable = TRUE;
 					 
 	// Decide desired Tx MCS
@@ -1926,15 +1877,16 @@ VOID	RTMPAddWcidAttributeEntry(
 #ifdef CONFIG_STA_SUPPORT
 	IF_DEV_CONFIG_OPMODE_ON_STA(pAd)
 	{
-		if (pEntry && IS_ENTRY_MESH(pEntry))
+		if (pEntry && pEntry->ValidAsMesh)
 			WCIDAttri = (CipherAlg<<1) | PAIRWISEKEYTABLE;
-#if defined(DOT11Z_TDLS_SUPPORT) || defined(QOS_DLS_SUPPORT)
-		else if ((pEntry) && (IS_ENTRY_DLS(pEntry) || IS_ENTRY_TDLS(pEntry)) &&
+#ifdef QOS_DLS_SUPPORT
+		else if ((pEntry) && (pEntry->ValidAsDls) &&
 					((CipherAlg == CIPHER_TKIP) || 
+				 	(CipherAlg == CIPHER_TKIP_NO_MIC) || 
 					(CipherAlg == CIPHER_AES) || 
 				 	(CipherAlg == CIPHER_NONE))) 
 			WCIDAttri = (CipherAlg<<1) | PAIRWISEKEYTABLE;
-#endif
+#endif // QOS_DLS_SUPPORT //
 		else
 		WCIDAttri = (CipherAlg<<1) | SHAREDKEYTABLE;
 	}
@@ -1947,7 +1899,7 @@ VOID	RTMPAddWcidAttributeEntry(
 	offset = MAC_IVEIV_TABLE_BASE + (Wcid * HW_IVEIV_ENTRY_SIZE);
 
 	// WPA mode
-	if ((CipherAlg == CIPHER_TKIP) || (CipherAlg == CIPHER_AES))
+	if ((CipherAlg == CIPHER_TKIP) || (CipherAlg == CIPHER_TKIP_NO_MIC) || (CipherAlg == CIPHER_AES))
 	{	
 		// Eiv bit on. keyid always is 0 for pairwise key 			
 		IVEIV = (KeyIdx <<6) | 0x20;	
@@ -2043,7 +1995,7 @@ PSTRING GetAuthMode(CHAR auth)
         		3.) UI needs to prepare at least 4096bytes to get the results
     ==========================================================================
 */
-#define	LINE_LEN	(4+33+20+23+9+7+7+3)	// Channel+SSID+Bssid+Security+Signal+WiressMode+ExtCh+NetworkType
+#define	LINE_LEN	(4+33+20+23+9+7+3)	// Channel+SSID+Bssid+Security+Signal+WiressMode+NetworkType
 #ifdef CONFIG_STA_SUPPORT
 #endif // CONFIG_STA_SUPPORT //
 VOID	RTMPCommSiteSurveyData(
@@ -2079,10 +2031,13 @@ VOID	RTMPCommSiteSurveyData(
 	if ((Ndis802_11AuthModeWPA <= pBss->AuthMode) &&
 		(pBss->AuthMode <= Ndis802_11AuthModeWPA1PSKWPA2PSK))
 	{
-		if (pBss->AuthMode == Ndis802_11AuthModeWPANone)
+		if (pBss->AuthModeAux == Ndis802_11AuthModeWPANone)
 		{
 			ap_auth_mode = pBss->AuthMode;
+			if (pBss->WPA.PairCipherAux == Ndis802_11WEPDisabled)
 				ap_cipher = pBss->WPA.PairCipher;
+			else 
+				ap_cipher = Ndis802_11Encryption4Enabled;
 		}
 		else if (pBss->AuthModeAux == Ndis802_11AuthModeOpen)
 		{
@@ -2193,22 +2148,6 @@ VOID	RTMPCommSiteSurveyData(
 			sprintf(msg+strlen(msg),"%-7s", "11b/g/n");
 		else
 			sprintf(msg+strlen(msg),"%-7s", "unknow");
-
-		// Ext Channel
-		if (pBss->AddHtInfoLen > 0)
-		{
-			if (pBss->AddHtInfo.AddHtInfo.ExtChanOffset == EXTCHA_ABOVE)
-				sprintf(msg+strlen(msg),"%-7s", " ABOVE");
-			else if (pBss->AddHtInfo.AddHtInfo.ExtChanOffset == EXTCHA_BELOW)
-				sprintf(msg+strlen(msg),"%-7s", " BELOW");
-			else
-				sprintf(msg+strlen(msg),"%-7s", " NONE");
-		}
-		else
-		{
-			sprintf(msg+strlen(msg),"%-7s", " NONE");
-		}
-		
 		//Network Type		
 		if (pBss->BssType == BSS_ADHOC)
 			sprintf(msg+strlen(msg),"%-3s", " Ad");
@@ -2244,8 +2183,8 @@ VOID RTMPIoctlGetSiteSurvey(
 
 	memset(msg, 0 ,(MAX_LEN_OF_BSS_TABLE)*max_len );
 	sprintf(msg,"%s","\n");
-	sprintf(msg+strlen(msg),"%-4s%-33s%-20s%-23s%-9s%-7s%-7s%-3s\n",
-	    "Ch", "SSID", "BSSID", "Security", "Siganl(%)", "W-Mode", " ExtCH"," NT");	
+	sprintf(msg+strlen(msg),"%-4s%-33s%-20s%-23s%-9s%-7s%-3s\n",
+	    "Ch", "SSID", "BSSID", "Security", "Siganl(%)", "W-Mode", " NT");	
 	
 #ifdef CONFIG_STA_SUPPORT
 
@@ -2298,7 +2237,7 @@ VOID RTMPIoctlGetMacTable(
 	MacTab.Num = 0;
 	for (i=0; i<MAX_LEN_OF_MAC_TABLE; i++)
 	{
-		if (IS_ENTRY_CLIENT(&pAd->MacTab.Content[i]) && (pAd->MacTab.Content[i].Sst == SST_ASSOC))
+		if (pAd->MacTab.Content[i].ValidAsCLI && (pAd->MacTab.Content[i].Sst == SST_ASSOC))
 		{
 			COPY_MAC_ADDR(MacTab.Entry[MacTab.Num].Addr, &pAd->MacTab.Content[i].Addr);
 			MacTab.Entry[MacTab.Num].Aid = (UCHAR)pAd->MacTab.Content[i].Aid;
@@ -2325,6 +2264,11 @@ VOID RTMPIoctlGetMacTable(
 			MacTab.Num += 1;
 		}
 	}
+	wrq->u.data.length = sizeof(RT_802_11_MAC_TABLE);
+	if (copy_to_user(wrq->u.data.pointer, &MacTab, wrq->u.data.length))
+	{
+		DBGPRINT(RT_DEBUG_TRACE, ("%s: copy_to_user() fail\n", __FUNCTION__));
+	}
 
 	msg = kmalloc(sizeof(CHAR)*(MAX_LEN_OF_MAC_TABLE*MAC_LINE_LEN), MEM_ALLOC_FLAG);
 	if (msg == NULL)
@@ -2334,37 +2278,35 @@ VOID RTMPIoctlGetMacTable(
 	}
 	memset(msg, 0 ,MAX_LEN_OF_MAC_TABLE*MAC_LINE_LEN );
 	sprintf(msg,"%s","\n");
-	sprintf(msg+strlen(msg),"%-14s%-4s%-4s%-4s%-4s%-6s%-6s%-10s%-10s%-10s\n",
-		"MAC", "AP",  "AID", "PSM", "AUTH", "CTxR", "LTxR","LDT", "RxB", "TxB");
+	sprintf(msg+strlen(msg),"%-14s%-4s%-4s%-10s%-10s%-10s%-6s%-6s\n",
+		"MAC", "AID", "PSM", "LDT", "RxB", "TxB","CTxR", "LTxR");
 	
 	for (i=0; i<MAX_LEN_OF_MAC_TABLE; i++)
 	{
 		PMAC_TABLE_ENTRY pEntry = &pAd->MacTab.Content[i];
-		if (IS_ENTRY_CLIENT(pEntry) && (pEntry->Sst == SST_ASSOC))
+		if (pEntry->ValidAsCLI && (pEntry->Sst == SST_ASSOC))
 		{
 			if((strlen(msg)+MAC_LINE_LEN ) >= (MAX_LEN_OF_MAC_TABLE*MAC_LINE_LEN) )
 				break;	
 			sprintf(msg+strlen(msg),"%02x%02x%02x%02x%02x%02x  ",
 				pEntry->Addr[0], pEntry->Addr[1], pEntry->Addr[2],
 				pEntry->Addr[3], pEntry->Addr[4], pEntry->Addr[5]);
-			sprintf(msg+strlen(msg),"%-4d", (int)pEntry->apidx);
 			sprintf(msg+strlen(msg),"%-4d", (int)pEntry->Aid);
 			sprintf(msg+strlen(msg),"%-4d", (int)pEntry->PsMode);
-			sprintf(msg+strlen(msg),"%-4d", (int)pEntry->AuthState);
-			sprintf(msg+strlen(msg),"%-6d",RateIdToMbps[pAd->MacTab.Content[i].CurrTxRate]);
-			sprintf(msg+strlen(msg),"%-6d",0/*RateIdToMbps[pAd->MacTab.Content[i].HTPhyMode.word]*/); // ToDo
 			sprintf(msg+strlen(msg),"%-10d",0/*pAd->MacTab.Content[i].HSCounter.LastDataPacketTime*/); // ToDo
 			sprintf(msg+strlen(msg),"%-10d",0/*pAd->MacTab.Content[i].HSCounter.TotalRxByteCount*/); // ToDo
-			sprintf(msg+strlen(msg),"%-10d\n",0/*pAd->MacTab.Content[i].HSCounter.TotalTxByteCount*/); // ToDo
-
+			sprintf(msg+strlen(msg),"%-10d",0/*pAd->MacTab.Content[i].HSCounter.TotalTxByteCount*/); // ToDo
+			sprintf(msg+strlen(msg),"%-6d",RateIdToMbps[pAd->MacTab.Content[i].CurrTxRate]);
+			sprintf(msg+strlen(msg),"%-6d\n",0/*RateIdToMbps[pAd->MacTab.Content[i].LastTxRate]*/); // ToDo
 		}
 	} 
 	// for compatible with old API just do the printk to console
-	wrq->u.data.length = strlen(msg);
-	if (copy_to_user(wrq->u.data.pointer, msg, wrq->u.data.length))
+	//wrq->u.data.length = strlen(msg);
+	//if (copy_to_user(wrq->u.data.pointer, msg, wrq->u.data.length))
 	{
-		DBGPRINT(RT_DEBUG_OFF, ("%s", msg));
+		DBGPRINT(RT_DEBUG_TRACE, ("%s", msg));
 	}
+
 	kfree(msg);
 }
 
@@ -2581,14 +2523,14 @@ INT	Set_HtMcs_Proc(
 	IN	PRTMP_ADAPTER	pAd, 
 	IN	PSTRING			arg)
 {
-	ULONG HtMcs, Mcs_tmp, ValidMcs = 15;
+	ULONG HtMcs, Mcs_tmp;
 #ifdef CONFIG_STA_SUPPORT    
     BOOLEAN bAutoRate = FALSE;
 #endif // CONFIG_STA_SUPPORT //
 
 	Mcs_tmp = simple_strtol(arg, 0, 10);
 		
-	if (Mcs_tmp <= ValidMcs || Mcs_tmp == 32)			
+	if (Mcs_tmp <= 15 || Mcs_tmp == 32)			
 		HtMcs = Mcs_tmp;	
 	else
 		HtMcs = MCS_AUTO;	
@@ -3122,9 +3064,16 @@ INT	Set_FixedTxMode_Proc(
 	IN	PRTMP_ADAPTER	pAd, 
 	IN	PSTRING			arg)
 {
-	INT	fix_tx_mode = FIXED_TXMODE_HT;
+	UCHAR	fix_tx_mode = FIXED_TXMODE_HT;
 
-	fix_tx_mode = RT_CfgSetFixedTxPhyMode(arg);
+	if (strcmp(arg, "OFDM") == 0 || strcmp(arg, "ofdm") == 0)
+	{
+		fix_tx_mode = FIXED_TXMODE_OFDM;
+	}	
+	else if (strcmp(arg, "CCK") == 0 || strcmp(arg, "cck") == 0)
+	{
+        fix_tx_mode = FIXED_TXMODE_CCK;
+	}
 	
 #ifdef CONFIG_STA_SUPPORT
 	IF_DEV_CONFIG_OPMODE_ON_STA(pAd)
@@ -3766,95 +3715,4 @@ INT	Show_WPAPSK_Proc(
 
 	return 0;
 }
-
-#ifdef RT2883_TEMP_PATCH
-INT	Set_ETxBfEnCond_Proc(
-	IN	PRTMP_ADAPTER	pAd, 
-	IN	PCHAR			arg)
-{
-	// insert code here
-	UCHAR i;
-	MAC_TABLE_ENTRY		*pEntry = NULL;	
-	for (i=0; i<MAX_LEN_OF_MAC_TABLE; i++){
-		pEntry =	&pAd->MacTab.Content[i];
-		pEntry->eTxBfEnCond = simple_strtol(arg, 0, 10);
-	}
-
-	return TRUE;	
-}
-INT	Set_NoSndgCntThrd_Proc(
-	IN	PRTMP_ADAPTER	pAd, 
-	IN	PCHAR			arg)
-{
-	// insert code here
-	UCHAR i;
-	MAC_TABLE_ENTRY		*pEntry = NULL;	
-	for (i=0; i<MAX_LEN_OF_MAC_TABLE; i++){
-		pEntry =	&pAd->MacTab.Content[i];
-		pEntry->noSndgCntThrd = simple_strtol(arg, 0, 10);
-	}
-	return TRUE;	
-}
-
-INT	Set_NdpSndgStreams_Proc(
-	IN	PRTMP_ADAPTER	pAd, 
-	IN	PCHAR			arg)
-{
-	// insert code here
-	UCHAR i;
-	MAC_TABLE_ENTRY		*pEntry = NULL;	
-	for (i=0; i<MAX_LEN_OF_MAC_TABLE; i++){
-		pEntry =	&pAd->MacTab.Content[i];
-		pEntry->ndpSndgStreams = simple_strtol(arg, 0, 10);
-	}
-	return TRUE;	
-}
-
-INT	Set_PerThrdAdj_Proc(
-	IN	PRTMP_ADAPTER	pAd, 
-	IN	PCHAR			arg)
-{
-	// insert code here
-	UCHAR i;
-	MAC_TABLE_ENTRY		*pEntry = NULL;	
-	for (i=0; i<MAX_LEN_OF_MAC_TABLE; i++){
-		pEntry =	&pAd->MacTab.Content[i];
-		pEntry->perThrdAdj = simple_strtol(arg, 0, 10);
-	}
-	return TRUE;	
-}
-
-INT	Set_Trigger_Sounding_Proc(
-	IN	PRTMP_ADAPTER	pAd, 
-	IN	PCHAR			arg)
-{
-	UCHAR					macAddr[MAC_ADDR_LEN];
-	CHAR					*value;
-	INT						i;
-	UCHAR HashIdx;
-	MAC_TABLE_ENTRY *pEntry = NULL;
-
-	if(strlen(arg) != 17)  //Mac address acceptable format 01:02:03:04:05:06 length 17
-		return FALSE;
-
-	for (i=0, value = rstrtok(arg,":"); value; value = rstrtok(NULL,":")) 
-	{
-		if((strlen(value) != 2) || (!isxdigit(*value)) || (!isxdigit(*(value+1))) ) 
-			return FALSE;  //Invalid
-
-		AtoH(value, &macAddr[i++], 1);
-	}
-
-	HashIdx = MAC_ADDR_HASH_INDEX(macAddr);
-	pEntry = pAd->MacTab.Hash[HashIdx];
-
-	if (pEntry)
-	{
-		//MlmeDeAuthAction(pAd, pEntry, REASON_DISASSOC_STA_LEAVING);
-		Trigger_Sounding_Packet(pAd, SNDG_TYPE_SOUNGING, 0, pEntry->sndgMcs, pEntry);
-	}
-
-	return TRUE;
-}
-#endif // RT2883_TEMP_PATCH //
 

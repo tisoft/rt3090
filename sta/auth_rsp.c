@@ -118,17 +118,13 @@ VOID PeerDeauthAction(
     IN PRTMP_ADAPTER pAd, 
     IN PMLME_QUEUE_ELEM Elem) 
 {
-	UCHAR       Addr1[MAC_ADDR_LEN];
     UCHAR       Addr2[MAC_ADDR_LEN];
-	UCHAR       Addr3[MAC_ADDR_LEN];
     USHORT      Reason;
 
-    if (PeerDeauthSanity(pAd, Elem->Msg, Elem->MsgLen, Addr1, Addr2, Addr3, &Reason)) 
+    if (PeerDeauthSanity(pAd, Elem->Msg, Elem->MsgLen, Addr2, &Reason)) 
     {
         if (INFRA_ON(pAd)
-			&& (MAC_ADDR_EQUAL(Addr1, pAd->CurrentAddress) || MAC_ADDR_EQUAL(Addr1, BROADCAST_ADDR))
 			&& MAC_ADDR_EQUAL(Addr2, pAd->CommonCfg.Bssid)
-			&& MAC_ADDR_EQUAL(Addr3, pAd->CommonCfg.Bssid)
 			)
         {
             DBGPRINT(RT_DEBUG_TRACE,("AUTH_RSP - receive DE-AUTH from our AP (Reason=%d)\n", Reason));
@@ -142,13 +138,6 @@ VOID PeerDeauthAction(
 			// send wireless event - for deauthentication
 			if (pAd->CommonCfg.bWirelessEvent)
 				RTMPSendWirelessEvent(pAd, IW_DEAUTH_EVENT_FLAG, pAd->MacTab.Content[BSSID_WCID].Addr, BSS0, 0); 
-
-#ifdef WPA_SUPPLICANT_SUPPORT
-			if ((pAd->StaCfg.WpaSupplicantUP != WPA_SUPPLICANT_DISABLE) &&
-				(pAd->StaCfg.AuthMode == Ndis802_11AuthModeWPA2) &&
-				(pAd->StaCfg.PortSecured == WPA_802_1X_PORT_SECURED))
-				pAd->StaCfg.bLostAp = TRUE;
-#endif // WPA_SUPPLICANT_SUPPORT //
 
             LinkDown(pAd, TRUE);
         }

@@ -22,27 +22,29 @@
  * Free Software Foundation, Inc.,                                       * 
  * 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             * 
  *                                                                       * 
- ***************************************************************************/
+ *************************************************************************
 
-
-/****************************************************************************
     Module Name:
-    SHA2
+    crypt_sha2.h
 
     Abstract:
-    FIPS 180-2: Secure Hash Standard (SHS)
-    
+    Miniport generic portion header file
+
     Revision History:
-    Who         When            What
-    --------    ----------      ------------------------------------------
+    Who         When          What
+    --------    ----------    ----------------------------------------------
     Eddy        2008/11/24      Create SHA1
     Eddy        2008/07/23      Create SHA256
-***************************************************************************/
+*/
 
 #ifndef __CRYPT_SHA2_H__
 #define __CRYPT_SHA2_H__
 
+#ifdef CRYPT_TESTPLAN
+#include "crypt_testplan.h"
+#else
 #include "rt_config.h"
+#endif /* CRYPT_TESTPLAN */
 
 /* Algorithm options */
 #define SHA1_SUPPORT
@@ -58,7 +60,7 @@ typedef struct _SHA1_CTX_STRUC {
     UINT   BlockLen;
 } SHA1_CTX_STRUC, *PSHA1_CTX_STRUC;
 
-VOID RT_SHA1_Init (
+VOID SHA1_Init (
     IN  SHA1_CTX_STRUC *pSHA_CTX);
 VOID SHA1_Hash (
     IN  SHA1_CTX_STRUC *pSHA_CTX);
