@@ -4,3 +4,4 @@ enable-wpa-supplicant.dpatch
 fix-rt_ioctl_siwencode-check.dpatch
 return-value-with-void.dpatch
 unexpected-format.dpatch
+include_sched_h.dpatch

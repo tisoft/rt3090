@@ -1,3 +1,9 @@
+rt3090 (1:2.1.0.1-0ubuntu0~ppa1) karmic; urgency=low
+
+  * added patch for 2.6.32 compatibility
+
+ -- Markus Heberling <markus@tisoft.de>  Thu, 18 Dec 2009 00:48:00 +0200
+
 rt3090 (1:2.1.0.1-0ubuntu0~ppa0) karmic; urgency=low
 
   * reverted back to 2.1.0.1
