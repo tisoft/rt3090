@@ -28,7 +28,7 @@
 	rt3090.c
 
 	Abstract:
-	Specific funcitons and variables for RT3070
+	Specific funcitons and variables for RT3090
 
 	Revision History:
 	Who         When          What
@@ -64,8 +64,9 @@ VOID NICInitRT3090RFRegisters(IN PRTMP_ADAPTER pAd)
 		RT30xxWriteRFRegister(pAd, RF_R30, (UCHAR)RfReg);
 
 		// init R24, R31
-		RT30xxWriteRFRegister(pAd, RF_R24, 0x0F);
-		RT30xxWriteRFRegister(pAd, RF_R31, 0x0F);
+//		RT30xxWriteRFRegister(pAd, RF_R24, 0x0F);
+//		RT30xxWriteRFRegister(pAd, RF_R31, 0x0F);
+
 
 		// RT309x version E has fixed this issue
 		if ((pAd->NicConfig2.field.DACTestBit == 1) && ((pAd->MACVersion & 0xffff) < 0x0211))
@@ -88,10 +89,12 @@ VOID NICInitRT3090RFRegisters(IN PRTMP_ADAPTER pAd)
 		RTMP_IO_WRITE32(pAd, GPIO_SWITCH, data);
 
 		// Initialize RF register to default value
-		for (i = 0; i < NUM_RF_REG_PARMS; i++)
+		for (i = 0; i < NUM_RF_3020_REG_PARMS; i++)
 		{
-			RT30xxWriteRFRegister(pAd, RT30xx_RFRegTable[i].Register, RT30xx_RFRegTable[i].Value);
+			RT30xxWriteRFRegister(pAd, RT3020_RFRegTable[i].Register, RT3020_RFRegTable[i].Value);
 		}
+
+		RT30xxWriteRFRegister(pAd, RF_R31, 0x14);
 
 		// Driver should set RF R6 bit6 on before calibration	
 		RT30xxReadRFRegister(pAd, RF_R06, (PUCHAR)&RfReg);
@@ -114,6 +117,8 @@ VOID NICInitRT3090RFRegisters(IN PRTMP_ADAPTER pAd)
 		if (pAd->RfIcType == RFIC_3020)
 			AsicSetRxAnt(pAd, pAd->RxAnt.Pair1PrimaryRxAnt);
 
+		// From RT3071 Power Sequence v1.1 document, the Normal Operation Setting Registers as follow :
+		// BBP_R138 / RF_R1 / RF_R15 / RF_R17 / RF_R20 / RF_R21.
 		// add by johnli, RF power sequence setup, load RF normal operation-mode setup
 		RT30xxLoadRFNormalModeSetup(pAd);
 	}

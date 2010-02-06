@@ -22,18 +22,19 @@
  * Free Software Foundation, Inc.,                                       * 
  * 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             * 
  *                                                                       * 
- *************************************************************************
-
+ ****************************************************************************
+ 
     Module Name:
-	vr_ikans.h
+    vr_ikans.h
  
     Abstract:
-    Handle association related requests either from WSTA or from local MLME
+    Only for IKANOS Vx160 or Vx180 platform.
  
     Revision History:
-    Who          When          What
-    ---------    ----------    ----------------------------------------------
+    Who         When          What
+    --------    ----------    ----------------------------------------------
     Sample Lin	01-28-2008    Created
+
  */
 
 #ifndef __VR_IKANS_H__

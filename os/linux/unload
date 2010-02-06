@@ -1,2 +1,2 @@
 ifconfig ra0 down
-rmmod rt2860ap
+rmmod rt3090sta

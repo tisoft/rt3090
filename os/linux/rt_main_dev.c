@@ -55,6 +55,11 @@ module_param (mac, charp, 0);
 #endif
 MODULE_PARM_DESC (mac, "rt28xx: wireless mac addr");
 
+#ifdef OS_ABL_SUPPORT
+
+UCHAR ZERO_MAC_ADDR[MAC_ADDR_LEN]  = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+#endif // OS_ABL_SUPPORT //
+
 
 /*---------------------------------------------------------------------*/
 /* Prototypes of Functions Used                                        */
@@ -66,6 +71,8 @@ int rt28xx_open(struct net_device *net_dev);
 
 // private function prototype
 static INT rt28xx_send_packets(IN struct sk_buff *skb_p, IN struct net_device *net_dev);
+
+
 
 
 static struct net_device_stats *RT28xx_get_ether_stats(
@@ -93,7 +100,9 @@ Note:
 */
 int MainVirtualIF_close(IN struct net_device *net_dev)
 {
-    RTMP_ADAPTER *pAd = RTMP_OS_NETDEV_GET_PRIV(net_dev);
+    RTMP_ADAPTER *pAd = NULL;
+
+	GET_PAD_FROM_NET_DEV(pAd, net_dev);	
 
 	// Sanity check for pAd
 	if (pAd == NULL)
@@ -176,6 +185,20 @@ int MainVirtualIF_close(IN struct net_device *net_dev)
 		// send wireless event to wpa_supplicant for infroming interface down.
 		RtmpOSWrielessEventSend(pAd, IWEVCUSTOM, RT_INTERFACE_DOWN, NULL, NULL, 0);
 #endif // NATIVE_WPA_SUPPLICANT_SUPPORT //
+
+		if (pAd->StaCfg.pWpsProbeReqIe)
+		{
+			kfree(pAd->StaCfg.pWpsProbeReqIe);
+			pAd->StaCfg.pWpsProbeReqIe = NULL;
+			pAd->StaCfg.WpsProbeReqIeLen = 0;
+		}
+
+		if (pAd->StaCfg.pWpaAssocIe)
+		{
+			kfree(pAd->StaCfg.pWpaAssocIe);
+			pAd->StaCfg.pWpaAssocIe = NULL;
+			pAd->StaCfg.WpaAssocIeLen = 0;
+		}
 #endif // WPA_SUPPLICANT_SUPPORT //
 
 
@@ -211,7 +234,9 @@ Note:
 */
 int MainVirtualIF_open(IN struct net_device *net_dev)
 {
-    RTMP_ADAPTER *pAd = RTMP_OS_NETDEV_GET_PRIV(net_dev);
+    RTMP_ADAPTER *pAd = NULL;
+
+	GET_PAD_FROM_NET_DEV(pAd, net_dev);	
 
 	// Sanity check for pAd
 	if (pAd == NULL)
@@ -253,12 +278,15 @@ Note:
 int rt28xx_close(IN PNET_DEV dev)
 {
 	struct net_device * net_dev = (struct net_device *)dev;
-    RTMP_ADAPTER	*pAd = RTMP_OS_NETDEV_GET_PRIV(net_dev);
+    RTMP_ADAPTER	*pAd = NULL;
 	BOOLEAN 		Cancelled;
 	UINT32			i = 0;
 
+	GET_PAD_FROM_NET_DEV(pAd, net_dev);	
 
 	DBGPRINT(RT_DEBUG_TRACE, ("===> rt28xx_close\n"));
+
+
 
 	Cancelled = FALSE;
 	// Sanity check for pAd
@@ -274,9 +302,9 @@ int rt28xx_close(IN PNET_DEV dev)
 #ifdef CONFIG_STA_SUPPORT
 	IF_DEV_CONFIG_OPMODE_ON_STA(pAd)
 	{
-#ifdef RTMP_MAC_PCI	
+#ifdef PCIE_PS_SUPPORT
 		RTMPPCIeLinkCtrlValueRestore(pAd, RESTORE_CLOSE);
-#endif // RTMP_MAC_PCI //
+#endif // PCIE_PS_SUPPORT //
 
 		// If dirver doesn't wake up firmware here,
 		// NICLoadFirmware will hang forever when interface is up again.
@@ -347,7 +375,9 @@ int rt28xx_close(IN PNET_DEV dev)
 			brc=RT28xxPciAsicRadioOff(pAd, RTMP_HALT, 0);
 
 //In  solution 3 of 3090F, the bPCIclkOff will be set to TRUE after calling RT28xxPciAsicRadioOff
+#ifdef PCIE_PS_SUPPORT
 			pAd->bPCIclkOff = FALSE;    
+#endif // PCIE_PS_SUPPORT //
 
 			if (brc==FALSE)
 			{
@@ -372,7 +402,7 @@ int rt28xx_close(IN PNET_DEV dev)
 	{
 #ifdef RTMP_MAC_PCI
 		// Deregister interrupt function
-		RTMP_IRQ_RELEASE(net_dev)
+		RtmpOSIRQRelease(net_dev);
 #endif // RTMP_MAC_PCI //
 		RTMP_CLEAR_FLAG(pAd, fRTMP_ADAPTER_INTERRUPT_IN_USE);
 	}
@@ -399,6 +429,11 @@ int rt28xx_close(IN PNET_DEV dev)
 	}
 #endif // CONFIG_STA_SUPPORT //
 
+#ifdef VENDOR_FEATURE2_SUPPORT
+	printk("Number of Packet Allocated = %d\n", pAd->NumOfPktAlloc);
+	printk("Number of Packet Freed = %d\n", pAd->NumOfPktFree);
+#endif // VENDOR_FEATURE2_SUPPORT //
+
 	DBGPRINT(RT_DEBUG_TRACE, ("<=== rt28xx_close\n"));
 	return 0; // close ok
 } /* End of rt28xx_close */
@@ -422,10 +457,11 @@ Note:
 int rt28xx_open(IN PNET_DEV dev)
 {				 
 	struct net_device * net_dev = (struct net_device *)dev;
-	PRTMP_ADAPTER pAd = RTMP_OS_NETDEV_GET_PRIV(net_dev);
+	PRTMP_ADAPTER pAd = NULL;
 	int retval = 0;
  	//POS_COOKIE pObj;
 
+	GET_PAD_FROM_NET_DEV(pAd, net_dev);	
 
 	// Sanity check for pAd
 	if (pAd == NULL)
@@ -462,7 +498,7 @@ int rt28xx_open(IN PNET_DEV dev)
 
 	// Request interrupt service routine for PCI device
 	// register the interrupt routine with the os
-	RTMP_IRQ_REQUEST(net_dev);
+	RtmpOSIRQRequest(net_dev);
 
 	// Init IRQ parameters stored in pAd
 	RTMP_IRQ_INIT(pAd);
@@ -470,6 +506,11 @@ int rt28xx_open(IN PNET_DEV dev)
 	// Chip & other init
 	if (rt28xx_init(pAd, mac, hostname) == FALSE)
 		goto err;
+
+#ifdef RT_CFG80211_SUPPORT
+	RT_CFG80211_REINIT(pAd);
+	RT_CFG80211_CRDA_REG_RULE_APPLY(pAd);
+#endif // RT_CFG80211_SUPPORT //
 
 #ifdef CONFIG_STA_SUPPORT
 #endif // CONFIG_STA_SUPPORT //
@@ -502,18 +543,28 @@ int rt28xx_open(IN PNET_DEV dev)
 
 
 #ifdef CONFIG_STA_SUPPORT
-#ifdef RTMP_MAC_PCI
+#ifdef PCIE_PS_SUPPORT
 	IF_DEV_CONFIG_OPMODE_ON_STA(pAd)
         RTMPInitPCIeLinkCtrlValue(pAd);
-#endif // RTMP_MAC_PCI //
+#endif // PCIE_PS_SUPPORT //
+
+
 #endif // CONFIG_STA_SUPPORT //
+
+
+
+#ifdef VENDOR_FEATURE2_SUPPORT
+	printk("Number of Packet Allocated in open = %d\n", pAd->NumOfPktAlloc);
+	printk("Number of Packet Freed in open = %d\n", pAd->NumOfPktFree);
+#endif // VENDOR_FEATURE2_SUPPORT //
 
 	return (retval);
 
 err:
 //+++Add by shiang, move from rt28xx_init() to here.
-	RTMP_IRQ_RELEASE(net_dev);
+	RtmpOSIRQRelease(net_dev);
 //---Add by shiang, move from rt28xx_init() to here.
+
 	return (-1);
 } /* End of rt28xx_open */
 
@@ -545,8 +596,29 @@ PNET_DEV RtmpPhyNetDevInit(
 
 	pNetDevHook->needProtcted = FALSE;
 
+#if (WIRELESS_EXT < 21) && (WIRELESS_EXT >= 12)
+	pNetDevHook->get_wstats = rt28xx_get_wireless_stats;
+#endif
+
+#ifdef CONFIG_STA_SUPPORT
+#if WIRELESS_EXT >= 12
+	if (pAd->OpMode == OPMODE_STA)
+	{
+		pNetDevHook->iw_handler = (void *)&rt28xx_iw_handler_def;
+	}
+#endif //WIRELESS_EXT >= 12
+#endif // CONFIG_STA_SUPPORT //
+
+#ifdef CONFIG_APSTA_MIXED_SUPPORT
+#if WIRELESS_EXT >= 12
+	if (pAd->OpMode == OPMODE_AP)
+	{
+		pNetDevHook->iw_handler = &rt28xx_ap_iw_handler_def;
+	}
+#endif //WIRELESS_EXT >= 12
+#endif // CONFIG_APSTA_MIXED_SUPPORT //
+
 	RTMP_OS_NETDEV_SET_PRIV(net_dev, pAd);
-	//net_dev->priv = (PVOID)pAd;
 	pAd->net_dev = net_dev;
 	
 
@@ -582,9 +654,11 @@ Note:
 int rt28xx_packet_xmit(struct sk_buff *skb)
 {
 	struct net_device *net_dev = skb->dev;
-	PRTMP_ADAPTER pAd = RTMP_OS_NETDEV_GET_PRIV(net_dev);
+	PRTMP_ADAPTER pAd = NULL;
 	int status = 0;
 	PNDIS_PACKET pPacket = (PNDIS_PACKET) skb;
+
+	GET_PAD_FROM_NET_DEV(pAd, net_dev);	
 
 	/* RT2870STA does this in RTMPSendPackets() */
 #ifdef RALINK_ATE
@@ -664,9 +738,11 @@ static int rt28xx_send_packets(
 	IN struct sk_buff 		*skb_p, 
 	IN struct net_device 	*net_dev)
 {
-	RTMP_ADAPTER *pAd = RTMP_OS_NETDEV_GET_PRIV(net_dev);
+	RTMP_ADAPTER *pAd = NULL;
 
-	if (!(net_dev->flags & IFF_UP))
+	GET_PAD_FROM_NET_DEV(pAd, net_dev);	
+
+	if (!(RTMP_OS_NETDEV_STATE_RUNNING(net_dev)))
 	{
 		RELEASE_NDIS_PACKET(pAd, (PNDIS_PACKET)skb_p, NDIS_STATUS_FAILURE);
 		return 0;
@@ -674,6 +750,8 @@ static int rt28xx_send_packets(
 
 	NdisZeroMemory((PUCHAR)&skb_p->cb[CB_OFF], 15);
 	RTMP_SET_PACKET_NET_DEVICE_MBSSID(skb_p, MAIN_MBSSID);
+
+	MEM_DBG_PKT_ALLOC_INC(pAd);
 
 	return rt28xx_packet_xmit(skb_p);
 }
@@ -684,18 +762,23 @@ static int rt28xx_send_packets(
 struct iw_statistics *rt28xx_get_wireless_stats(
     IN struct net_device *net_dev)
 {
-	PRTMP_ADAPTER pAd = RTMP_OS_NETDEV_GET_PRIV(net_dev);
+	PRTMP_ADAPTER pAd = NULL;
 
+	GET_PAD_FROM_NET_DEV(pAd, net_dev);	
 
 
 	DBGPRINT(RT_DEBUG_TRACE, ("rt28xx_get_wireless_stats --->\n"));
+
+	//check if the interface is down
+	if(!RTMP_TEST_FLAG(pAd, fRTMP_ADAPTER_INTERRUPT_IN_USE))
+		return NULL;	
 	
 	pAd->iw_stats.status = 0; // Status - device dependent for now
 
 	// link quality
 #ifdef CONFIG_STA_SUPPORT
 	if (pAd->OpMode == OPMODE_STA)
-	pAd->iw_stats.qual.qual = ((pAd->Mlme.ChannelQuality * 12)/10 + 10);
+		pAd->iw_stats.qual.qual = ((pAd->Mlme.ChannelQuality * 12)/10 + 10);
 #endif // CONFIG_STA_SUPPORT //
 
 	if(pAd->iw_stats.qual.qual > 100)
@@ -742,7 +825,8 @@ INT rt28xx_ioctl(
 	RTMP_ADAPTER	*pAd = NULL;
 	INT				ret = 0;
 
-	pAd = RTMP_OS_NETDEV_GET_PRIV(net_dev);
+	GET_PAD_FROM_NET_DEV(pAd, net_dev);	
+
 	if (pAd == NULL)
 	{
 		/* if 1st open fail, pAd will be free;
@@ -784,7 +868,7 @@ static struct net_device_stats *RT28xx_get_ether_stats(
     RTMP_ADAPTER *pAd = NULL;
 
 	if (net_dev)
-		pAd = RTMP_OS_NETDEV_GET_PRIV(net_dev);
+		GET_PAD_FROM_NET_DEV(pAd, net_dev);	
 
 	if (pAd)
 	{
@@ -858,36 +942,61 @@ BOOLEAN RtmpPhyNetDevExit(
 }
 
 
-/*
-========================================================================
-Routine Description:
-    Allocate memory for adapter control block.
+/*******************************************************************************
 
-Arguments:
-    pAd					Pointer to our adapter
-
-Return Value:
-	NDIS_STATUS_SUCCESS
-	NDIS_STATUS_FAILURE
-	NDIS_STATUS_RESOURCES
-
-Note:
-========================================================================
-*/
-NDIS_STATUS AdapterBlockAllocateMemory(
-	IN PVOID	handle,
-	OUT	PVOID	*ppAd)
+	Device IRQ related functions.
+	
+ *******************************************************************************/
+int RtmpOSIRQRequest(IN PNET_DEV pNetDev)
 {
-
-	*ppAd = (PVOID)vmalloc(sizeof(RTMP_ADAPTER)); //pci_alloc_consistent(pci_dev, sizeof(RTMP_ADAPTER), phy_addr);
-    
-	if (*ppAd) 
+	struct net_device *net_dev = pNetDev;
+	PRTMP_ADAPTER pAd = NULL;
+	int retval = 0;
+	
+	GET_PAD_FROM_NET_DEV(pAd, pNetDev);	
+	
+	ASSERT(pAd);
+	
+#ifdef RTMP_PCI_SUPPORT
+	if (pAd->infType == RTMP_DEV_INF_PCI || pAd->infType == RTMP_DEV_INF_PCIE)
 	{
-		NdisZeroMemory(*ppAd, sizeof(RTMP_ADAPTER));
-		((PRTMP_ADAPTER)*ppAd)->OS_Cookie = handle;
-		return (NDIS_STATUS_SUCCESS);
-	} else {
-		return (NDIS_STATUS_FAILURE);
+		POS_COOKIE _pObj = (POS_COOKIE)(pAd->OS_Cookie);
+		RTMP_MSI_ENABLE(pAd);	
+		retval = request_irq(_pObj->pci_dev->irq,  rt2860_interrupt, SA_SHIRQ, (net_dev)->name, (net_dev));
+		if (retval != 0) 
+			printk("RT2860: request_irq  ERROR(%d)\n", retval);
 	}
+#endif // RTMP_PCI_SUPPORT //
+
+
+	return retval; 
+	
 }
+
+
+int RtmpOSIRQRelease(IN PNET_DEV pNetDev)
+{
+	struct net_device *net_dev = pNetDev;
+	PRTMP_ADAPTER pAd = NULL;
+
+	GET_PAD_FROM_NET_DEV(pAd, net_dev);	
+	
+	ASSERT(pAd);
+	
+#ifdef RTMP_PCI_SUPPORT
+	if (pAd->infType == RTMP_DEV_INF_PCI || pAd->infType == RTMP_DEV_INF_PCIE)
+	{ 
+		POS_COOKIE pObj = (POS_COOKIE)(pAd->OS_Cookie);
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,5,0)
+		synchronize_irq(pObj->pci_dev->irq);
+#endif
+		free_irq(pObj->pci_dev->irq, (net_dev));
+		RTMP_MSI_DISABLE(pAd);
+	}
+#endif // RTMP_PCI_SUPPORT //
+
+
+	return 0;
+}
+
 

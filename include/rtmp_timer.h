@@ -48,7 +48,7 @@
 	void rtmp_timer_##_func(unsigned long data)
 
 #define GET_TIMER_FUNCTION(_func)				\
-	rtmp_timer_##_func
+	(PVOID)rtmp_timer_##_func
 
 
 /* ----------------- Timer Related MARCO ---------------*/
@@ -72,9 +72,9 @@ typedef struct  _RALINK_TIMER_STRUCT    {
 	BOOLEAN				Repeat;         // True if periodic timer
 	ULONG				TimerValue;     // Timer value in milliseconds
 	ULONG				cookie;			// os specific object
+	void					*pAd;
 #ifdef RTMP_TIMER_TASK_SUPPORT
 	RTMP_TIMER_TASK_HANDLE	handle;
-	void					*pAd;
 #endif // RTMP_TIMER_TASK_SUPPORT //
 }RALINK_TIMER_STRUCT, *PRALINK_TIMER_STRUCT;
 
@@ -127,7 +127,10 @@ DECLARE_TIMER_FUNCTION(MlmePeriodicExec);
 DECLARE_TIMER_FUNCTION(MlmeRssiReportExec);
 DECLARE_TIMER_FUNCTION(AsicRxAntEvalTimeout);
 DECLARE_TIMER_FUNCTION(APSDPeriodicExec);
-DECLARE_TIMER_FUNCTION(AsicRfTuningExec);
+DECLARE_TIMER_FUNCTION(EnqueueStartForPSKExec);
+#ifdef CONFIG_STA_SUPPORT
+DECLARE_TIMER_FUNCTION(Adhoc_WpaRetryExec);
+#endif // CONFIG_STA_SUPPORT //
 
 
 #ifdef CONFIG_STA_SUPPORT
@@ -140,12 +143,16 @@ DECLARE_TIMER_FUNCTION(DisassocTimeout);
 DECLARE_TIMER_FUNCTION(LinkDownExec);
 DECLARE_TIMER_FUNCTION(StaQuickResponeForRateUpExec);
 DECLARE_TIMER_FUNCTION(WpaDisassocApAndBlockAssoc);
+
+#ifdef RTMP_PCI_SUPPORT
 DECLARE_TIMER_FUNCTION(PsPollWakeExec);
 DECLARE_TIMER_FUNCTION(RadioOnExec);
-
+#endif // RTMP_PCI_SUPPORT //
 #ifdef QOS_DLS_SUPPORT
 DECLARE_TIMER_FUNCTION(DlsTimeoutAction);
 #endif // QOS_DLS_SUPPORT //
+
+
 
 
 #endif // CONFIG_STA_SUPPORT //
@@ -156,7 +163,6 @@ DECLARE_TIMER_FUNCTION(DlsTimeoutAction);
 #if defined(AP_LED) || defined(STA_LED)
 DECLARE_TIMER_FUNCTION(LedCtrlMain);
 #endif
-
 
 
 #endif // __RTMP_TIMER_H__ //

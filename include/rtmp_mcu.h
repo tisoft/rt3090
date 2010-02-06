@@ -50,6 +50,7 @@ INT RtmpAsicSendCommandToMcu(
 	IN UCHAR		 Command,
 	IN UCHAR		 Token,
 	IN UCHAR		 Arg0,
-	IN UCHAR		 Arg1);
+	IN UCHAR		 Arg1,
+	IN BOOLEAN		IrqLock);
 	
 #endif // __RTMP_MCU_H__ //
