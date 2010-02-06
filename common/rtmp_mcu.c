@@ -346,7 +346,7 @@ NDIS_STATUS RtmpAsicLoadFirmware(
 	//Use Second Part
 	{
 #ifdef RTMP_MAC_PCI
-		if ((Version == 0x2860) || IS_RT3090(pAd)||IS_RT3390(pAd))
+		if ((Version == 0x2860) || (Version == 0x3572) || IS_RT3090(pAd)||IS_RT3390(pAd) || IS_RT3593(pAd))
 		{
 			pFirmwareImage = FirmwareImage;
 			FileLength = FIRMWAREIMAGE_LENGTH;
@@ -393,7 +393,8 @@ INT RtmpAsicSendCommandToMcu(
 	IN UCHAR		 Command,
 	IN UCHAR		 Token,
 	IN UCHAR		 Arg0,
-	IN UCHAR		 Arg1)
+	IN UCHAR		 Arg1,
+	IN BOOLEAN 		 IrqLock)
 {
 	HOST_CMD_CSR_STRUC	H2MCmd;
 	H2M_MAILBOX_STRUC	H2MMailbox;
@@ -403,18 +404,21 @@ INT RtmpAsicSendCommandToMcu(
 	static UINT32 j = 0;
 #endif // RALINK_ATE //
 #endif // RTMP_MAC_PCI //
-#ifdef PCIE_PS_SUPPORT
 #ifdef CONFIG_STA_SUPPORT
+#ifdef PCIE_PS_SUPPORT
 	// 3090F power solution 3 has hw limitation that needs to ban all mcu command 
 	// when firmware is in radio state.  For other chip doesn't have this limitation. 
-	if (((IS_RT3090(pAd) || IS_RT3572(pAd) || IS_RT3390(pAd)) && IS_VERSION_AFTER_F(pAd)) && IS_VERSION_AFTER_F(pAd)
+	if ((IS_RT3090(pAd) || IS_RT3572(pAd) ||
+		IS_RT3390(pAd) || IS_RT3593(pAd)) && IS_VERSION_AFTER_F(pAd)
 		&& (pAd->StaCfg.PSControl.field.rt30xxPowerMode == 3) 
 		&& (pAd->StaCfg.PSControl.field.EnableNewPS == TRUE))
 	{
+		if (IrqLock==FALSE)
 		RTMP_SEM_LOCK(&pAd->McuCmdLock);
 		if ((pAd->brt30xxBanMcuCmd == TRUE)
 			&& (Command != WAKE_MCU_CMD) && (Command != RFOFF_MCU_CMD))
 		{
+			if (IrqLock==FALSE)
 			RTMP_SEM_UNLOCK(&pAd->McuCmdLock);
 			DBGPRINT(RT_DEBUG_TRACE, (" Ban Mcu Cmd %x in sleep mode\n",  Command));
 			return FALSE;
@@ -428,30 +432,39 @@ INT RtmpAsicSendCommandToMcu(
 		{
 			pAd->brt30xxBanMcuCmd = FALSE;
 		}
-
+		if (IrqLock==FALSE)
 		RTMP_SEM_UNLOCK(&pAd->McuCmdLock);
 
 	}
-	if (((IS_RT3090(pAd) || IS_RT3572(pAd) || IS_RT3390(pAd)) && IS_VERSION_AFTER_F(pAd)) && IS_VERSION_AFTER_F(pAd)
+
+	if (Command == SLEEP_MCU_CMD)
+		pAd->LastMCUCmd = Command;
+
+	if ((IS_RT3090(pAd) || IS_RT3572(pAd) ||
+		IS_RT3390(pAd) || IS_RT3593(pAd)) && IS_VERSION_AFTER_F(pAd)
 		&& (pAd->StaCfg.PSControl.field.rt30xxPowerMode == 3) 
 		&& (pAd->StaCfg.PSControl.field.EnableNewPS == TRUE)
 		&& (Command == WAKE_MCU_CMD))
 	{
 
-		do
+		// don't check MailBox for 0x84, 0x31
+		if ((Command != 0x84) && (Command != WAKE_MCU_CMD))
 		{
-			RTMP_IO_FORCE_READ32(pAd, H2M_MAILBOX_CSR, &H2MMailbox.word);
-			if (H2MMailbox.field.Owner == 0)
-				break;
+			do
+			{
+				RTMP_IO_FORCE_READ32(pAd, H2M_MAILBOX_CSR, &H2MMailbox.word);
+				if (H2MMailbox.field.Owner == 0)
+					break;
 
-			RTMPusecDelay(2);
-			DBGPRINT(RT_DEBUG_INFO, ("AsicSendCommanToMcu::Mail box is busy\n"));
-		} while(i++ < 100);
+				RTMPusecDelay(2);
+				DBGPRINT(RT_DEBUG_INFO, ("AsicSendCommanToMcu::Mail box is busy\n"));
+			} while(i++ < 100);
 
-		if (i >= 100)
-		{
-			DBGPRINT_ERR(("H2M_MAILBOX still hold by MCU. command fail\n"));
-			return FALSE;
+			if (i >= 100)
+			{
+				DBGPRINT_ERR(("H2M_MAILBOX still hold by MCU. command fail\n"));
+				return FALSE;
+			}
 		}
 
 		H2MMailbox.field.Owner	  = 1;	   // pass ownership to MCU
@@ -467,8 +480,8 @@ INT RtmpAsicSendCommandToMcu(
 
 	}
 	else
-#endif // CONFIG_STA_SUPPORT //
 #endif // PCIE_PS_SUPPORT //
+#endif // CONFIG_STA_SUPPORT //
 	{
 	do
 	{
@@ -539,11 +552,12 @@ INT RtmpAsicSendCommandToMcu(
 	{
 	}
 }
-#ifdef PCIE_PS_SUPPORT
 #ifdef CONFIG_STA_SUPPORT
+#ifdef PCIE_PS_SUPPORT
 	// 3090 MCU Wakeup command needs more time to be stable. 
 	// Before stable, don't issue other MCU command to prevent from firmware error.
-	if (((IS_RT3090(pAd) || IS_RT3572(pAd) || IS_RT3390(pAd)) && IS_VERSION_AFTER_F(pAd)) && IS_VERSION_AFTER_F(pAd)
+	if ((IS_RT3090(pAd) || IS_RT3572(pAd)
+		|| IS_RT3390(pAd) || IS_RT3593(pAd)) && IS_VERSION_AFTER_F(pAd)
 		&& (pAd->StaCfg.PSControl.field.rt30xxPowerMode == 3) 
 		&& (pAd->StaCfg.PSControl.field.EnableNewPS == TRUE)
 		&& (Command == WAKE_MCU_CMD))
@@ -554,8 +568,11 @@ INT RtmpAsicSendCommandToMcu(
 		//pAd->brt30xxBanMcuCmd = FALSE;
 		//NdisReleaseSpinLock(&pAd->McuCmdLock);
 	}
-#endif // CONFIG_STA_SUPPORT //
 #endif // PCIE_PS_SUPPORT //	
-	
+#endif // CONFIG_STA_SUPPORT //
+
+	if (Command == WAKE_MCU_CMD)
+		pAd->LastMCUCmd = Command;
+
 	return TRUE;
 }

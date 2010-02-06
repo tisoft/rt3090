@@ -44,7 +44,11 @@
 #define ATE_ON(_p)              (((_p)->ate.Mode) != ATE_STOP)
 
 #ifdef RTMP_MAC_PCI
-#define ATE_BBP_IO_READ8_BY_REG_ID(_A, _I, _pV)        \
+NTSTATUS	ATE_RT3562WriteBBPR66(
+	IN	PRTMP_ADAPTER	pAd,
+	IN	UCHAR			Value);
+
+#define ATEPCIReadBBPRegister(_A, _I, _pV)        \
 {                                                       \
     BBP_CSR_CFG_STRUC  BbpCsr;                             \
     int             j, k;                               \
@@ -81,7 +85,7 @@
     }                                                   \
 }
 
-#define ATE_BBP_IO_WRITE8_BY_REG_ID(_A, _I, _V)        \
+#define ATEPCIWriteBBPRegister(_A, _I, _V)        \
 {                                                       \
     BBP_CSR_CFG_STRUC  BbpCsr;                             \
     int             BusyCnt;                            \
@@ -105,14 +109,18 @@
         ATEDBGPRINT(RT_DEBUG_ERROR, ("BBP write R%d fail\n", _I));     \
     }                                                   \
 }
+
+#define ATE_BBP_IO_READ8_BY_REG_ID(_A, _I, _pV)		ATEPCIReadBBPRegister(_A, _I, _pV)
+
+#define ATE_BBP_IO_WRITE8_BY_REG_ID(_A, _I, _V)		ATEPCIWriteBBPRegister(_A, _I, _V)
+
 #endif // RTMP_MAC_PCI //
 
 
-#ifdef RT30xx
-#define ATE_RF_IO_READ8_BY_REG_ID(_A, _I, _pV)     RTMP_RF_IO_READ8_BY_REG_ID(_A, _I, _pV)
-#define ATE_RF_IO_WRITE8_BY_REG_ID(_A, _I, _V)     RTMP_RF_IO_WRITE8_BY_REG_ID(_A, _I, _V)
-#endif // RT30xx //
-
+#ifdef RTMP_RF_RW_SUPPORT
+#define ATE_RF_IO_READ8_BY_REG_ID(_A, _I, _pV)     RT30xxReadRFRegister(_A, _I, _pV)
+#define ATE_RF_IO_WRITE8_BY_REG_ID(_A, _I, _V)     RT30xxWriteRFRegister(_A, _I, _V)
+#endif // RTMP_RF_RW_SUPPORT //
 
 VOID rt_ee_read_all(
 	IN  PRTMP_ADAPTER   pAd,
@@ -149,6 +157,7 @@ INT	Set_ATE_TX_POWER0_Proc(
 INT	Set_ATE_TX_POWER1_Proc(
 	IN	PRTMP_ADAPTER	pAd,
 	IN	PSTRING			arg);
+
 
 INT	Set_ATE_TX_Antenna_Proc(
 	IN	PRTMP_ADAPTER	pAd,
@@ -195,6 +204,7 @@ INT Set_ATE_Read_RF_Proc(
 	IN	PRTMP_ADAPTER	pAd, 
 	IN	PSTRING			arg);
 
+#ifndef RTMP_RF_RW_SUPPORT
 INT Set_ATE_Write_RF1_Proc(
 	IN	PRTMP_ADAPTER	pAd, 
 	IN	PSTRING			arg);
@@ -210,6 +220,7 @@ INT Set_ATE_Write_RF3_Proc(
 INT Set_ATE_Write_RF4_Proc(
 	IN	PRTMP_ADAPTER	pAd, 
 	IN	PSTRING			arg);
+#endif // RTMP_RF_RW_SUPPORT //
 
 INT Set_ATE_Load_E2P_Proc(
 	IN	PRTMP_ADAPTER	pAd, 
@@ -287,9 +298,6 @@ INT Set_RFWrite_Proc(
 
 VOID ATEAsicSwitchChannel(
 	IN PRTMP_ADAPTER pAd); 
-
-VOID ATEAsicAdjustTxPower(
-	IN PRTMP_ADAPTER pAd);
 
 VOID ATEDisableAsicProtect(
 	IN		PRTMP_ADAPTER	pAd);

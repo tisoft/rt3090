@@ -23,7 +23,6 @@
  * 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             * 
  *                                                                       * 
  *************************************************************************
-
     Module Name:
 	rt3090.h
  
@@ -57,11 +56,11 @@
 
 #ifdef CARRIER_DETECTION_SUPPORT
 #define TONE_RADAR_DETECT_SUPPORT
-#define CARRIER_SENSE_NEW_ALGO
 #endif // CARRIER_DETECTION_SUPPORT //
 
+#ifdef CONFIG_STA_SUPPORT
 #define PCIE_PS_SUPPORT
-
+#endif // CONFIG_STA_SUPPORT //
 #include "chip/mac_pci.h"
 #include "chip/rt30xx.h"
 
