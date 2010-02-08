@@ -6,57 +6,133 @@
 
 @DPATCH@
 diff -urNad rt3090~/Makefile rt3090/Makefile
---- rt3090~/Makefile	2009-12-17 22:38:51.000000000 +0100
-+++ rt3090/Makefile	2009-12-17 22:45:58.000000000 +0100
-@@ -154,30 +154,30 @@
- ifneq (,$(findstring 2.4,$(LINUX_SRC)))
- 	cp -f os/linux/Makefile.4 $(RT28xx_DIR)/os/linux/Makefile
- 	make -C $(RT28xx_DIR)/os/linux/
+--- rt3090~/Makefile	2010-02-07 09:18:00.000000000 +0100
++++ rt3090/Makefile	2010-02-08 11:23:42.000000000 +0100
+@@ -241,30 +241,6 @@
+ 	$(MAKE) -C $(RT28xx_DIR)/os/linux/
+ endif
+ 
 -ifeq ($(RT28xx_MODE),AP)
 -	cp -f $(RT28xx_DIR)/os/linux/rt$(CHIPSET)ap.o /tftpboot
+-ifeq ($(OSABL),YES)
+-	cp -f $(RT28xx_DIR)/os/linux/rtutil$(CHIPSET)ap.o /tftpboot
+-	cp -f $(RT28xx_DIR)/os/linux/rtnet$(CHIPSET)ap.o /tftpboot
+-endif
 -ifeq ($(PLATFORM),INF_AMAZON_SE)
 -	cp -f /tftpboot/rt2870ap.o /backup/ifx/build/root_filesystem/lib/modules/2.4.31-Amazon_SE-3.6.2.2-R0416_Ralink/kernel/drivers/net
 -endif
 -else	
 -ifeq ($(RT28xx_MODE),APSTA)
 -	cp -f $(RT28xx_DIR)/os/linux/rt$(CHIPSET)apsta.o /tftpboot
+-ifeq ($(OSABL),YES)
+-	cp -f $(RT28xx_DIR)/os/linux/rtutil$(CHIPSET)apsta.o /tftpboot
+-	cp -f $(RT28xx_DIR)/os/linux/rtnet$(CHIPSET)apsta.o /tftpboot
+-endif
 -else
 -	cp -f $(RT28xx_DIR)/os/linux/rt$(CHIPSET)sta.o /tftpboot
+-ifeq ($(OSABL),YES)
+-	cp -f $(RT28xx_DIR)/os/linux/rtutil$(CHIPSET)sta.o /tftpboot
+-	cp -f $(RT28xx_DIR)/os/linux/rtnet$(CHIPSET)sta.o /tftpboot
+-endif
 -endif	
 -endif	
-+#ifeq ($(RT28xx_MODE),AP)
-+#	cp -f $(RT28xx_DIR)/os/linux/rt$(CHIPSET)ap.o /tftpboot
-+#ifeq ($(PLATFORM),INF_AMAZON_SE)
-+#	cp -f /tftpboot/rt2870ap.o /backup/ifx/build/root_filesystem/lib/modules/2.4.31-Amazon_SE-3.6.2.2-R0416_Ralink/kernel/drivers/net
-+#endif
-+#else	
-+#ifeq ($(RT28xx_MODE),APSTA)
-+#	cp -f $(RT28xx_DIR)/os/linux/rt$(CHIPSET)apsta.o /tftpboot
-+#else
-+#	cp -f $(RT28xx_DIR)/os/linux/rt$(CHIPSET)sta.o /tftpboot
-+#endif	
-+#endif	
  else
- 	cp -f os/linux/Makefile.6 $(RT28xx_DIR)/os/linux/Makefile
- 	make  -C  $(LINUX_SRC) SUBDIRS=$(RT28xx_DIR)/os/linux modules
+ 
+ ifeq ($(OSABL),YES)
+@@ -288,29 +264,6 @@
+ 	$(MAKE) -C $(LINUX_SRC) SUBDIRS=$(RT28xx_DIR)/os/linux modules
+ endif
+ 
 -ifeq ($(RT28xx_MODE),AP)
 -	cp -f $(RT28xx_DIR)/os/linux/rt$(CHIPSET)ap.ko /tftpboot
+-ifeq ($(OSABL),YES)
+-	cp -f $(RT28xx_DIR)/os/linux/rtutil$(CHIPSET)ap.ko /tftpboot
+-	cp -f $(RT28xx_DIR)/os/linux/rtnet$(CHIPSET)ap.ko /tftpboot
+-endif
+-	rm -f os/linux/rt$(CHIPSET)ap.ko.lzma
+-	/root/bin/lzma e os/linux/rt$(CHIPSET)ap.ko os/linux/rt$(CHIPSET)ap.ko.lzma
 -else	
 -ifeq ($(RT28xx_MODE),APSTA)
 -	cp -f $(RT28xx_DIR)/os/linux/rt$(CHIPSET)apsta.ko /tftpboot
+-ifeq ($(OSABL),YES)
+-	cp -f $(RT28xx_DIR)/os/linux/rtutil$(CHIPSET)apsta.ko /tftpboot
+-	cp -f $(RT28xx_DIR)/os/linux/rtnet$(CHIPSET)apsta.ko /tftpboot
+-endif
 -else
 -	cp -f $(RT28xx_DIR)/os/linux/rt$(CHIPSET)sta.ko /tftpboot
--endif	
+-ifeq ($(OSABL),YES)
+-	cp -f $(RT28xx_DIR)/os/linux/rtutil$(CHIPSET)sta.ko /tftpboot
+-	cp -f $(RT28xx_DIR)/os/linux/rtnet$(CHIPSET)sta.ko /tftpboot
 -endif
-+#ifeq ($(RT28xx_MODE),AP)
-+#	cp -f $(RT28xx_DIR)/os/linux/rt$(CHIPSET)ap.ko /tftpboot
-+#else	
-+#ifeq ($(RT28xx_MODE),APSTA)
-+#	cp -f $(RT28xx_DIR)/os/linux/rt$(CHIPSET)apsta.ko /tftpboot
-+#else
-+#	cp -f $(RT28xx_DIR)/os/linux/rt$(CHIPSET)sta.ko /tftpboot
-+#endif	
-+#endif
+-endif
+-endif
  endif
  
- release:
+ 
+diff -urNad rt3090~/Makefile.rej rt3090/Makefile.rej
+--- rt3090~/Makefile.rej	1970-01-01 01:00:00.000000000 +0100
++++ rt3090/Makefile.rej	2010-02-08 11:21:16.000000000 +0100
+@@ -0,0 +1,63 @@
++***************
++*** 154,183 ****
++  ifneq (,$(findstring 2.4,$(LINUX_SRC)))
++  	cp -f os/linux/Makefile.4 $(RT28xx_DIR)/os/linux/Makefile
++  	make -C $(RT28xx_DIR)/os/linux/
++- ifeq ($(RT28xx_MODE),AP)
++- 	cp -f $(RT28xx_DIR)/os/linux/rt$(CHIPSET)ap.o /tftpboot
++- ifeq ($(PLATFORM),INF_AMAZON_SE)
++- 	cp -f /tftpboot/rt2870ap.o /backup/ifx/build/root_filesystem/lib/modules/2.4.31-Amazon_SE-3.6.2.2-R0416_Ralink/kernel/drivers/net
++- endif
++- else	
++- ifeq ($(RT28xx_MODE),APSTA)
++- 	cp -f $(RT28xx_DIR)/os/linux/rt$(CHIPSET)apsta.o /tftpboot
++- else
++- 	cp -f $(RT28xx_DIR)/os/linux/rt$(CHIPSET)sta.o /tftpboot
++- endif	
++- endif	
++  else
++  	cp -f os/linux/Makefile.6 $(RT28xx_DIR)/os/linux/Makefile
++  	make  -C  $(LINUX_SRC) SUBDIRS=$(RT28xx_DIR)/os/linux modules
++- ifeq ($(RT28xx_MODE),AP)
++- 	cp -f $(RT28xx_DIR)/os/linux/rt$(CHIPSET)ap.ko /tftpboot
++- else	
++- ifeq ($(RT28xx_MODE),APSTA)
++- 	cp -f $(RT28xx_DIR)/os/linux/rt$(CHIPSET)apsta.ko /tftpboot
++- else
++- 	cp -f $(RT28xx_DIR)/os/linux/rt$(CHIPSET)sta.ko /tftpboot
++- endif	
++- endif
++  endif
++  
++  release:
++--- 154,183 ----
++  ifneq (,$(findstring 2.4,$(LINUX_SRC)))
++  	cp -f os/linux/Makefile.4 $(RT28xx_DIR)/os/linux/Makefile
++  	make -C $(RT28xx_DIR)/os/linux/
+++ #ifeq ($(RT28xx_MODE),AP)
+++ #	cp -f $(RT28xx_DIR)/os/linux/rt$(CHIPSET)ap.o /tftpboot
+++ #ifeq ($(PLATFORM),INF_AMAZON_SE)
+++ #	cp -f /tftpboot/rt2870ap.o /backup/ifx/build/root_filesystem/lib/modules/2.4.31-Amazon_SE-3.6.2.2-R0416_Ralink/kernel/drivers/net
+++ #endif
+++ #else	
+++ #ifeq ($(RT28xx_MODE),APSTA)
+++ #	cp -f $(RT28xx_DIR)/os/linux/rt$(CHIPSET)apsta.o /tftpboot
+++ #else
+++ #	cp -f $(RT28xx_DIR)/os/linux/rt$(CHIPSET)sta.o /tftpboot
+++ #endif	
+++ #endif	
++  else
++  	cp -f os/linux/Makefile.6 $(RT28xx_DIR)/os/linux/Makefile
++  	make  -C  $(LINUX_SRC) SUBDIRS=$(RT28xx_DIR)/os/linux modules
+++ #ifeq ($(RT28xx_MODE),AP)
+++ #	cp -f $(RT28xx_DIR)/os/linux/rt$(CHIPSET)ap.ko /tftpboot
+++ #else	
+++ #ifeq ($(RT28xx_MODE),APSTA)
+++ #	cp -f $(RT28xx_DIR)/os/linux/rt$(CHIPSET)apsta.ko /tftpboot
+++ #else
+++ #	cp -f $(RT28xx_DIR)/os/linux/rt$(CHIPSET)sta.ko /tftpboot
+++ #endif	
+++ #endif
++  endif
++  
++  release:
