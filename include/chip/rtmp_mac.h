@@ -698,7 +698,7 @@ typedef	union	_US_CYC_CNT_STRUC	{
 	    ULONG  TestEn:1;
 	    ULONG  TestSel:8;
 	    ULONG  rsv1:7;
-	    ULONG  BtModeEn:1;
+	    ULONG  MiscModeEn:1;
 	    ULONG  UsCycCnt:8;
 	}	field;
 	ULONG			word;
@@ -707,7 +707,7 @@ typedef	union	_US_CYC_CNT_STRUC	{
 typedef	union	_US_CYC_CNT_STRUC	{
 	struct	{
 	    ULONG  UsCycCnt:8;
-		ULONG  BtModeEn:1;
+		ULONG  MiscModeEn:1;
 		ULONG  rsv1:7;
 		ULONG  TestSel:8;
 		ULONG  TestEn:1;
@@ -2648,6 +2648,8 @@ typedef union _RF_CSR_CFG_EXT_STRUC
 #define QID_MGMT                13
 #define QID_RX                  14
 #define QID_OTHER               15
+
+#define ACT_CNT 0x7030
 
 
 #endif // __RTMP_MAC_H__ //

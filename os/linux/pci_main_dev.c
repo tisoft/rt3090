@@ -82,6 +82,7 @@ static struct pci_device_id rt2860_pci_tbl[] __devinitdata =
 
 MODULE_DEVICE_TABLE(pci, rt2860_pci_tbl);
 #ifdef CONFIG_STA_SUPPORT
+MODULE_LICENSE("GPL");
 #ifdef MODULE_VERSION
 MODULE_VERSION(STA_DRIVER_VERSION);
 #endif
@@ -384,6 +385,10 @@ static INT __devinit   rt2860_probe(
 
 //All done, it's time to register the net device to linux kernel.
 	// Register this device
+#ifdef RT_CFG80211_SUPPORT
+	pAd->pCfgDev = &(pci_dev->dev);
+#endif // RT_CFG80211_SUPPORT //
+
 	rv = RtmpOSNetDevAttach(net_dev, &netDevHook);
 	if (rv)
 		goto err_out_free_netdev;
@@ -395,10 +400,6 @@ static INT __devinit   rt2860_probe(
 #ifdef KTHREAD_SUPPORT
 	init_waitqueue_head(&pAd->cmdQTask.kthread_q);
 #endif // KTHREAD_SUPPORT //
-
-#ifdef RT_CFG80211_SUPPORT
-	pAd->pCfgDev = &(pci_dev->dev);
-#endif // RT_CFG80211_SUPPORT //
 
 	DBGPRINT(RT_DEBUG_TRACE, ("<=== rt2860_probe\n"));
 

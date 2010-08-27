@@ -70,6 +70,10 @@
 #include "rtmp_chip.h"
 #include "rtmp_timer.h"
 
+#ifdef RT_CFG80211_SUPPORT
+#include "cfg80211extr.h"
+#endif // RT_CFG80211_SUPPORT //
+
 #include "oid.h"
 #include "mlme.h"
 #include "crypt_md5.h"
@@ -156,6 +160,7 @@
 #include "cfg80211.h"
 #endif // RT_CFG80211_SUPPORT //
 
+#include	"misc.h"
 
 #endif	// __RT_CONFIG_H__
 

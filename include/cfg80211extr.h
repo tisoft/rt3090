@@ -75,7 +75,7 @@ do {																			\
 #define RT_CFG80211_CRDA_REG_RULE_APPLY(__pAd)									\
 do {																			\
 	if ((__pAd->pCfg80211_CB != NULL) &&										\
-		(__pAd->CFG80211_RegHint != NULL))										\
+		(__pAd->CFG80211_RegRuleApply != NULL))									\
 		__pAd->CFG80211_RegRuleApply((VOID *)__pAd, NULL, __pAd->Cfg80211_Alpha2);\
 } while(0);
 

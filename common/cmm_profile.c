@@ -1970,6 +1970,15 @@ NDIS_STATUS	RTMPSetProfileParameters(
 		}
 #endif // SINGLE_SKU //
 
+		if (RTMPGetKeyParameter("WiMaxCoexistenceOn", tmpbuf, 10, pBuffer, TRUE))
+		{
+			if (simple_strtol(tmpbuf, 0, 10) == 0)
+				pAd->bWiMaxCoexistenceOn = FALSE;
+			else
+				pAd->bWiMaxCoexistenceOn = TRUE;
+	
+			DBGPRINT(RT_DEBUG_TRACE, ("WiMaxCoexistenceOn=%d\n", pAd->bWiMaxCoexistenceOn));
+		}
 
 	}while(0);
 

@@ -2824,6 +2824,7 @@ VOID AsicAdjustTxPower(
 	RTMP_INT_UNLOCK(&pAd->irq_lock, flags); 
 #endif // defined(RT3090) || defined(RT3592) || defined(RT3390) || defined(RT3593) //
 
+	TxPowerDown(pAd, Rssi, &DeltaPowerByBbpR1, &DeltaPwr);
 
 	TotalDeltaPower += DeltaPowerByBbpR1; // the transmit power controlled by the BBP R1
 	TotalDeltaPower += DeltaPwr; // the transmit power controlled by the MAC	

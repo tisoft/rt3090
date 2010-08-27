@@ -293,6 +293,9 @@ INT Set_SSID_Proc(
 		NdisMoveMemory(pAd->MlmeAux.Ssid, Ssid.Ssid, Ssid.SsidLength);
 		pAd->MlmeAux.SsidLen = (UCHAR)Ssid.SsidLength;
 
+		pAd->MlmeAux.AutoReconnectSsidLen = pAd->MlmeAux.SsidLen;
+		NdisMoveMemory(pAd->MlmeAux.AutoReconnectSsid, pAd->MlmeAux.Ssid, pAd->MlmeAux.SsidLen);
+
         pAd->MlmeAux.CurrReqIsFromNdis = TRUE;
         pAd->StaCfg.bScanReqIsFromWebUI = FALSE;
 		pAd->bConfigChanged = TRUE;

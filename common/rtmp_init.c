@@ -1945,6 +1945,9 @@ VOID	NICReadEEPROMParameters(
 		pAd->EEPROMDefaultValue[EEPROM_COUNTRY_REG_OFFSET] = value;
 	}
 
+	RT28xx_EEPROM_READ16(pAd, EEPROM_NIC3_OFFSET, value);
+	pAd->EEPROMDefaultValue[EEPROM_NIC_CFG3_OFFSET] = value;
+	pAd->NicConfig3.word = pAd->EEPROMDefaultValue[EEPROM_NIC_CFG3_OFFSET];
 
 	for(i = 0; i < 8; i++)
 	{
@@ -4388,6 +4391,10 @@ RTMP_SET_PSFLAG(pAd, fRTMP_PS_CAN_GO_SLEEP);
 	}
 #endif // RT3593 //
 
+	pAd->bHWCoexistenceInit = FALSE;
+	pAd->bWiMaxCoexistenceOn = FALSE;
+	MiscUserCfgInit(pAd);
+
 
 	DBGPRINT(RT_DEBUG_TRACE, ("<-- UserCfgInit\n"));
 }
@@ -4841,6 +4848,18 @@ VOID RTMPEnableRxTx(
 	}
 #endif // CONFIG_STA_SUPPORT //
 	
+	if (pAd->bHWCoexistenceInit)
+	{
+		if (IS_ENABLE_WIFI_ACTIVE_PULL_LOW_BY_FORCE(pAd))
+		{
+			RTMP_IO_WRITE32(pAd, MAC_SYS_CTRL, WLAN_WIFI_ACT_PULL_LOW);
+		}
+		else
+		{
+			RTMP_IO_WRITE32(pAd, MAC_SYS_CTRL, WLAN_WIFI_ACT_PULL_HIGH);
+		}
+	}
+	else
 	{
 		RTMP_IO_WRITE32(pAd, MAC_SYS_CTRL, 0xc);
 	}
@@ -5322,6 +5341,6 @@ EXPORT_SYMBOL(RTMPSendDLSTearDownFrame);
 #ifdef DFS_SUPPORT
 #endif // DFS_SUPPORT //
 
-
+EXPORT_SYMBOL(MiscInit);
 
 #endif // OS_ABL_SUPPORT //

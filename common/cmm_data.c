@@ -1181,6 +1181,7 @@ VOID RTMPWriteTxWI(
 			BASize =7;
 	}
 	pTxWI->BAWinSize = BASize;
+	TxBaSizeDown(pAd, pTxWI);
 	pTxWI->ShortGI = pTransmit->field.ShortGI;
 	pTxWI->STBC = pTransmit->field.STBC;
 #endif // DOT11_N_SUPPORT //
@@ -1231,6 +1232,7 @@ VOID RTMPWriteTxWI(
 		{
 			pTxWI->MpduDensity = pMac->MpduDensity;
 		}
+		TxBaDensityDown(pAd, pTxWI);
 	}
 #endif // DOT11_N_SUPPORT //
 
@@ -1339,6 +1341,7 @@ VOID RTMPWriteTxWI_Data(
 
 
 	pTxWI->BAWinSize = BASize;
+	TxBaSizeDown(pAd, pTxWI);
 	pTxWI->ShortGI = pTransmit->field.ShortGI;
 	pTxWI->STBC = pTransmit->field.STBC;
 #endif // DOT11_N_SUPPORT //
@@ -1373,6 +1376,7 @@ VOID RTMPWriteTxWI_Data(
 		{
 			pTxWI->MpduDensity = pMacEntry->MpduDensity;
 		}
+		TxBaDensityDown(pAd, pTxWI);
 	}
 #endif // DOT11_N_SUPPORT //
 	
@@ -1408,6 +1412,7 @@ VOID RTMPWriteTxWI_Cache(
 	PHTTRANSMIT_SETTING	/*pTxHTPhyMode,*/ pTransmit;
 	PMAC_TABLE_ENTRY	pMacEntry;
 #ifdef DOT11_N_SUPPORT
+	UCHAR				BASize;
 #endif // DOT11_N_SUPPORT //
 	
 	//
@@ -1463,6 +1468,32 @@ VOID RTMPWriteTxWI_Cache(
 		}
     }
 
+	// John tune the performace with Intel Client in 20 MHz performance
+	BASize = pAd->CommonCfg.TxBASize;
+	if((pTxBlk->TxFrameType == TX_AMPDU_FRAME) && (pMacEntry))
+	{
+		UCHAR		RABAOriIdx = 0; //The RA's BA Originator table index.
+					
+		RABAOriIdx = pTxBlk->pMacEntry->BAOriWcidArray[pTxBlk->UserPriority];
+		BASize = pAd->BATable.BAOriEntry[RABAOriIdx].BAWinSize;
+	}
+	pTxWI->BAWinSize = BASize;
+
+	TxBaSizeDown(pAd, pTxWI);
+	
+	if(pMacEntry)
+	{
+		if (pMacEntry->bIAmBadAtheros && (pMacEntry->WepStatus != Ndis802_11WEPDisabled))
+		{
+			pTxWI->MpduDensity = 7;
+		}
+		else
+		{
+			pTxWI->MpduDensity = pMacEntry->MpduDensity;
+		}
+
+		TxBaDensityDown(pAd, pTxWI);
+	}
 #endif // DOT11_N_SUPPORT //
 
 #ifdef DBG_DIAGNOSE
