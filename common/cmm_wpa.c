@@ -4007,6 +4007,8 @@ VOID WPAInstallSharedKey(
 		pSharedKey->CipherAlg = CIPHER_TKIP;
 	else if (GroupCipher == Ndis802_11Encryption3Enabled)
 		pSharedKey->CipherAlg = CIPHER_AES;
+	else if (GroupCipher == Ndis802_11GroupWEP104Enabled)
+		pSharedKey->CipherAlg = CIPHER_WEP128;
 	else
 	{
 		DBGPRINT(RT_DEBUG_ERROR, ("%s : fails (IF/ra%d) \n", 

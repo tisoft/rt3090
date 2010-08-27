@@ -77,6 +77,7 @@
 
 
 
+#include	"misc_cmm.h"
 
 typedef struct _RTMP_ADAPTER		RTMP_ADAPTER;
 typedef struct _RTMP_ADAPTER		*PRTMP_ADAPTER;
@@ -1159,6 +1160,7 @@ typedef struct _MLME_STRUCT {
 
 	UINT                    ShiftReg;
 
+	RALINK_TIMER_STRUCT     MiscDetectTimer;
 	RALINK_TIMER_STRUCT     PeriodicTimer;
 	RALINK_TIMER_STRUCT     APSDPeriodicTimer;
 	RALINK_TIMER_STRUCT     LinkDownTimer;
@@ -2549,6 +2551,7 @@ struct _RTMP_ADAPTER
 
 	EEPROM_ANTENNA_STRUC    Antenna;                            // Since ANtenna definition is different for a & g. We need to save it for future reference.
 	EEPROM_NIC_CONFIG2_STRUC    NicConfig2;
+	EEPROM_NIC_CONFIG3_STRUC    NicConfig3;
 
 	// This soft Rx Antenna Diversity mechanism is used only when user set 
 	// RX Antenna = DIVERSITY ON
@@ -2884,6 +2887,8 @@ struct _RTMP_ADAPTER
 	BOOLEAN FlgCfg80211Scanning;
 	BOOLEAN FlgCfg80211Connecting;
 	UCHAR Cfg80211_Alpha2[2];
+
+	CFG80211_FUNC_OPS;
 #endif // RT_CFG80211_SUPPORT //
 #endif // LINUX //
 
@@ -2893,6 +2898,20 @@ struct _RTMP_ADAPTER
 	UCHAR	*pIe;
 	INT		IeLen;
 	} ProbeRespIE[MAX_LEN_OF_BSS_TABLE];
+	BOOLEAN 				bHWCoexistenceInit;
+	BOOLEAN 				bWiMaxCoexistenceOn;
+	BOOLEAN 				bMiscOn;
+#ifdef DOT11_N_SUPPORT
+	BOOLEAN 				bPermitRecBaDown;
+	BOOLEAN 				bPermitMcsDown;
+	BOOLEAN 				bPermitTxBaSizeDown;
+	BOOLEAN 				bPermitTxBaDensityDown;
+#endif // DOT11_N_SUPPORT //
+	BOOLEAN 				bPermitTxPowerDown;
+	BOOLEAN 				bPermitLnaGainDown;
+	ULONG					ulConfiguration;
+	ULONG					ulActiveCountPastPeriod; /* Record Buletooth activities in the past period */
+	BUSY_DEGREE	BusyDegree; /* BT Device Status */
 };
 
 #ifdef RTMP_INTERNAL_TX_ALC

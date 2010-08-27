@@ -617,7 +617,7 @@ VOID CntlOidRTBssidProc(
 			if ((pAd->StaCfg.AuthMode == Ndis802_11AuthModeWPA) || (pAd->StaCfg.AuthMode == Ndis802_11AuthModeWPAPSK))
 			{
 				pAd->StaCfg.GroupCipher = pInBss->WPA.GroupCipher;
-				
+
 				if (pAd->StaCfg.WepStatus == pInBss->WPA.PairCipher)
 					pAd->StaCfg.PairCipher = pInBss->WPA.PairCipher;
 				else if (pInBss->WPA.PairCipherAux != Ndis802_11WEPDisabled)
@@ -2444,7 +2444,7 @@ VOID IterateOnBssTab(
 		if ((pAd->StaCfg.AuthMode == Ndis802_11AuthModeWPA) || (pAd->StaCfg.AuthMode == Ndis802_11AuthModeWPAPSK))
 		{
 			pAd->StaCfg.GroupCipher = pInBss->WPA.GroupCipher;
-			
+	
 			if (pAd->StaCfg.WepStatus == pInBss->WPA.PairCipher)
 				pAd->StaCfg.PairCipher = pInBss->WPA.PairCipher;
 			else if (pInBss->WPA.PairCipherAux != Ndis802_11WEPDisabled)

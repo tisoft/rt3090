@@ -72,6 +72,8 @@ int rt28xx_open(struct net_device *net_dev);
 // private function prototype
 static INT rt28xx_send_packets(IN struct sk_buff *skb_p, IN struct net_device *net_dev);
 
+VOID InitHWCoexistence(
+	IN PRTMP_ADAPTER pAd);
 
 
 
@@ -551,7 +553,7 @@ int rt28xx_open(IN PNET_DEV dev)
 
 #endif // CONFIG_STA_SUPPORT //
 
-
+	InitHWCoexistence(pAd);
 
 #ifdef VENDOR_FEATURE2_SUPPORT
 	printk("Number of Packet Allocated in open = %d\n", pAd->NumOfPktAlloc);
@@ -999,4 +1001,54 @@ int RtmpOSIRQRelease(IN PNET_DEV pNetDev)
 	return 0;
 }
 
+VOID InitHWCoexistence(
+	IN PRTMP_ADAPTER pAd)
+{
+	ULONG				GPIO = 0;
+	US_CYC_CNT_STRUC	USCycCnt;
+	
+	if (pAd == NULL)
+	{
+		return;
+	}
+
+	DBGPRINT(RT_DEBUG_TRACE,("In InitHWCoexistence ...\n"));	
+	
+	if (
+		((pAd->bMiscOn == TRUE) && 
+		(pAd->NicConfig2.field.CoexBit == TRUE)) || 
+		(pAd->bWiMaxCoexistenceOn == TRUE))
+	{
+		DBGPRINT(RT_DEBUG_TRACE,("Coexistence Initialize Hardware\n"));
+		
+		RTMP_IO_READ32(pAd, US_CYC_CNT, &USCycCnt.word);
+		if (IS_ENABLE_WIFI_ACTIVE_PULL_LOW_BY_FORCE(pAd))
+			USCycCnt.field.MiscModeEn = 0;
+		else
+		USCycCnt.field.MiscModeEn = 1;
+		RTMP_IO_WRITE32(pAd, US_CYC_CNT, USCycCnt.word);
+
+		/* Set bit 0 & 1 to zero to use GPIO 0 & 1 */
+		RTMP_IO_READ32(pAd, GPIO_SWITCH, &GPIO);
+		GPIO = (GPIO & 0xfffffffc);	
+		RTMP_IO_WRITE32(pAd, GPIO_SWITCH, GPIO);
+
+		if (IS_ENABLE_WIFI_ACTIVE_PULL_LOW_BY_FORCE(pAd))
+		{
+			ULONG Value = 0;
+			
+			RTMP_IO_READ32( pAd, GPIO_CTRL_CFG, &Value);
+			Value &= ~(0x0202);
+			Value |= 0x0;
+			RTMP_IO_WRITE32( pAd, GPIO_CTRL_CFG, Value);
+		}
+
+		
+		MiscInit(pAd);
+
+		pAd->bHWCoexistenceInit = TRUE;
+		
+		DBGPRINT(RT_DEBUG_TRACE,("Hardware Coexistence Initialized\n"));			
+	}
+}
 

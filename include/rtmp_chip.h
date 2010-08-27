@@ -159,6 +159,7 @@
 #define EEPROM_LED1_OFFSET			0x3c
 #define EEPROM_LED2_OFFSET			0x3e
 #define EEPROM_LED3_OFFSET			0x40
+#define	EEPROM_NIC3_OFFSET			0x42
 #define EEPROM_LNA_OFFSET			0x44
 #define EEPROM_RSSI_BG_OFFSET		0x46
 #define EEPROM_TXMIXER_GAIN_2_4G	0x48
@@ -488,7 +489,7 @@ typedef	union	_EEPROM_ANTENNA_STRUC	{
 typedef	union _EEPROM_NIC_CINFIG2_STRUC	{
 	struct	{
 		USHORT		DACTestBit:1;			// control if driver should patch the DAC issue
-		USHORT		BTCoexist:1;			// Wi-Fi / Bluetooth coexistence
+		USHORT		CoexBit:1;
 		USHORT		bInternalTxALC:1; // Internal Tx ALC
 		USHORT		AntOpt:1; // Fix Antenna Option: 0:Main; 1: Aux
 		USHORT		AntDiversity:1;			// Antenna diversity
@@ -523,13 +524,38 @@ typedef	union _EEPROM_NIC_CINFIG2_STRUC	{
 		USHORT		AntDiversity:1;			// Antenna diversity
 		USHORT		AntOpt:1; // Fix Antenna Option: 0:Main; 1: Aux
 		USHORT		bInternalTxALC:1; // Internal Tx ALC
-		USHORT		BTCoexist:1;			// Wi-Fi / Bluetooth coexistence
+		USHORT		CoexBit:1;
 		USHORT		DACTestBit:1;			// control if driver should patch the DAC issue
 	}	field;
 	USHORT			word;
 }	EEPROM_NIC_CONFIG2_STRUC, *PEEPROM_NIC_CONFIG2_STRUC;
 #endif
 
+#ifdef RTMP_PCI_SUPPORT
+#ifdef RT_BIG_ENDIAN
+typedef	union	_EEPROM_NIC_CINFIG3_STRUC	{
+	struct	{
+		USHORT		Rsv1:5;				// must be 0
+		USHORT		CrystalShared:2;
+		USHORT		Rsv2:1;
+		USHORT		TxStream:4;			// Number of Tx stream
+		USHORT		RxStream:4;			// Number of rx stream
+	}	field;
+	USHORT			word;
+}	EEPROM_NIC_CONFIG3_STRUC, *PEEPROM_NIC_CONFIG3_STRUC;
+#else
+typedef	union	_EEPROM_NIC_CINFIG3_STRUC	{
+	struct	{
+		USHORT		RxStream:4;			// Number of rx stream
+		USHORT		TxStream:4;			// Number of Tx stream
+		USHORT		Rsv2:1;
+		USHORT		CrystalShared:2;
+		USHORT		Rsv1:5;				// must be 0
+	}	field;
+	USHORT			word;
+}	EEPROM_NIC_CONFIG3_STRUC, *PEEPROM_NIC_CONFIG3_STRUC;
+#endif
+#endif // RTMP_PCI_SUPPORT //
 
 //
 // TX_PWR Value valid range 0xFA(-6) ~ 0x24(36)

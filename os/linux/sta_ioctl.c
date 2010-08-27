@@ -343,11 +343,13 @@ int rt_ioctl_giwrange(struct net_device *dev,
 	}
 
 #ifndef NATIVE_WPA_SUPPLICANT_SUPPORT
+#ifndef RT_CFG80211_SUPPORT
 	if(!RTMP_TEST_FLAG(pAd, fRTMP_ADAPTER_INTERRUPT_IN_USE))
 	{
     	DBGPRINT(RT_DEBUG_TRACE, ("INFO::Network is down!\n"));
     	return -ENETDOWN;   
 	}
+#endif // RT_CFG80211_SUPPORT //
 #endif // NATIVE_WPA_SUPPLICANT_SUPPORT //
 
 	DBGPRINT(RT_DEBUG_TRACE ,("===>rt_ioctl_giwrange\n"));
@@ -2101,16 +2103,20 @@ int rt_ioctl_siwauth(struct net_device *dev,
             DBGPRINT(RT_DEBUG_TRACE, ("%s::IW_AUTH_WPA_VERSION - param->value = %d!\n", __FUNCTION__, param->value));
     		break;
     	case IW_AUTH_80211_AUTH_ALG: 
-			if (param->value & IW_AUTH_ALG_SHARED_KEY) 
-            {
-				pAd->StaCfg.AuthMode = Ndis802_11AuthModeShared;
-			} 
-            else if (param->value & IW_AUTH_ALG_OPEN_SYSTEM) 
-            {
-				pAd->StaCfg.AuthMode = Ndis802_11AuthModeOpen;
-			} 
-            else
-				return -EINVAL;
+		if (param->value == IW_AUTH_ALG_OPEN_SYSTEM) 
+		{
+			pAd->StaCfg.AuthMode = Ndis802_11AuthModeOpen;
+		}
+		else if (param->value == IW_AUTH_ALG_SHARED_KEY) 
+		{
+			pAd->StaCfg.AuthMode = Ndis802_11AuthModeShared;
+		} 
+		else if (param->value == (IW_AUTH_ALG_OPEN_SYSTEM | IW_AUTH_ALG_SHARED_KEY))
+		{
+			pAd->StaCfg.AuthMode = Ndis802_11AuthModeAutoSwitch;
+		} 
+		else
+			return -EINVAL;
             DBGPRINT(RT_DEBUG_TRACE, ("%s::IW_AUTH_80211_AUTH_ALG - param->value = %d!\n", __FUNCTION__, param->value));
 			break;
     	case IW_AUTH_WPA_ENABLED:
@@ -2173,13 +2179,32 @@ void fnSetCipherKey(
     NdisMoveMemory(pAd->SharedKey[BSS0][keyIdx].RxMic, ext->key + LEN_TK + LEN_TKIP_MIC, LEN_TKIP_MIC);
     pAd->SharedKey[BSS0][keyIdx].CipherAlg = CipherAlg;
 
-    // Update group key information to ASIC Shared Key Table	   
-	AsicAddSharedKeyEntry(pAd, 
+    // Update group key information to ASIC Shared Key Table	  
+	if (!bGTK) 
+	{
+		AsicAddPairwiseKeyEntry(
+					pAd,
+					1, 
+					&pAd->SharedKey[BSS0][keyIdx]);
+
+		// Update ASIC WCID attribute table and IVEIV table
+		RTMPSetWcidSecurityInfo(pAd,
+					BSS0,
+					keyIdx,
+					pAd->SharedKey[BSS0][keyIdx].CipherAlg,
+					BSSID_WCID,
+					PAIRWISEKEYTABLE);
+	}
+	else
+	{
+		AsicAddSharedKeyEntry(pAd, 
 						  BSS0, 
 						  keyIdx, 
 						  &pAd->SharedKey[BSS0][keyIdx]);
+	}
 			
 	// Update ASIC WCID attribute table and IVEIV table
+#if 0
 	if (!bGTK)
 		RTMPSetWcidSecurityInfo(pAd, 
 	    						BSS0, 
@@ -2187,6 +2212,7 @@ void fnSetCipherKey(
 	    						pAd->SharedKey[BSS0][keyIdx].CipherAlg, 
 	       						BSSID_WCID, 
 	       						SHAREDKEYTABLE);
+#endif
 }
 
 int rt_ioctl_siwencodeext(struct net_device *dev,
@@ -2254,7 +2280,7 @@ int rt_ioctl_siwencodeext(struct net_device *dev,
                 NdisZeroMemory(pAd->SharedKey[BSS0][keyIdx].Key,  16);
 			    NdisMoveMemory(pAd->SharedKey[BSS0][keyIdx].Key, ext->key, ext->key_len);
 
-				if (pAd->StaCfg.GroupCipher == Ndis802_11WEPEnabled ||
+				if (pAd->StaCfg.GroupCipher == Ndis802_11WEPEnabled || 
 					pAd->StaCfg.GroupCipher == Ndis802_11GroupWEP40Enabled ||					
 					pAd->StaCfg.GroupCipher == Ndis802_11GroupWEP104Enabled)				
 				{										
@@ -2262,10 +2288,13 @@ int rt_ioctl_siwencodeext(struct net_device *dev,
 					AsicAddSharedKeyEntry(pAd, BSS0, keyIdx, &pAd->SharedKey[BSS0][keyIdx]);										
 
 					// Assign pairwise key info
-					RTMPSetWcidSecurityInfo(pAd,
+#ifdef WPA_SUPPLICANT_SUPPORT
+					if (pAd->StaCfg.IEEE8021X)
+#endif // WPA_SUPPLICANT_SUPPORT //
+						RTMPSetWcidSecurityInfo(pAd,
 										 	BSS0, 
 										 	keyIdx, 
-										 	pAd->SharedKey[BSS0][keyIdx].CipherAlg, 												 
+										 	pAd->SharedKey[BSS0][keyIdx].CipherAlg,
 										 	BSSID_WCID, 
 										 	SHAREDKEYTABLE);
 					STA_PORT_SECURED(pAd);					    				

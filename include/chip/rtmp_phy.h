@@ -720,7 +720,7 @@ typedef union _BBP_R110_STRUC {
 	This marco used for the BBP write operation which didn't need via MCU.
 */
 #define BBP_IO_WRITE8_BY_REG_ID(_A, _I, _pV)			\
-	RTMP_BBP_IO_WRITE8((_A), (_I), (_pV), FALSE)
+	RTMP_BBP_IO_WRITE8((_A), (_I), (_pV), FALSE, FALSE)
 
 /*
 	This marco used for the BBP write operation which need via MCU.

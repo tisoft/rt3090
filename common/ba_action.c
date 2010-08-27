@@ -1210,6 +1210,7 @@ VOID PeerAddBAReqAction(
 	ULONG       FrameLen;
 	PULONG      ptemp;
 	PMAC_TABLE_ENTRY	pMacEntry;
+	PFRAME_802_11 		pFrame;
 
 	DBGPRINT(RT_DEBUG_TRACE, ("%s ==> (Wcid = %d)\n", __FUNCTION__, Elem->Wcid));
 
@@ -1224,6 +1225,18 @@ VOID PeerAddBAReqAction(
 	ptemp = (PULONG)Elem->Msg;
 	//DBGPRINT_RAW(RT_DEBUG_EMU, ("%08x:: %08x:: %08x:: %08x:: %08x:: %08x:: %08x:: %08x:: %08x\n", *(ptemp), *(ptemp+1), *(ptemp+2), *(ptemp+3), *(ptemp+4), *(ptemp+5), *(ptemp+6), *(ptemp+7), *(ptemp+8)));
 
+	if ((pAd->bHWCoexistenceInit == TRUE) && 
+		(IS_ENABLE_REJECT_ORE_BA_BY_TIMER(pAd)) && 
+		(pAd->bPermitRecBaDown == TRUE))
+	{
+		//BATableTearRECEntry(pAd, 0, BSSID_WCID,TRUE);
+
+		Status = REASON_DECLINED;
+		pFrame = (PFRAME_802_11)Elem->Msg;
+		COPY_MAC_ADDR(pAddr, pFrame->Hdr.Addr2);	
+		DBGPRINT(RT_DEBUG_TRACE,("ACTION - PeerBAAction() Status = %d\n", Status));
+	}
+	else 
 	if (PeerAddBAReqActionSanity(pAd, Elem->Msg, Elem->MsgLen, pAddr))
 	{
 

@@ -765,6 +765,10 @@ VOID MlmeHalt(
 	RTMPCancelTimer(&pAd->Mlme.PeriodicTimer,		&Cancelled);
 	RTMPCancelTimer(&pAd->Mlme.RxAntEvalTimer,		&Cancelled);
 
+	if ((pAd->bHWCoexistenceInit == TRUE) && IS_ENABLE_MISC_TIMER(pAd))
+	{
+		RTMPCancelTimer(&pAd->Mlme.MiscDetectTimer,&Cancelled);
+	}
 
 
 
@@ -1134,6 +1138,18 @@ else
 			{
 				RTMP_IO_WRITE32(pAd, MAC_SYS_CTRL, 0x1);
 				RTMPusecDelay(1);
+				if (pAd->bHWCoexistenceInit)
+				{
+					if (IS_ENABLE_WIFI_ACTIVE_PULL_LOW_BY_FORCE(pAd))
+					{
+						RTMP_IO_WRITE32(pAd, MAC_SYS_CTRL, WLAN_WIFI_ACT_PULL_LOW);
+					}
+					else
+					{
+						RTMP_IO_WRITE32(pAd, MAC_SYS_CTRL, WLAN_WIFI_ACT_PULL_HIGH);
+					}
+				}
+				else
 				{
 					RTMP_IO_WRITE32(pAd, MAC_SYS_CTRL, 0xC);
 				}
@@ -2323,6 +2339,7 @@ VOID MlmeDynamicTxRateSwitching(
 		pCurrTxRate = (PRTMP_TX_RATE_SWITCH) &pTable[(CurrRateIdx+1)*5];
 
 #ifdef DOT11_N_SUPPORT
+		McsDown(pAd, CurrRateIdx, pCurrTxRate, &UpRateIdx, &DownRateIdx);
 
 		if ((Rssi > -65) && (pCurrTxRate->Mode >= MODE_HTMIX))
 		{
@@ -2542,6 +2559,9 @@ VOID MlmeDynamicTxRateSwitching(
 					TxRateIdx = MCS0;
 			}
 
+#ifdef DOT11_N_SUPPORT			
+			McsDown2(pAd, MCS3, MCS4, MCS5, MCS6, &TxRateIdx);
+#endif // DOT11_N_SUPPORT //
 
 	//		if (TxRateIdx != pAd->CommonCfg.TxRateIndex)
 			{
@@ -2597,6 +2617,14 @@ VOID MlmeDynamicTxRateSwitching(
 
 			pEntry->PER[CurrRateIdx] = (UCHAR)TxErrorRatio;
 
+#ifdef DOT11_N_SUPPORT			
+			if ((pAd->bHWCoexistenceInit == TRUE) && 
+				IS_ENABLE_RATE_ADAPTIVE_BY_TIMER(pAd) &&
+				(CurrRateIdx > UpRateIdx)) //force to downgrade TX
+			{
+				bTrainUpDown = TRUE;
+			}
+#endif // DOT11_N_SUPPORT //
 			if (bTrainUpDown)
 			{
 				// perform DRS - consider TxRate Down first, then rate up.
@@ -2608,6 +2636,14 @@ VOID MlmeDynamicTxRateSwitching(
 				{
 					pEntry->CurrTxRateIndex = UpRateIdx;
 				}
+#ifdef DOT11_N_SUPPORT			
+				if ((pAd->bHWCoexistenceInit == TRUE) && 
+					IS_ENABLE_RATE_ADAPTIVE_BY_TIMER(pAd) &&
+					(CurrRateIdx > UpRateIdx)) // force to downgrade TX
+				{
+					pEntry->CurrTxRateIndex = DownRateIdx;
+				}
+#endif // DOT11_N_SUPPORT //
 			}
 		} while (FALSE);
 
@@ -2755,6 +2791,7 @@ VOID StaQuickResponeForRateUpExec(
 	pCurrTxRate = (PRTMP_TX_RATE_SWITCH) &pTable[(CurrRateIdx+1)*5];
 
 #ifdef DOT11_N_SUPPORT
+	McsDown(pAd, CurrRateIdx, pCurrTxRate, &UpRateIdx, &DownRateIdx);
 
 	if ((Rssi > -65) && (pCurrTxRate->Mode >= MODE_HTMIX))
 	{
@@ -2869,6 +2906,14 @@ VOID StaQuickResponeForRateUpExec(
 		}
 	}while (FALSE);
 
+#ifdef DOT11_N_SUPPORT
+	if ((pAd->bHWCoexistenceInit == TRUE) && 
+		IS_ENABLE_RATE_ADAPTIVE_BY_TIMER(pAd) &&
+		(CurrRateIdx > UpRateIdx)) // force to downgrade TX
+	{
+		pEntry->CurrTxRateIndex = DownRateIdx;
+	}
+#endif // DOT11_N_SUPPORT //
 
 	// if rate-up happen, clear all bad history of all TX rates
 	if (pAd->CommonCfg.TxRateIndex > CurrRateIdx)

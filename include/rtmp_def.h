@@ -172,6 +172,8 @@
 #endif // XLINK_SUPPORT //
 #endif // CONFIG_STA_SUPPORT //
 
+#define WLAN_WIFI_ACT_PULL_HIGH 0x124C
+#define WLAN_WIFI_ACT_PULL_LOW  0x024C
 
 //
 //  RTMP_ADAPTER flags
