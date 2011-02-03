@@ -1,5 +1,0 @@
-#!/bin/sh
-ifconfig ra0 down
-rmmod rt3090sta
-insmod rt3090sta.ko
-ifconfig ra0 up

@@ -5,35 +5,26 @@
  * Hsinchu County 302,
  * Taiwan, R.O.C.
  *
- * (c) Copyright 2002-2007, Ralink Technology, Inc.
+ * (c) Copyright 2002-2010, Ralink Technology, Inc.
  *
- * This program is free software; you can redistribute it and/or modify  * 
- * it under the terms of the GNU General Public License as published by  * 
- * the Free Software Foundation; either version 2 of the License, or     * 
- * (at your option) any later version.                                   * 
- *                                                                       * 
- * This program is distributed in the hope that it will be useful,       * 
- * but WITHOUT ANY WARRANTY; without even the implied warranty of        * 
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         * 
- * GNU General Public License for more details.                          * 
- *                                                                       * 
- * You should have received a copy of the GNU General Public License     * 
- * along with this program; if not, write to the                         * 
- * Free Software Foundation, Inc.,                                       * 
- * 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             * 
- *                                                                       * 
- *************************************************************************
+ * This program is free software; you can redistribute it and/or modify  *
+ * it under the terms of the GNU General Public License as published by  *
+ * the Free Software Foundation; either version 2 of the License, or     *
+ * (at your option) any later version.                                   *
+ *                                                                       *
+ * This program is distributed in the hope that it will be useful,       *
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of        *
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
+ * GNU General Public License for more details.                          *
+ *                                                                       *
+ * You should have received a copy of the GNU General Public License     *
+ * along with this program; if not, write to the                         *
+ * Free Software Foundation, Inc.,                                       *
+ * 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
+ *                                                                       *
+ *************************************************************************/
 
-	Module Name:
-	oid.h
 
-	Abstract:
-
-	Revision History:
-	Who			When			What
-	--------	----------		----------------------------------------------
-	Name		Date			Modification logs
-*/
 #ifndef _OID_H_
 #define _OID_H_
 
@@ -825,7 +816,7 @@ typedef struct _NDIS_802_11_CAPABILITY
 
 
 #ifdef CONFIG_STA_SUPPORT
-#define RT_PRIV_IOCTL							(SIOCIWFIRSTPRIV + 0x01) // Sync. with AP for wsc upnp daemon
+#define RT_PRIV_IOCTL								(SIOCIWFIRSTPRIV + 0x01)
 #define RTPRIV_IOCTL_SET							(SIOCIWFIRSTPRIV + 0x02)
 
 #ifdef DBG
@@ -839,9 +830,9 @@ typedef struct _NDIS_802_11_CAPABILITY
 #endif // DBG //
 
 #ifdef RALINK_ATE
-#ifdef RALINK_28xx_QA
+#ifdef RALINK_QA
 #define RTPRIV_IOCTL_ATE							(SIOCIWFIRSTPRIV + 0x08)
-#endif // RALINK_28xx_QA //
+#endif // RALINK_QA //
 #endif // RALINK_ATE //
 
 #define RTPRIV_IOCTL_STATISTICS                     (SIOCIWFIRSTPRIV + 0x09)
@@ -850,6 +841,7 @@ typedef struct _NDIS_802_11_CAPABILITY
 #define RTPRIV_IOCTL_GSITESURVEY					(SIOCIWFIRSTPRIV + 0x0D)
 #define RT_PRIV_IOCTL_EXT							(SIOCIWFIRSTPRIV + 0x0E) // Sync. with RT61 (for wpa_supplicant)
 #define RTPRIV_IOCTL_GET_MAC_TABLE					(SIOCIWFIRSTPRIV + 0x0F)
+#define RTPRIV_IOCTL_GET_MAC_TABLE_STRUCT					(SIOCIWFIRSTPRIV + 0x1F)	// modified by Red@Ralink, 2009/09/30
 
 #define RTPRIV_IOCTL_SHOW							(SIOCIWFIRSTPRIV + 0x11)
 enum {    
@@ -929,6 +921,7 @@ enum {
 #define RT_OID_WSC_SERIAL_NO						0x0759
 #define RT_OID_WSC_READ_UFD_FILE					0x075A
 #define RT_OID_WSC_WRITE_UFD_FILE					0x075B
+#define RT_OID_WSC_QUERY_PEER_INFO_ON_RUNNING		0x075C
 #define RT_OID_WSC_MAC_ADDRESS						0x0760
 
 #ifdef LLTD_SUPPORT
@@ -944,6 +937,7 @@ enum {
 #endif // NINTENDO_AP //
 
 
+
 // New for MeetingHouse Api support
 #define OID_MH_802_1X_SUPPORTED               0xFFEDC100
 
@@ -952,9 +946,9 @@ typedef union  _HTTRANSMIT_SETTING {
 #ifdef RT_BIG_ENDIAN
 	struct	{
 	USHORT		MODE:2;	// Use definition MODE_xxx.  
-//	USHORT		rsv:3;	 
-	USHORT		TxBF:1;
-	USHORT		rsv:2;
+	USHORT		iTxBF:1;
+	USHORT		rsv:1;
+	USHORT		eTxBF:1;
 	USHORT		STBC:2;	//SPACE 
 	USHORT		ShortGI:1;
 	USHORT		BW:1;	//channel bandwidth 20MHz or 40 MHz
@@ -966,9 +960,9 @@ typedef union  _HTTRANSMIT_SETTING {
 	USHORT		BW:1;	//channel bandwidth 20MHz or 40 MHz
 	USHORT		ShortGI:1;
 	USHORT		STBC:2;	//SPACE 
-//	USHORT		rsv:3;
-	USHORT		rsv:2;
-	USHORT		TxBF:1;
+	USHORT		eTxBF:1;
+	USHORT		rsv:1;
+	USHORT		iTxBF:1;
 	USHORT		MODE:2;	// Use definition MODE_xxx.  
 	}	field;
 #endif
@@ -997,6 +991,21 @@ typedef enum _RT_802_11_PHY_MODE {
 	PHY_11N_5G,			// 11n-only with 5G band		11
 #endif // DOT11_N_SUPPORT //
 } RT_802_11_PHY_MODE;
+
+#ifdef DOT11_N_SUPPORT
+#define PHY_MODE_IS_5G_BAND(__Mode)	\
+	((__Mode == PHY_11A) ||			\
+	(__Mode == PHY_11ABG_MIXED) ||	\
+	(__Mode == PHY_11ABGN_MIXED) ||	\
+	(__Mode == PHY_11AN_MIXED) ||	\
+	(__Mode == PHY_11AGN_MIXED) ||	\
+	(__Mode == PHY_11N_5G))
+#else
+
+#define PHY_MODE_IS_5G_BAND(__Mode)	\
+	((__Mode == PHY_11A) ||			\
+	(__Mode == PHY_11ABG_MIXED))
+#endif // DOT11_N_SUPPORT //
 
 
 // put all proprietery for-query objects here to reduce # of Query_OID
@@ -1052,6 +1061,31 @@ typedef struct _RT_802_11_MAC_TABLE {
     ULONG       Num;
     RT_802_11_MAC_ENTRY Entry[MAX_NUMBER_OF_MAC];
 } RT_802_11_MAC_TABLE, *PRT_802_11_MAC_TABLE;
+
+
+#ifdef DOT11_N_SUPPORT
+#ifdef TXBF_SUPPORT
+typedef
+struct {
+	ULONG			TxSuccessCount;
+	ULONG			TxRetryCount;
+	ULONG			TxFailCount;
+	ULONG			ETxSuccessCount;
+	ULONG			ETxRetryCount;
+	ULONG			ETxFailCount;
+	ULONG			ITxSuccessCount;
+	ULONG			ITxRetryCount;
+	ULONG			ITxFailCount;
+} RT_COUNTER_TXBF;
+
+typedef
+struct {
+	ULONG			Num;
+	RT_COUNTER_TXBF	Entry[MAX_NUMBER_OF_MAC];
+} RT_802_11_TXBF_TABLE;
+#endif // TXBF_SUPPORT //
+#endif // DOT11_N_SUPPORT //
+
 
 // structure for query/set hardware register - MAC, BBP, RF register
 typedef struct _RT_802_11_HARDWARE_REGISTER {
@@ -1279,9 +1313,10 @@ typedef	struct	_WSC_CREDENTIAL
 	USHORT				EncrType;			// mandatory, 1: none, 2: wep, 4: tkip, 8: aes
 	UCHAR				Key[64];			// mandatory, Maximum 64 byte
 	USHORT				KeyLength;
-	UCHAR				MacAddr[6];			// mandatory, AP MAC address
+	UCHAR				MacAddr[MAC_ADDR_LENGTH];			// mandatory, AP MAC address
 	UCHAR				KeyIndex;			// optional, default is 1
-	UCHAR				Rsvd[3];			// Make alignment
+	UCHAR				bFromUPnP;			// TRUE: This credential is from external UPnP registrar
+	UCHAR				Rsvd[2];			// Make alignment
 }	WSC_CREDENTIAL, *PWSC_CREDENTIAL;
 
 // WSC configured profiles

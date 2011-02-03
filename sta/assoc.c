@@ -5,35 +5,26 @@
  * Hsinchu County 302,
  * Taiwan, R.O.C.
  *
- * (c) Copyright 2002-2007, Ralink Technology, Inc.
+ * (c) Copyright 2002-2010, Ralink Technology, Inc.
  *
- * This program is free software; you can redistribute it and/or modify  * 
- * it under the terms of the GNU General Public License as published by  * 
- * the Free Software Foundation; either version 2 of the License, or     * 
- * (at your option) any later version.                                   * 
- *                                                                       * 
- * This program is distributed in the hope that it will be useful,       * 
- * but WITHOUT ANY WARRANTY; without even the implied warranty of        * 
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         * 
- * GNU General Public License for more details.                          * 
- *                                                                       * 
- * You should have received a copy of the GNU General Public License     * 
- * along with this program; if not, write to the                         * 
- * Free Software Foundation, Inc.,                                       * 
- * 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             * 
- *                                                                       * 
- *************************************************************************
+ * This program is free software; you can redistribute it and/or modify  *
+ * it under the terms of the GNU General Public License as published by  *
+ * the Free Software Foundation; either version 2 of the License, or     *
+ * (at your option) any later version.                                   *
+ *                                                                       *
+ * This program is distributed in the hope that it will be useful,       *
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of        *
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
+ * GNU General Public License for more details.                          *
+ *                                                                       *
+ * You should have received a copy of the GNU General Public License     *
+ * along with this program; if not, write to the                         *
+ * Free Software Foundation, Inc.,                                       *
+ * 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
+ *                                                                       *
+ *************************************************************************/
 
-	Module Name:
-	assoc.c
 
-	Abstract:
-
-	Revision History:
-	Who			When			What
-	--------	----------		----------------------------------------------
-	John		2004-9-3		porting from RT2500
-*/
 #include "rt_config.h"
 
 UCHAR	CipherWpaTemplate[] = {
@@ -371,10 +362,9 @@ VOID MlmeAssocReqAction(
 
 #if defined(DOT11N_DRAFT3) || defined(DOT11V_WNM_SUPPORT)
 		{
-			ULONG TmpLen, infoPos;
+			ULONG TmpLen;
 			EXT_CAP_INFO_ELEMENT	extCapInfo;
 			UCHAR extInfoLen;
-			PUCHAR pInfo;
 
 
 			extInfoLen = sizeof(EXT_CAP_INFO_ELEMENT);
@@ -1008,14 +998,15 @@ VOID PeerAssocRspAction(
 			}
 			pAd->Mlme.AssocMachine.CurrState = ASSOC_IDLE;
 			MlmeEnqueue(pAd, MLME_CNTL_STATE_MACHINE, MT2_ASSOC_CONF, 2, &Status, 0);
+
 #ifdef LINUX
 #ifdef RT_CFG80211_SUPPORT
-			{
+{
 			PFRAME_802_11 pFrame = (PFRAME_802_11)(Elem->Msg);
 			RTEnqueueInternalCmd(pAd, CMDTHREAD_CONNECT_RESULT_INFORM,
 								&pFrame->Octet[6],
 								Elem->MsgLen - 6 - sizeof(HEADER_802_11));
-			}			
+}
 #endif // RT_CFG80211_SUPPORT //
 #endif // LINUX //
 		} 
@@ -1542,6 +1533,7 @@ BOOLEAN StaAddMacTableEntry(
 	IN  USHORT        		CapabilityInfo)
 {
 	UCHAR            MaxSupportedRate = RATE_11;
+	BOOLEAN		bSupportN = FALSE;
 	
 	if (!pEntry)
         return FALSE;
@@ -1619,7 +1611,20 @@ BOOLEAN StaAddMacTableEntry(
 #ifdef DOT11_N_SUPPORT
 	NdisZeroMemory(&pEntry->HTCapability, sizeof(pEntry->HTCapability));
 	// If this Entry supports 802.11n, upgrade to HT rate. 
-	if ((HtCapabilityLen != 0) && (pAd->CommonCfg.PhyMode >= PHY_11ABGN_MIXED))
+	if (((pAd->StaCfg.WepStatus != Ndis802_11WEPEnabled) && (pAd->StaCfg.WepStatus != Ndis802_11Encryption2Enabled))
+				|| (pAd->CommonCfg.HT_DisallowTKIP == FALSE))
+	{		
+		if ((pAd->StaCfg.BssType == BSS_INFRA) && 
+			(HtCapabilityLen != 0) && 
+			(pAd->CommonCfg.PhyMode >= PHY_11ABGN_MIXED))
+			bSupportN = TRUE;
+		if ((pAd->StaCfg.BssType == BSS_ADHOC) &&
+			(pAd->StaCfg.bAdhocN == TRUE) &&
+			(HtCapabilityLen != 0) && 
+			(pAd->CommonCfg.PhyMode >= PHY_11ABGN_MIXED))
+			bSupportN = TRUE;
+	}	
+	if (bSupportN)
 	{
 		UCHAR	j, bitmask; //k,bitmask;
 		CHAR    i;
@@ -1638,8 +1643,7 @@ BOOLEAN StaAddMacTableEntry(
 		}
 
 		if ((pHtCapability->HtCapInfo.ChannelWidth) && 
-			(pAd->CommonCfg.DesiredHtPhy.ChannelWidth) &&
-			((pAd->StaCfg.BssType == BSS_INFRA) || ((pAd->StaCfg.BssType == BSS_ADHOC) && (pAddHtInfo->AddHtInfo.ExtChanOffset == pAd->CommonCfg.AddHTInfo.AddHtInfo.ExtChanOffset))))
+			(pAd->CommonCfg.DesiredHtPhy.ChannelWidth))
 		{
 			pEntry->MaxHTPhyMode.field.BW= BW_40;
 			pEntry->MaxHTPhyMode.field.ShortGI = ((pAd->CommonCfg.DesiredHtPhy.ShortGIfor40)&(pHtCapability->HtCapInfo.ShortGIfor40));
@@ -1651,9 +1655,6 @@ BOOLEAN StaAddMacTableEntry(
 			pAd->MacTab.fAnyStation20Only = TRUE;
 		}
 		
-		// 3*3
-		if (pAd->MACVersion >= RALINK_2883_VERSION && pAd->MACVersion < RALINK_3070_VERSION)
-			pEntry->MaxHTPhyMode.field.TxBF = pAd->CommonCfg.RegTransmitSetting.field.TxBF;
 
 		// find max fixed rate
 		for (i=23; i>=0; i--) // 3*3

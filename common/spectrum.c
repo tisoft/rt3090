@@ -5,36 +5,25 @@
  * Hsinchu County 302,
  * Taiwan, R.O.C.
  *
- * (c) Copyright 2002-2007, Ralink Technology, Inc.
+ * (c) Copyright 2002-2010, Ralink Technology, Inc.
  *
- * This program is free software; you can redistribute it and/or modify  * 
- * it under the terms of the GNU General Public License as published by  * 
- * the Free Software Foundation; either version 2 of the License, or     * 
- * (at your option) any later version.                                   * 
- *                                                                       * 
- * This program is distributed in the hope that it will be useful,       * 
- * but WITHOUT ANY WARRANTY; without even the implied warranty of        * 
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         * 
- * GNU General Public License for more details.                          * 
- *                                                                       * 
- * You should have received a copy of the GNU General Public License     * 
- * along with this program; if not, write to the                         * 
- * Free Software Foundation, Inc.,                                       * 
- * 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             * 
- *                                                                       * 
- *************************************************************************
+ * This program is free software; you can redistribute it and/or modify  *
+ * it under the terms of the GNU General Public License as published by  *
+ * the Free Software Foundation; either version 2 of the License, or     *
+ * (at your option) any later version.                                   *
+ *                                                                       *
+ * This program is distributed in the hope that it will be useful,       *
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of        *
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
+ * GNU General Public License for more details.                          *
+ *                                                                       *
+ * You should have received a copy of the GNU General Public License     *
+ * along with this program; if not, write to the                         *
+ * Free Software Foundation, Inc.,                                       *
+ * 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
+ *                                                                       *
+ *************************************************************************/
 
-    Module Name:
-	action.c
- 
-    Abstract:
-    Handle association related requests either from WSTA or from local MLME
- 
-    Revision History:
-    Who          When          What
-    ---------    ----------    ----------------------------------------------
-	Fonchi Wu    2008	  	   created for 802.11h
- */
 
 #include "rt_config.h"
 #include "action.h"
@@ -942,7 +931,7 @@ VOID InsertDialogToken(
 	OUT PULONG pFrameLen)
 {
 	ULONG TempLen;
-	ULONG Len = 0;
+	UINT8 Len = 0;
 	UINT8 ElementID = IE_TPC_REQUEST;
 
 	MakeOutgoingFrame(pFrameBuf,					&TempLen,
@@ -977,7 +966,7 @@ VOID InsertTpcReportIE(
 	IN UINT8 LinkMargin)
 {
 	ULONG TempLen;
-	ULONG Len = sizeof(TPC_REPORT_INFO);
+	UINT8 Len = sizeof(TPC_REPORT_INFO);
 	UINT8 ElementID = IE_TPC_REPORT;
 	TPC_REPORT_INFO TpcReportIE;
 
@@ -1062,7 +1051,7 @@ static VOID InsertMeasureReportIE(
 	IN PUINT8 pReportInfo)
 {
 	ULONG TempLen;
-	ULONG Len;
+	UINT8 Len;
 	UINT8 ElementID = IE_MEASUREMENT_REPORT;
 
 	Len = sizeof(MEASURE_REPORT_INFO) + ReportLnfoLen;

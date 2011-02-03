@@ -5,35 +5,24 @@
  * Hsinchu County 302,
  * Taiwan, R.O.C.
  *
- * (c) Copyright 2002-2007, Ralink Technology, Inc.
+ * (c) Copyright 2002-2010, Ralink Technology, Inc.
  *
- * This program is free software; you can redistribute it and/or modify  * 
- * it under the terms of the GNU General Public License as published by  * 
- * the Free Software Foundation; either version 2 of the License, or     * 
- * (at your option) any later version.                                   * 
- *                                                                       * 
- * This program is distributed in the hope that it will be useful,       * 
- * but WITHOUT ANY WARRANTY; without even the implied warranty of        * 
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         * 
- * GNU General Public License for more details.                          * 
- *                                                                       * 
- * You should have received a copy of the GNU General Public License     * 
- * along with this program; if not, write to the                         * 
- * Free Software Foundation, Inc.,                                       * 
- * 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             * 
- *                                                                       * 
- *************************************************************************
-
-	Module Name:
-	rtmp_mcu.c
-
-	Abstract:
-	Miniport generic portion header file
-
-	Revision History:
-	Who         When          What
-	--------    ----------    ----------------------------------------------
-*/
+ * This program is free software; you can redistribute it and/or modify  *
+ * it under the terms of the GNU General Public License as published by  *
+ * the Free Software Foundation; either version 2 of the License, or     *
+ * (at your option) any later version.                                   *
+ *                                                                       *
+ * This program is distributed in the hope that it will be useful,       *
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of        *
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
+ * GNU General Public License for more details.                          *
+ *                                                                       *
+ * You should have received a copy of the GNU General Public License     *
+ * along with this program; if not, write to the                         *
+ * Free Software Foundation, Inc.,                                       *
+ * 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
+ *                                                                       *
+ *************************************************************************/
 
 
 #include	"rt_config.h"
@@ -331,11 +320,11 @@ NDIS_STATUS RtmpAsicLoadFirmware(
 
 	NDIS_STATUS		Status = NDIS_STATUS_SUCCESS;
 	PUCHAR			pFirmwareImage;
-	ULONG			FileLength, Index;
+	ULONG			FileLength, Index,Loadindex;
 	//ULONG			firm;
 	UINT32			MacReg = 0;
 	UINT32			Version = (pAd->MACVersion >> 16);
-
+	INT i;
 	pFirmwareImage = FirmwareImage;
 	FileLength = sizeof(FirmwareImage);
 
@@ -359,29 +348,53 @@ NDIS_STATUS RtmpAsicLoadFirmware(
 		Status = NDIS_STATUS_FAILURE;
 	}
 
+	printk("ralink test for reset MCU before write \n");
+	PBF_SYS_CTRL_STRUC PbfSysCtrl = {{0}};
+	RTMP_IO_READ32(pAd, PBF_SYS_CTRL, &PbfSysCtrl.word);
+	PbfSysCtrl.field.MCU_RESET = 1;
+	RTMP_IO_WRITE32(pAd, PBF_SYS_CTRL, &PbfSysCtrl.word);
+	printk("FileLength %d \n",FileLength);
+	for(i=0; i< FileLength ; i=i+4)
+		RTMP_IO_WRITE32(pAd,FIRMWARE_IMAGE_BASE+i,0x0);
+
+	RTMPusecDelay(1000);
 
 	RTMP_WRITE_FIRMWARE(pAd, pFirmwareImage, FileLength);
-
 #endif
 
-	/* check if MCU is ready */
-	Index = 0;
+	Loadindex = 0;
 	do
 	{
-		RTMP_IO_READ32(pAd, PBF_SYS_CTRL, &MacReg);
+		/* check if MCU is ready */
+		Index = 0;
+		do
+		{
+			if (RTMP_TEST_FLAG(pAd, fRTMP_ADAPTER_NIC_NOT_EXIST))			
+				return NDIS_STATUS_FAILURE;
 
-		if (MacReg & 0x80)
-			break;
-		
-		RTMPusecDelay(1000);
-	} while (Index++ < 1000);
+			RTMP_IO_READ32(pAd, PBF_SYS_CTRL, &MacReg);
 
-    if (Index >= 1000)
+			if (MacReg & 0x80)
+				break;
+
+			RTMPusecDelay(1000);
+		} while (Index++ < 1000);
+
+		if (Index >= 1000)
+		{
+			DBGPRINT(RT_DEBUG_ERROR, ("NICLoadFirmware: MCU is not ready try again\n\n\n"));
+			RTMP_WRITE_FIRMWARE(pAd, pFirmwareImage, FileLength);		
+		}
+		else
+			break;	
+	} while (Loadindex++ < 4);
+
+	if(Loadindex > 4)
 	{
-		DBGPRINT(RT_DEBUG_ERROR, ("NICLoadFirmware: MCU is not ready\n\n\n"));
-		Status = NDIS_STATUS_FAILURE;
-	}
+               DBGPRINT(RT_DEBUG_ERROR, ("NICLoadFirmware: MCU is not ready\n\n\n"));
+                Status = NDIS_STATUS_FAILURE;
 
+	}
     DBGPRINT(RT_DEBUG_TRACE, ("<=== %s (status=%d)\n", __FUNCTION__, Status));
 
     return Status;
@@ -390,11 +403,11 @@ NDIS_STATUS RtmpAsicLoadFirmware(
 
 INT RtmpAsicSendCommandToMcu(
 	IN PRTMP_ADAPTER pAd,
+	IN BOOLEAN		 bNeedSpinLock,
 	IN UCHAR		 Command,
 	IN UCHAR		 Token,
 	IN UCHAR		 Arg0,
-	IN UCHAR		 Arg1,
-	IN BOOLEAN 		 IrqLock)
+	IN UCHAR		 Arg1)
 {
 	HOST_CMD_CSR_STRUC	H2MCmd;
 	H2M_MAILBOX_STRUC	H2MMailbox;
@@ -413,13 +426,13 @@ INT RtmpAsicSendCommandToMcu(
 		&& (pAd->StaCfg.PSControl.field.rt30xxPowerMode == 3) 
 		&& (pAd->StaCfg.PSControl.field.EnableNewPS == TRUE))
 	{
-		if (IrqLock==FALSE)
-		RTMP_SEM_LOCK(&pAd->McuCmdLock);
+		if (bNeedSpinLock == TRUE)
+			RTMP_SEM_LOCK(&pAd->McuCmdLock);
 		if ((pAd->brt30xxBanMcuCmd == TRUE)
 			&& (Command != WAKE_MCU_CMD) && (Command != RFOFF_MCU_CMD))
 		{
-			if (IrqLock==FALSE)
-			RTMP_SEM_UNLOCK(&pAd->McuCmdLock);
+			if (bNeedSpinLock == TRUE)
+				RTMP_SEM_UNLOCK(&pAd->McuCmdLock);
 			DBGPRINT(RT_DEBUG_TRACE, (" Ban Mcu Cmd %x in sleep mode\n",  Command));
 			return FALSE;
 		}
@@ -432,8 +445,9 @@ INT RtmpAsicSendCommandToMcu(
 		{
 			pAd->brt30xxBanMcuCmd = FALSE;
 		}
-		if (IrqLock==FALSE)
-		RTMP_SEM_UNLOCK(&pAd->McuCmdLock);
+
+		if (bNeedSpinLock == TRUE)
+			RTMP_SEM_UNLOCK(&pAd->McuCmdLock);
 
 	}
 
@@ -455,6 +469,9 @@ INT RtmpAsicSendCommandToMcu(
 				RTMP_IO_FORCE_READ32(pAd, H2M_MAILBOX_CSR, &H2MMailbox.word);
 				if (H2MMailbox.field.Owner == 0)
 					break;
+
+				if (RTMP_TEST_FLAG(pAd, fRTMP_ADAPTER_NIC_NOT_EXIST))				
+					return FALSE;
 
 				RTMPusecDelay(2);
 				DBGPRINT(RT_DEBUG_INFO, ("AsicSendCommanToMcu::Mail box is busy\n"));
@@ -489,6 +506,9 @@ INT RtmpAsicSendCommandToMcu(
 		if (H2MMailbox.field.Owner == 0)
 			break;
 
+		if (RTMP_TEST_FLAG(pAd, fRTMP_ADAPTER_NIC_NOT_EXIST))				
+			return FALSE;
+
 		RTMPusecDelay(2);
 	} while(i++ < 100);
 
@@ -503,17 +523,17 @@ INT RtmpAsicSendCommandToMcu(
 			{
 				if (j % 64 != 0)
 				{
-					ATEDBGPRINT(RT_DEBUG_ERROR, ("#"));
+					DBGPRINT(RT_DEBUG_ERROR, ("#"));
 				}
 				else
 				{
-					ATEDBGPRINT(RT_DEBUG_ERROR, ("\n"));
+					DBGPRINT(RT_DEBUG_ERROR, ("\n"));
 				}
 				++j;
 			}
 			else if (j == 0)
 			{
-				ATEDBGPRINT(RT_DEBUG_ERROR, ("Loading firmware. Please wait for a moment...\n"));
+				DBGPRINT(RT_DEBUG_ERROR, ("Loading firmware. Please wait for a moment...\n"));
 				++j;
 			}
 		}
@@ -532,7 +552,7 @@ INT RtmpAsicSendCommandToMcu(
 	{
 		/* reloading of firmware is completed */
 		pAd->ate.bFWLoading = FALSE;
-		ATEDBGPRINT(RT_DEBUG_ERROR, ("\n"));
+		DBGPRINT(RT_DEBUG_ERROR, ("\n"));
 		j = 0;
 	}
 #endif // RALINK_ATE //

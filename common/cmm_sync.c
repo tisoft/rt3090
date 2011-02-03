@@ -5,35 +5,26 @@
  * Hsinchu County 302,
  * Taiwan, R.O.C.
  *
- * (c) Copyright 2002-2007, Ralink Technology, Inc.
+ * (c) Copyright 2002-2010, Ralink Technology, Inc.
  *
- * This program is free software; you can redistribute it and/or modify  * 
- * it under the terms of the GNU General Public License as published by  * 
- * the Free Software Foundation; either version 2 of the License, or     * 
- * (at your option) any later version.                                   * 
- *                                                                       * 
- * This program is distributed in the hope that it will be useful,       * 
- * but WITHOUT ANY WARRANTY; without even the implied warranty of        * 
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         * 
- * GNU General Public License for more details.                          * 
- *                                                                       * 
- * You should have received a copy of the GNU General Public License     * 
- * along with this program; if not, write to the                         * 
- * Free Software Foundation, Inc.,                                       * 
- * 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             * 
- *                                                                       * 
- *************************************************************************
+ * This program is free software; you can redistribute it and/or modify  *
+ * it under the terms of the GNU General Public License as published by  *
+ * the Free Software Foundation; either version 2 of the License, or     *
+ * (at your option) any later version.                                   *
+ *                                                                       *
+ * This program is distributed in the hope that it will be useful,       *
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of        *
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
+ * GNU General Public License for more details.                          *
+ *                                                                       *
+ * You should have received a copy of the GNU General Public License     *
+ * along with this program; if not, write to the                         *
+ * Free Software Foundation, Inc.,                                       *
+ * 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
+ *                                                                       *
+ *************************************************************************/
 
-	Module Name:
-	cmm_sync.c
 
-	Abstract:
-
-	Revision History:
-	Who			When			What
-	--------	----------		----------------------------------------------
-	John Chang	2004-09-01      modified for rt2561/2661
-*/
 #include "rt_config.h"
 
 // 2.4 Ghz channel plan index in the TxPower arrays.
@@ -233,6 +224,26 @@ VOID BuildChannelList(
 				num = sizeof(A_BAND_REGION_16_CHANNEL_LIST)/sizeof(UCHAR);
 				pChannelList = A_BAND_REGION_16_CHANNEL_LIST;
 				break;
+			case REGION_17_A_BAND:
+				num = sizeof(A_BAND_REGION_17_CHANNEL_LIST)/sizeof(UCHAR);
+				pChannelList = A_BAND_REGION_17_CHANNEL_LIST;
+				break;
+			case REGION_18_A_BAND:
+				num = sizeof(A_BAND_REGION_18_CHANNEL_LIST)/sizeof(UCHAR);
+				pChannelList = A_BAND_REGION_18_CHANNEL_LIST;
+				break;
+			case REGION_19_A_BAND:
+				num = sizeof(A_BAND_REGION_19_CHANNEL_LIST)/sizeof(UCHAR);
+				pChannelList = A_BAND_REGION_19_CHANNEL_LIST;
+				break;
+			case REGION_20_A_BAND:
+				num = sizeof(A_BAND_REGION_20_CHANNEL_LIST)/sizeof(UCHAR);
+				pChannelList = A_BAND_REGION_20_CHANNEL_LIST;
+				break;
+			case REGION_21_A_BAND:
+				num = sizeof(A_BAND_REGION_21_CHANNEL_LIST)/sizeof(UCHAR);
+				pChannelList = A_BAND_REGION_21_CHANNEL_LIST;
+				break;
 			default:            // Error. should never happen
 				DBGPRINT(RT_DEBUG_WARN,("countryregion=%d not support", pAd->CommonCfg.CountryRegionForABand));
 				break;
@@ -241,16 +252,18 @@ VOID BuildChannelList(
 		if (num != 0)
 		{
 			UCHAR RadarCh[15]={52, 56, 60, 64, 100, 104, 108, 112, 116, 120, 124, 128, 132, 136, 140};
+			PUCHAR ChannelList;
+			ChannelList=pChannelList;
 			for (i=0; i<num; i++)
 			{
 				for (j=0; j<MAX_NUM_OF_CHANNELS; j++)
 				{
-					if (pChannelList[i] == pAd->TxPower[j].Channel)
+					if (ChannelList[i] == pAd->TxPower[j].Channel)
 						NdisMoveMemory(&pAd->ChannelList[index+i], &pAd->TxPower[j], sizeof(CHANNEL_TX_POWER));
 					}
 				for (j=0; j<15; j++)
 				{
-					if (pChannelList[i] == RadarCh[j])
+					if (ChannelList[i] == RadarCh[j])
 						pAd->ChannelList[index+i].DfsReq = TRUE;
 				}
 				pAd->ChannelList[index+i].MaxTxPwr = 20;
@@ -415,6 +428,14 @@ CHAR	ConvertToRssi(
     return (-12 - RssiOffset - LNAGain - Rssi);
 }
 
+CHAR	ConvertToSnr(
+	IN PRTMP_ADAPTER	pAd,
+	IN UCHAR			Snr)	
+{
+	return ((0xeb - Snr) * 3) / 16 ;
+
+}
+
 #if defined(AP_SCAN_SUPPORT) || defined(CONFIG_STA_SUPPORT)
 /*
 	==========================================================================
@@ -432,7 +453,6 @@ VOID ScanNextChannel(
 	UCHAR           SsidLen = 0, ScanType = pAd->MlmeAux.ScanType, BBPValue = 0;
 #ifdef CONFIG_STA_SUPPORT
 	USHORT          Status;
-	PHEADER_802_11  pHdr80211;
 #endif // CONFIG_STA_SUPPORT //
 	UINT			ScanTimeIn5gChannel = SHORT_CHANNEL_TIME;
 	BOOLEAN			ScanPending = FALSE;
@@ -500,21 +520,10 @@ VOID ScanNextChannel(
 			//
 			if (OPSTATUS_TEST_FLAG(pAd, fOP_STATUS_MEDIA_STATE_CONNECTED) && (INFRA_ON(pAd)))
 			{
-				NStatus = MlmeAllocateMemory(pAd, (PVOID)&pOutBuffer);
-				if (NStatus	== NDIS_STATUS_SUCCESS)
-				{
-					pHdr80211 = (PHEADER_802_11) pOutBuffer;
-					MgtMacHeaderInit(pAd, pHdr80211, SUBTYPE_NULL_FUNC, 1, pAd->CommonCfg.Bssid, pAd->CommonCfg.Bssid);
-					pHdr80211->Duration = 0;
-					pHdr80211->FC.Type = BTYPE_DATA;
-					pHdr80211->FC.PwrMgmt = (pAd->StaCfg.Psm == PWR_SAVE);
-
-					// Send using priority queue
-					MiniportMMRequest(pAd, 0, pOutBuffer, sizeof(HEADER_802_11));
-					DBGPRINT(RT_DEBUG_TRACE, ("%s -- Send PSM Data frame\n", __FUNCTION__));
-					MlmeFreeMemory(pAd, pOutBuffer);
-					RTMPusecDelay(5000);
-				}
+				RTMPSendNullFrame(pAd, 
+								  pAd->CommonCfg.TxRate, 
+								  (OPSTATUS_TEST_FLAG(pAd, fOP_STATUS_WMM_INUSED) ? TRUE:FALSE));
+				DBGPRINT(RT_DEBUG_TRACE, ("%s -- Send PSM Data frame\n", __FUNCTION__));
 			}
 
 			// keep the latest scan channel, could be 0 for scan complete, or other channel
@@ -523,8 +532,8 @@ VOID ScanNextChannel(
 			pAd->StaCfg.ScanChannelCnt = 0;
 
 			// Suspend scanning and Resume TxData for Fast Scanning
-			if ((pAd->MlmeAux.Channel != 0)	&& 
-				(pAd->StaCfg.bImprovedScan))// it is scan pending
+			if ((pAd->MlmeAux.Channel != 0) &&
+				(pAd->StaCfg.bImprovedScan))	// it is scan pending
 			{
 				pAd->Mlme.SyncMachine.CurrState = SCAN_PENDING;
 				Status = MLME_SUCCESS;
@@ -542,9 +551,9 @@ VOID ScanNextChannel(
 				MlmeEnqueue(pAd, MLME_CNTL_STATE_MACHINE, MT2_SCAN_CONF, 2, &Status, 0);
 
 				RTMPSendWirelessEvent(pAd, IW_SCAN_COMPLETED_EVENT_FLAG, NULL, BSS0, 0);
-#ifdef NATIVE_WPA_SUPPLICANT_SUPPORT
+#ifdef WPA_SUPPLICANT_SUPPORT
 				RtmpOSWrielessEventSend(pAd, SIOCGIWSCAN, -1, NULL, NULL, 0);
-#endif // NATIVE_WPA_SUPPLICANT_SUPPORT //
+#endif // WPA_SUPPLICANT_SUPPORT //
 			}
 
 #ifdef LINUX
@@ -624,15 +633,20 @@ VOID ScanNextChannel(
 #endif // DOT11_N_SUPPORT //
 			)
 			{
-				if (pAd->MlmeAux.Channel > 14)
-					RTMPSetTimer(&pAd->MlmeAux.ScanTimer, ScanTimeIn5gChannel);
-				else	
-				RTMPSetTimer(&pAd->MlmeAux.ScanTimer, MIN_CHANNEL_TIME);
+				{
+					if (pAd->MlmeAux.Channel > 14)
+						RTMPSetTimer(&pAd->MlmeAux.ScanTimer, ScanTimeIn5gChannel);
+					else	
+					RTMPSetTimer(&pAd->MlmeAux.ScanTimer, MIN_CHANNEL_TIME);
+				}
 			}
 			else
-				RTMPSetTimer(&pAd->MlmeAux.ScanTimer, MAX_CHANNEL_TIME);
+			{
+				{
+					RTMPSetTimer(&pAd->MlmeAux.ScanTimer, MAX_CHANNEL_TIME);
+				}
+			}
 		}
-
 		if ((ScanType == SCAN_ACTIVE)
 			|| (ScanType == FAST_SCAN_ACTIVE)
 #ifdef DOT11_N_SUPPORT
@@ -823,15 +837,9 @@ VOID ScanNextChannel(
 					(INFRA_ON(pAd)) &&
 					(pAd->CommonCfg.Channel == pAd->MlmeAux.Channel))
 				{
-					NdisZeroMemory(pOutBuffer, MGMT_DMA_BUFFER_SIZE);
-					pHdr80211 = (PHEADER_802_11) pOutBuffer;
-					MgtMacHeaderInit(pAd, pHdr80211, SUBTYPE_NULL_FUNC, 1, pAd->CommonCfg.Bssid, pAd->CommonCfg.Bssid);
-					pHdr80211->Duration = 0;
-					pHdr80211->FC.Type = BTYPE_DATA;
-					pHdr80211->FC.PwrMgmt = PWR_ACTIVE;
-
-					// Send using priority queue
-					MiniportMMRequest(pAd, 0, pOutBuffer, sizeof(HEADER_802_11));
+					RTMPSendNullFrame(pAd, 
+								  pAd->CommonCfg.TxRate, 
+								  (OPSTATUS_TEST_FLAG(pAd, fOP_STATUS_WMM_INUSED) ? TRUE:FALSE));
 					DBGPRINT(RT_DEBUG_TRACE, ("ScanNextChannel():Send PWA NullData frame to notify the associated AP!\n"));
 				}
 			}
@@ -852,4 +860,17 @@ VOID ScanNextChannel(
 #endif
 
 
+
+BOOLEAN ScanRunning(
+		IN PRTMP_ADAPTER pAd)
+{
+	BOOLEAN	rv = FALSE;
+
+#ifdef CONFIG_STA_SUPPORT
+		IF_DEV_CONFIG_OPMODE_ON_STA(pAd)
+			rv = ((pAd->Mlme.SyncMachine.CurrState == SCAN_LISTEN) ? TRUE : FALSE);
+#endif // CONFIG_STA_SUPPORT //
+
+	return rv;
+}
 

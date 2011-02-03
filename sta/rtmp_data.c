@@ -5,35 +5,26 @@
  * Hsinchu County 302,
  * Taiwan, R.O.C.
  *
- * (c) Copyright 2002-2007, Ralink Technology, Inc.
+ * (c) Copyright 2002-2010, Ralink Technology, Inc.
  *
- * This program is free software; you can redistribute it and/or modify  * 
- * it under the terms of the GNU General Public License as published by  * 
- * the Free Software Foundation; either version 2 of the License, or     * 
- * (at your option) any later version.                                   * 
- *                                                                       * 
- * This program is distributed in the hope that it will be useful,       * 
- * but WITHOUT ANY WARRANTY; without even the implied warranty of        * 
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         * 
- * GNU General Public License for more details.                          * 
- *                                                                       * 
- * You should have received a copy of the GNU General Public License     * 
- * along with this program; if not, write to the                         * 
- * Free Software Foundation, Inc.,                                       * 
- * 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             * 
- *                                                                       * 
- *************************************************************************
+ * This program is free software; you can redistribute it and/or modify  *
+ * it under the terms of the GNU General Public License as published by  *
+ * the Free Software Foundation; either version 2 of the License, or     *
+ * (at your option) any later version.                                   *
+ *                                                                       *
+ * This program is distributed in the hope that it will be useful,       *
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of        *
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
+ * GNU General Public License for more details.                          *
+ *                                                                       *
+ * You should have received a copy of the GNU General Public License     *
+ * along with this program; if not, write to the                         *
+ * Free Software Foundation, Inc.,                                       *
+ * 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
+ *                                                                       *
+ *************************************************************************/
 
-	Module Name:
-	rtmp_data.c
 
-	Abstract:
-	Data path subroutines
-
-	Revision History:
-	Who 		When			What
-	--------	----------		----------------------------------------------
-*/
 #include "rt_config.h"
 
 
@@ -55,7 +46,8 @@ VOID STARxEAPOLFrameIndicate(
 		// TBD : process fragmented EAPol frames
 		{
 			// In 802.1x mode, if the received frame is EAP-SUCCESS packet, turn on the PortSecured variable
-			if ( pAd->StaCfg.IEEE8021X == TRUE &&
+			if ( (pAd->StaCfg.IEEE8021X == TRUE) &&
+				 (pAd->StaCfg.WepStatus == Ndis802_11WEPEnabled) &&
 				 (EAP_CODE_SUCCESS == WpaCheckEapCode(pAd, pRxBlk->pData, pRxBlk->DataSize, LENGTH_802_1_H)))
 			{
 				PUCHAR	Key; 			
@@ -82,7 +74,7 @@ VOID STARxEAPOLFrameIndicate(
 						// Assign pairwise key info
 						RTMP_SET_WCID_SEC_INFO(pAd, BSS0, idx, CipherAlg, BSSID_WCID, SHAREDKEYTABLE);
 
-                        pAd->IndicateMediaState = NdisMediaStateConnected;
+						RTMP_IndicateMediaState(pAd, NdisMediaStateConnected);
                         pAd->ExtraInfo = GENERAL_LINK_UP;
 						        
 						// For Preventing ShardKey Table is cleared by remove key procedure.
@@ -246,6 +238,8 @@ BOOLEAN STACheckTkipMICValue(
 
 	return TRUE;
 }
+
+
 
 
 //
@@ -524,7 +518,7 @@ VOID STAHandleRxDataFrame(
 	}
 #endif // DOT11_N_SUPPORT //
 
-//#ifdef SOFT_ENCRYPT
+#if defined(SOFT_ENCRYPT) || defined(ADHOC_WPA2PSK_SUPPORT)
 	/* Use software to decrypt the encrypted frame if necessary.
 	   If a received "encrypted" unicast packet(its WEP bit as 1) 
 	   and it's passed to driver with "Decrypted" marked as 0 in RxD. */
@@ -559,7 +553,7 @@ VOID STAHandleRxDataFrame(
    		/* Record the Decrypted bit as 1 */
    		pRxD->Decrypted = 1;
     }
-//#endif // SOFT_ENCRYPT //
+#endif // SOFT_ENCRYPT || ADHOC_WPA2PSK_SUPPORT //
 		
 
 	// 
@@ -635,12 +629,8 @@ VOID STAHandleRxDataFrame(
 		pAd->StaCfg.LastSNR0 = (UCHAR)(pRxWI->SNR0);
 		pAd->StaCfg.LastSNR1 = (UCHAR)(pRxWI->SNR1);
 
-#ifdef RT3593
-		//2. Use Chip or MAC Version ??
-		if (IS_RT3593(pAd))
-			pAd->StaCfg.LastSNR2 = (UCHAR)(pRxWI->SNR2);				
-#endif // RT3593 //
 	
+
 		pAd->RalinkCounters.OneSecRxOkDataCnt++;
 
 
@@ -697,6 +687,9 @@ VOID STAHandleRxMgmtFrame(
 	IN	PRTMP_ADAPTER	pAd,
 	IN	RX_BLK			*pRxBlk)
 {
+#ifdef ANT_DIVERSITY_SUPPORT
+	PRT28XX_RXD_STRUC	pRxD = &(pRxBlk->RxD);
+#endif // ANT_DIVERSITY_SUPPORT //
 	PRXWI_STRUC		pRxWI = pRxBlk->pRxWI;
 	PHEADER_802_11	pHeader = pRxBlk->pHeader;
 	PNDIS_PACKET	pRxPacket = pRxBlk->pRxPacket;
@@ -741,6 +734,18 @@ VOID STAHandleRxMgmtFrame(
 		}
 
 #ifdef RT30xx
+#ifdef ANT_DIVERSITY_SUPPORT
+		// collect rssi information for antenna diversity
+		if ((pAd->NicConfig2.field.AntDiversity) &&
+			(pAd->CommonCfg.bRxAntDiversity != ANT_DIVERSITY_DISABLE))
+		{
+			if ((pRxD->U2M) || ((pHeader->FC.SubType == SUBTYPE_BEACON) && (MAC_ADDR_EQUAL(&pAd->CommonCfg.Bssid, &pHeader->Addr2))))
+			{
+					COLLECT_RX_ANTENNA_AVERAGE_RSSI(pAd, ConvertToRssi(pAd, (UCHAR)pRxWI->RSSI0, RSSI_0), 0); //Note: RSSI2 not used on RT73
+					pAd->StaCfg.NumOfAvgRssiSample ++;
+			}
+		}
+#endif // ANT_DIVERSITY_SUPPORT //
 #endif // RT30xx //
 
 		// First check the size, it MUST not exceed the mlme queue size		
@@ -875,7 +880,7 @@ BOOLEAN STARxDoneInterruptHandle(
 		pHeader = (PHEADER_802_11) (pData+RXWI_SIZE) ;
 
 #ifdef RT_BIG_ENDIAN
-	    RTMPFrameEndianChange(pAd, (PUCHAR)pHeader, DIR_READ, TRUE);
+		RTMPFrameEndianChange(pAd, (PUCHAR)pHeader, DIR_READ, TRUE);
 		RTMPWIEndianChange((PUCHAR)pRxWI, TYPE_RXWI);
 #endif
 
@@ -911,13 +916,13 @@ BOOLEAN STARxDoneInterruptHandle(
 		{
 			pAd->ate.RxCntPerSec++;
 			ATESampleRssi(pAd, pRxWI);
-#ifdef RALINK_28xx_QA
+#ifdef RALINK_QA
 			if (pAd->ate.bQARxStart == TRUE)
 			{
 				/* (*pRxD) has been swapped in GetPacketFromRxRing() */
 				ATE_QA_Statistics(pAd, pRxWI, pRxD,	pHeader);
 			}
-#endif // RALINK_28xx_QA //
+#endif // RALINK_QA //
 			RELEASE_NDIS_PACKET(pAd, pRxPacket, NDIS_STATUS_SUCCESS);
 			continue;
 		}
@@ -929,6 +934,7 @@ BOOLEAN STARxDoneInterruptHandle(
 		// Handle the received frame
 		if (Status == NDIS_STATUS_SUCCESS)
 		{
+
 			switch (pHeader->FC.Type)
 			{
 				// CASE I, receive a DATA frame
@@ -1210,6 +1216,7 @@ NDIS_STATUS STASendPacket(
 	QueIdx		 = QID_AC_BE;
 	RTMPCheckEtherType(pAd, pPacket, pEntry, &UserPriority, &QueIdx);
 
+
 	
 	
 	//
@@ -1232,6 +1239,7 @@ NDIS_STATUS STASendPacket(
 
 		return (NDIS_STATUS_FAILURE);
 	}
+
 
 
 	// STEP 1. Decide number of fragments required to deliver this MSDU. 
@@ -2422,15 +2430,7 @@ VOID STA_Legacy_Frame_Tx(
 
 	}
 
-	if (ADHOC_ON(pAd) 
-        && (pAd->StaCfg.AuthMode == Ndis802_11AuthModeWPA2PSK)
-        && (pAd->StaCfg.GroupCipher == Ndis802_11Encryption3Enabled)
-        && (!pTxBlk->pMacEntry))
-	{
-		// use Wcid as Hardware Key Index
-		GET_GroupKey_WCID(pTxBlk->Wcid, BSS0);
-	}
-    
+        
 	//
 	// prepare for TXWI
 	// use Wcid as Key Index

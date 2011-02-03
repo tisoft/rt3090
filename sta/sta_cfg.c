@@ -5,40 +5,37 @@
  * Hsinchu County 302,
  * Taiwan, R.O.C.
  *
- * (c) Copyright 2002-2007, Ralink Technology, Inc.
+ * (c) Copyright 2002-2010, Ralink Technology, Inc.
  *
- * This program is free software; you can redistribute it and/or modify  * 
- * it under the terms of the GNU General Public License as published by  * 
- * the Free Software Foundation; either version 2 of the License, or     * 
- * (at your option) any later version.                                   * 
- *                                                                       * 
- * This program is distributed in the hope that it will be useful,       * 
- * but WITHOUT ANY WARRANTY; without even the implied warranty of        * 
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         * 
- * GNU General Public License for more details.                          * 
- *                                                                       * 
- * You should have received a copy of the GNU General Public License     * 
- * along with this program; if not, write to the                         * 
- * Free Software Foundation, Inc.,                                       * 
- * 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             * 
- *                                                                       * 
- ****************************************************************************
+ * This program is free software; you can redistribute it and/or modify  *
+ * it under the terms of the GNU General Public License as published by  *
+ * the Free Software Foundation; either version 2 of the License, or     *
+ * (at your option) any later version.                                   *
+ *                                                                       *
+ * This program is distributed in the hope that it will be useful,       *
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of        *
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
+ * GNU General Public License for more details.                          *
+ *                                                                       *
+ * You should have received a copy of the GNU General Public License     *
+ * along with this program; if not, write to the                         *
+ * Free Software Foundation, Inc.,                                       *
+ * 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
+ *                                                                       *
+ *************************************************************************/
 
-    Module Name:
-    sta_ioctl.c
-
-    Abstract:
-    IOCTL related subroutines
-
-    Revision History:
-    Who         When          What
-    --------    ----------    ----------------------------------------------
-    Rory Chen   01-03-2003    created
-	Rory Chen   02-14-2005    modify to support RT61
-*/
 
 #include	"rt_config.h"
 
+
+
+INT Set_AutoReconnect_Proc(
+    IN  PRTMP_ADAPTER	pAd, 
+    IN  PSTRING			arg);
+
+INT Set_AdhocN_Proc(
+    IN  PRTMP_ADAPTER	pAd, 
+    IN  PSTRING			arg);
 
 
 char * rtstrchr(const char * s, int c)
@@ -70,6 +67,7 @@ static struct {
 	{"HtMcs",		                Set_HtMcs_Proc},
 	{"HtGi",		                Set_HtGi_Proc},
 	{"HtOpMode",		            Set_HtOpMode_Proc},
+	{"HtStbc",						Set_HtStbc_Proc},
 	{"HtExtcha",		            Set_HtExtcha_Proc},
 	{"HtMpduDensity",		        Set_HtMpduDensity_Proc},
 	{"HtBaWinSize",		        	Set_HtBaWinSize_Proc},
@@ -108,12 +106,17 @@ static struct {
 	{"Debug",						Set_Debug_Proc},             
 #endif // DBG //
 
+
 #ifdef RALINK_ATE
 	{"ATE",							Set_ATE_Proc},
 	{"ATEDA",						Set_ATE_DA_Proc},
 	{"ATESA",						Set_ATE_SA_Proc},
 	{"ATEBSSID",					Set_ATE_BSSID_Proc},
 	{"ATECHANNEL",					Set_ATE_CHANNEL_Proc},
+#ifdef RTMP_INTERNAL_TX_ALC
+	{"ATETSSICBA",				Set_ATE_TSSI_CALIBRATION_Proc},
+	{"ATETSSICBAEX",				Set_ATE_TSSI_CALIBRATION_EX_Proc},
+#endif // RTMP_INTERNAL_TX_ALC //
 	{"ATETXPOW0",					Set_ATE_TX_POWER0_Proc},
 	{"ATETXPOW1",					Set_ATE_TX_POWER1_Proc},
 	{"ATETXANT",					Set_ATE_TX_Antenna_Proc},
@@ -135,13 +138,16 @@ static struct {
 #endif // RTMP_RF_RW_SUPPORT //
 	{"ATELDE2P",				    Set_ATE_Load_E2P_Proc},
 	{"ATERE2P",						Set_ATE_Read_E2P_Proc},
+	{"ATEAUTOALC",					Set_ATE_AUTO_ALC_Proc},	
+	{"ATEIPG",						Set_ATE_IPG_Proc},
+	{"ATEPAYLOAD",					Set_ATE_Payload_Proc},
 	{"ATESHOW",						Set_ATE_Show_Proc},
 	{"ATEHELP",						Set_ATE_Help_Proc},
 
-#ifdef RALINK_28xx_QA
+#ifdef RALINK_QA
 	{"TxStop",						Set_TxStop_Proc},
 	{"RxStop",						Set_RxStop_Proc},	
-#endif // RALINK_28xx_QA //
+#endif // RALINK_QA //
 #endif // RALINK_ATE //
 
 #ifdef WPA_SUPPLICANT_SUPPORT
@@ -184,17 +190,28 @@ static struct {
 	{"efuseBufferModeWriteBack",		set_eFuseBufferModeWriteBack_Proc},
 #endif // RALINK_ATE //
 #endif // RTMP_EFUSE_SUPPORT //
+#ifdef ANT_DIVERSITY_SUPPORT
+	{"ant",					Set_Antenna_Proc},
+#endif // ANT_DIVERSITY_SUPPORT //
 #endif // RT30xx //
 //2008/09/11:KH add to support efuse-->
 	{"BeaconLostTime",				Set_BeaconLostTime_Proc},
 	{"AutoRoaming",					Set_AutoRoaming_Proc},
 	{"SiteSurvey",					Set_SiteSurvey_Proc},
 	{"ForceTxBurst",				Set_ForceTxBurst_Proc},
+
+
 #ifdef XLINK_SUPPORT
 	{"XlinkMode",					Set_XlinkMode_Proc},
 #endif // XLINK_SUPPORT //
 
 
+	{"AutoReconnect", 				Set_AutoReconnect_Proc},
+	{"AdhocN",						Set_AdhocN_Proc},
+
+#ifdef AGS_SUPPORT
+	{"Ags",						Show_AGS_Proc},
+#endif // AGS_SUPPORT //
 	{NULL,}
 };
 
@@ -245,8 +262,20 @@ INT Set_SSID_Proc(
     BOOLEAN                             StateMachineTouched = FALSE;
     int                                 success = TRUE;
 
-    if( strlen(arg) <= MAX_LEN_OF_SSID)
-    {
+	/*
+		Set the AutoReconnectSsid to prevent it reconnect to old SSID
+		Since calling this indicate user don't want to connect to that SSID anymore.
+	*/
+	pAd->MlmeAux.AutoReconnectSsidLen= 32;
+	NdisZeroMemory(pAd->MlmeAux.AutoReconnectSsid, pAd->MlmeAux.AutoReconnectSsidLen);
+
+#ifdef AUTO_RETRY_CNT_LIMIT
+	pAd->StaCfg.AutoReconntectCnt = 0;
+#endif /* AUTO_RETRY_CNT_LIMIT */
+
+
+	if( strlen(arg) <= MAX_LEN_OF_SSID)
+	{
         NdisZeroMemory(&Ssid, sizeof(NDIS_802_11_SSID));
         if (strlen(arg) != 0)
         {
@@ -256,14 +285,12 @@ INT Set_SSID_Proc(
         else   //ANY ssid
         {    
             Ssid.SsidLength = 0; 
-	    memcpy(Ssid.Ssid, "", 0);
+	    	memcpy(Ssid.Ssid, "", 0);
 			pAd->StaCfg.BssType = BSS_INFRA;	
 			pAd->StaCfg.AuthMode = Ndis802_11AuthModeOpen;
 	        pAd->StaCfg.WepStatus  = Ndis802_11EncryptionDisabled;		    
-	}	 
+		}
         pSsid = &Ssid;
-	pAd->MlmeAux.AutoReconnectSsidLen = 32;
-	NdisZeroMemory(pAd->MlmeAux.AutoReconnectSsid, 32);
 
         if (pAd->Mlme.CntlMachine.CurrState != CNTL_IDLE)
         {
@@ -293,17 +320,11 @@ INT Set_SSID_Proc(
 		NdisMoveMemory(pAd->MlmeAux.Ssid, Ssid.Ssid, Ssid.SsidLength);
 		pAd->MlmeAux.SsidLen = (UCHAR)Ssid.SsidLength;
 
-		pAd->MlmeAux.AutoReconnectSsidLen = pAd->MlmeAux.SsidLen;
-		NdisMoveMemory(pAd->MlmeAux.AutoReconnectSsid, pAd->MlmeAux.Ssid, pAd->MlmeAux.SsidLen);
-
         pAd->MlmeAux.CurrReqIsFromNdis = TRUE;
         pAd->StaCfg.bScanReqIsFromWebUI = FALSE;
 		pAd->bConfigChanged = TRUE;
-
-        if (pAd->StaCfg.BssType == BSS_ADHOC)
-            pAd->StaCfg.bNotFirstScan = FALSE;            
+        pAd->StaCfg.bNotFirstScan = FALSE;     
         
-
         MlmeEnqueue(pAd, 
                     MLME_CNTL_STATE_MACHINE, 
                     OID_802_11_SSID,
@@ -311,7 +332,10 @@ INT Set_SSID_Proc(
                     (VOID *)pSsid, 0);
 
         StateMachineTouched = TRUE;
-        DBGPRINT(RT_DEBUG_TRACE, ("Set_SSID_Proc::(Len=%d,Ssid=%s)\n", Ssid.SsidLength, Ssid.Ssid));
+		if (Ssid.SsidLength == MAX_LEN_OF_SSID)
+			hex_dump("Set_SSID_Proc::Ssid", Ssid.Ssid, Ssid.SsidLength);
+		else
+			DBGPRINT(RT_DEBUG_TRACE, ("Set_SSID_Proc::(Len=%d,Ssid=%s)\n", Ssid.SsidLength, Ssid.Ssid));
     }
     else
         success = FALSE;
@@ -396,6 +420,9 @@ INT Set_NetworkType_Proc(
 
 				DBGPRINT(RT_DEBUG_TRACE, ("NDIS_STATUS_MEDIA_DISCONNECT Event BB!\n"));
 			}
+#ifdef DOT11_N_SUPPORT
+			SetCommonHT(pAd);
+#endif // DOT11_N_SUPPORT //
 		}			
 		pAd->StaCfg.BssType = BSS_ADHOC;
 		RTMP_OS_NETDEV_SET_TYPE(pAd->net_dev, pAd->StaCfg.OriDevType);
@@ -427,6 +454,9 @@ INT Set_NetworkType_Proc(
 			
 				LinkDown(pAd, FALSE);
 			}
+#ifdef DOT11_N_SUPPORT
+			SetCommonHT(pAd);
+#endif // DOT11_N_SUPPORT //
 		}			
 		pAd->StaCfg.BssType = BSS_INFRA;
 		RTMP_OS_NETDEV_SET_TYPE(pAd->net_dev, pAd->StaCfg.OriDevType);
@@ -538,10 +568,6 @@ INT Set_NetworkType_Proc(
 				DBGPRINT(RT_DEBUG_TRACE, ("BW_20, Channel(%d)\n", pAd->CommonCfg.Channel));
 			}
 
-#ifdef RT3593
-			if (IS_RT3593(pAd))
-				RTMPSendNullFrame(pAd, pAd->CommonCfg.TxRate, TRUE);
-#endif // RT3593 //
 
 			// Enable Rx with promiscuous reception
 			RTMP_IO_WRITE32(pAd, RX_FILTR_CFG, 0x3);
@@ -659,8 +685,6 @@ INT Set_EncrypType_Proc(
     }
     else
         return FALSE;
-
-    pAd->StaCfg.OrigWepStatus = pAd->StaCfg.WepStatus;
 
 	if (pAd->StaCfg.BssType == BSS_ADHOC)
 	{
@@ -1116,6 +1140,7 @@ INT Set_PSMode_Proc(
             if (pAdapter->StaCfg.bWindowsACCAMEnable == FALSE)
                 pAdapter->StaCfg.WindowsPowerMode = Ndis802_11PowerModeCAM;
             pAdapter->StaCfg.WindowsBatteryPowerMode = Ndis802_11PowerModeCAM;
+
         }
 
         DBGPRINT(RT_DEBUG_TRACE, ("Set_PSMode_Proc::(PSMode=%ld)\n", pAdapter->StaCfg.WindowsPowerMode));
@@ -1223,7 +1248,7 @@ INT	Show_Adhoc_MacTable_Proc(
 	sprintf(extra, "%sHT Operating Mode : %d\n", extra, pAd->CommonCfg.AddHTInfo.AddHtInfo2.OperaionMode);
 #endif // DOT11_N_SUPPORT //
 
-	sprintf(extra, "%s\n%-19s%-4s%-4s%-7s%-7s%-7s%-10s%-6s%-6s%-6s%-6s\n", extra, 
+	sprintf(extra + strlen(extra), "\n%-19s%-4s%-4s%-7s%-7s%-7s%-10s%-6s%-6s%-6s%-6s\n",
 			"MAC", "AID", "BSS", "RSSI0", "RSSI1", "RSSI2", "PhMd", "BW", "MCS", "SGI", "STBC");
 	
 	for (i=1; i<MAX_LEN_OF_MAC_TABLE; i++)
@@ -1234,22 +1259,22 @@ INT	Show_Adhoc_MacTable_Proc(
 		    break;
 		if ((IS_ENTRY_CLIENT(pEntry) || IS_ENTRY_APCLI(pEntry)) && (pEntry->Sst == SST_ASSOC))
 		{
-			sprintf(extra, "%s%02X:%02X:%02X:%02X:%02X:%02X  ", extra,
+			sprintf(extra + strlen(extra), "%02X:%02X:%02X:%02X:%02X:%02X  ",
 				pEntry->Addr[0], pEntry->Addr[1], pEntry->Addr[2],
 				pEntry->Addr[3], pEntry->Addr[4], pEntry->Addr[5]);
-			sprintf(extra, "%s%-4d", extra, (int)pEntry->Aid);
-			sprintf(extra, "%s%-4d", extra, (int)pEntry->apidx);
-			sprintf(extra, "%s%-7d", extra, pEntry->RssiSample.AvgRssi0);
-			sprintf(extra, "%s%-7d", extra, pEntry->RssiSample.AvgRssi1);
-			sprintf(extra, "%s%-7d", extra, pEntry->RssiSample.AvgRssi2);
-			sprintf(extra, "%s%-10s", extra, GetPhyMode(pEntry->HTPhyMode.field.MODE));
-			sprintf(extra, "%s%-6s", extra, GetBW(pEntry->HTPhyMode.field.BW));
-			sprintf(extra, "%s%-6d", extra, pEntry->HTPhyMode.field.MCS);
-			sprintf(extra, "%s%-6d", extra, pEntry->HTPhyMode.field.ShortGI);
-			sprintf(extra, "%s%-6d", extra, pEntry->HTPhyMode.field.STBC);
-			sprintf(extra, "%s%-10d, %d, %d%%\n", extra, pEntry->DebugFIFOCount, pEntry->DebugTxCount, 
+			sprintf(extra + strlen(extra), "%-4d", (int)pEntry->Aid);
+			sprintf(extra + strlen(extra), "%-4d", (int)pEntry->apidx);
+			sprintf(extra + strlen(extra), "%-7d", pEntry->RssiSample.AvgRssi0);
+			sprintf(extra + strlen(extra), "%-7d", pEntry->RssiSample.AvgRssi1);
+			sprintf(extra + strlen(extra), "%-7d", pEntry->RssiSample.AvgRssi2);
+			sprintf(extra + strlen(extra), "%-10s", GetPhyMode(pEntry->HTPhyMode.field.MODE));
+			sprintf(extra + strlen(extra), "%-6s", GetBW(pEntry->HTPhyMode.field.BW));
+			sprintf(extra + strlen(extra), "%-6d", pEntry->HTPhyMode.field.MCS);
+			sprintf(extra + strlen(extra), "%-6d", pEntry->HTPhyMode.field.ShortGI);
+			sprintf(extra + strlen(extra), "%-6d", pEntry->HTPhyMode.field.STBC);
+			sprintf(extra + strlen(extra), "%-10d, %d, %d%%\n", pEntry->DebugFIFOCount, pEntry->DebugTxCount, 
 						(pEntry->DebugTxCount) ? ((pEntry->DebugTxCount-pEntry->DebugFIFOCount)*100/pEntry->DebugTxCount) : 0);
-			sprintf(extra, "%s\n", extra);
+			sprintf(extra + strlen(extra), "\n");
 		}
 	} 
 
@@ -1349,6 +1374,39 @@ INT Set_ForceTxBurst_Proc(
 	return TRUE;
 }
 
+#ifdef ANT_DIVERSITY_SUPPORT
+INT	Set_Antenna_Proc(
+	IN	PRTMP_ADAPTER	pAd, 
+	IN	PSTRING			arg)
+{
+    UCHAR UsedAnt;
+	DBGPRINT(RT_DEBUG_TRACE, ("==> Set_Antenna_Proc *******************\n"));
+
+    if(simple_strtol(arg, 0, 10) <= 3)
+        UsedAnt = simple_strtol(arg, 0, 10);
+
+    pAd->CommonCfg.bRxAntDiversity = UsedAnt; // Auto switch
+    if (UsedAnt == ANT_DIVERSITY_ENABLE)
+    {
+            pAd->RxAnt.EvaluateStableCnt = 0;
+            DBGPRINT(RT_DEBUG_TRACE, ("<== Set_Antenna_Proc(Auto Switch Mode), (%d,%d)\n", pAd->RxAnt.Pair1PrimaryRxAnt, pAd->RxAnt.Pair1SecondaryRxAnt));
+    }
+    /* 2: Fix in the PHY Antenna CON1*/
+    if (UsedAnt == ANT_FIX_ANT1)
+    {
+            AsicSetRxAnt(pAd, 0);
+            DBGPRINT(RT_DEBUG_TRACE, ("<== Set_Antenna_Proc(Fix in Ant CON1), (%d,%d)\n", pAd->RxAnt.Pair1PrimaryRxAnt, pAd->RxAnt.Pair1SecondaryRxAnt));
+    }
+    /* 3: Fix in the PHY Antenna CON2*/
+    if (UsedAnt == ANT_FIX_ANT2)
+    {
+            AsicSetRxAnt(pAd, 1);
+            DBGPRINT(RT_DEBUG_TRACE, ("<== Set_Antenna_Proc(Fix in Ant CON2), (%d,%d)\n", pAd->RxAnt.Pair1PrimaryRxAnt, pAd->RxAnt.Pair1SecondaryRxAnt));
+    }
+
+	return TRUE;
+}
+#endif // ANT_DIVERSITY_SUPPORT //
 
 #ifdef XLINK_SUPPORT
 INT Set_XlinkMode_Proc(
@@ -1446,11 +1504,7 @@ VOID RTMPAddKey(
             if (pAd->StaCfg.AuthMode >= Ndis802_11AuthModeWPA2)
             {
                 // set 802.1x port control
-	            //pAd->StaCfg.PortSecured = WPA_802_1X_PORT_SECURED;
 				STA_PORT_SECURED(pAd);
-                
-                // Indicate Connected for GUI
-                pAd->IndicateMediaState = NdisMediaStateConnected;
             }
 		}
         else
@@ -1489,11 +1543,7 @@ VOID RTMPAddKey(
 			/* STA doesn't need to set WCID attribute for group key */
 
             // set 802.1x port control
-	        //pAd->StaCfg.PortSecured = WPA_802_1X_PORT_SECURED;
 			STA_PORT_SECURED(pAd);
-
-            // Indicate Connected for GUI
-            pAd->IndicateMediaState = NdisMediaStateConnected;
         }
 	}
 	else	// dynamic WEP from wpa_supplicant
@@ -1617,6 +1667,33 @@ VOID StaSiteSurvey(
 	
 	RTMP_MLME_HANDLER(pAd);
 }
+
+INT Set_AutoReconnect_Proc(
+    IN  PRTMP_ADAPTER	pAd, 
+    IN  PSTRING			arg)
+{
+	if (simple_strtol(arg, 0, 10) == 0)
+        pAd->StaCfg.bAutoReconnect = FALSE;
+	else
+		pAd->StaCfg.bAutoReconnect = TRUE;
+
+	DBGPRINT(RT_DEBUG_TRACE, ("IF Set_AutoReconnect_Proc::(bAdhocN=%d)\n", pAd->StaCfg.bAutoReconnect));
+	return TRUE;
+}
+
+INT Set_AdhocN_Proc(
+    IN  PRTMP_ADAPTER	pAd, 
+    IN  PSTRING			arg)
+{
+	if (simple_strtol(arg, 0, 10) == 0)
+        pAd->StaCfg.bAdhocN = FALSE;
+	else
+		pAd->StaCfg.bAdhocN = TRUE;
+
+	DBGPRINT(RT_DEBUG_TRACE, ("IF Set_AdhocN_Proc::(bAdhocN=%d)\n", pAd->StaCfg.bAdhocN));
+	return TRUE;
+}
+
 
 /* End of sta_cfg.c */
 

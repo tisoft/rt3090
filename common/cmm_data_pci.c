@@ -5,39 +5,26 @@
  * Hsinchu County 302,
  * Taiwan, R.O.C.
  *
- * (c) Copyright 2002-2007, Ralink Technology, Inc.
+ * (c) Copyright 2002-2010, Ralink Technology, Inc.
  *
- * This program is free software; you can redistribute it and/or modify  * 
- * it under the terms of the GNU General Public License as published by  * 
- * the Free Software Foundation; either version 2 of the License, or     * 
- * (at your option) any later version.                                   * 
- *                                                                       * 
- * This program is distributed in the hope that it will be useful,       * 
- * but WITHOUT ANY WARRANTY; without even the implied warranty of        * 
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         * 
- * GNU General Public License for more details.                          * 
- *                                                                       * 
- * You should have received a copy of the GNU General Public License     * 
- * along with this program; if not, write to the                         * 
- * Free Software Foundation, Inc.,                                       * 
- * 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             * 
- *                                                                       * 
- *************************************************************************
-    Module Name:
-	cmm_data_pci.c
- 
-    Abstract:
- 
-    Revision History:
-    Who          When          What
-    ---------    ----------    ----------------------------------------------
- */
- 
-/*
-   All functions in this file must be PCI-depended, or you should out your function
-	in other files.
+ * This program is free software; you can redistribute it and/or modify  *
+ * it under the terms of the GNU General Public License as published by  *
+ * the Free Software Foundation; either version 2 of the License, or     *
+ * (at your option) any later version.                                   *
+ *                                                                       *
+ * This program is distributed in the hope that it will be useful,       *
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of        *
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
+ * GNU General Public License for more details.                          *
+ *                                                                       *
+ * You should have received a copy of the GNU General Public License     *
+ * along with this program; if not, write to the                         *
+ * Free Software Foundation, Inc.,                                       *
+ * 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
+ *                                                                       *
+ *************************************************************************/
 
-*/
+
 #include	"rt_config.h"
 
 
@@ -550,7 +537,7 @@ BOOLEAN  RTMPFreeTXDUponTxDmaDone(
 	{
 //		RTMP_IRQ_LOCK(&pAd->irq_lock, IrqFlags);
 #ifdef RALINK_ATE
-#ifdef RALINK_28xx_QA
+#ifdef RALINK_QA
 		PHEADER_802_11	pHeader80211;
 
 		if ((ATE_ON(pAd)) && (pAd->ate.bQATxStart == TRUE))
@@ -609,8 +596,8 @@ BOOLEAN  RTMPFreeTXDUponTxDmaDone(
 				else if (!(pAd->ate.Mode & ATE_TXFRAME))
 				{
 					/* not complete sending yet, but someone press the Stop TX botton */
-					DBGPRINT(RT_DEBUG_ERROR,("not complete sending yet, but someone pressed the Stop TX bottom\n"));
-					DBGPRINT(RT_DEBUG_ERROR,("pAd->ate.Mode = 0x%02x\n", pAd->ate.Mode));
+					DBGPRINT(RT_DEBUG_INFO,("not complete sending yet, but someone pressed the Stop TX bottom\n"));
+					DBGPRINT(RT_DEBUG_INFO,("pAd->ate.Mode = 0x%02x\n", pAd->ate.Mode));
 				}
 				else
 				{
@@ -628,7 +615,7 @@ BOOLEAN  RTMPFreeTXDUponTxDmaDone(
 				continue;
 			}
 		}
-#endif // RALINK_28xx_QA //
+#endif // RALINK_QA //
 #endif // RALINK_ATE //
 
 		// static rate also need NICUpdateFifoStaCounters() function.
@@ -706,6 +693,7 @@ BOOLEAN  RTMPFreeTXDUponTxDmaDone(
 		}
 
 		pAd->RalinkCounters.TransmittedByteCount +=  (pTxD->SDLen1 + pTxD->SDLen0);
+		pAd->RalinkCounters.OneSecTransmittedByteCount += (pTxD->SDLen1 + pTxD->SDLen0);
 		pAd->RalinkCounters.OneSecDmaDoneCount[QueIdx] ++;
 		INC_RING_INDEX(pTxRing->TxSwFreeIdx, TX_RING_SIZE);
 		/* get tx_tdx_idx again */
@@ -718,9 +706,9 @@ BOOLEAN  RTMPFreeTXDUponTxDmaDone(
 #endif
 
 #ifdef RALINK_ATE
-#ifdef RALINK_28xx_QA
+#ifdef RALINK_QA
 kick_out:
-#endif // RALINK_28xx_QA //
+#endif // RALINK_QA //
 
 		/*
 			ATE_TXCONT mode also need to send some normal frames, so let it in.

@@ -5,35 +5,26 @@
  * Hsinchu County 302,
  * Taiwan, R.O.C.
  *
- * (c) Copyright 2002-2007, Ralink Technology, Inc.
+ * (c) Copyright 2002-2010, Ralink Technology, Inc.
  *
- * This program is free software; you can redistribute it and/or modify  * 
- * it under the terms of the GNU General Public License as published by  * 
- * the Free Software Foundation; either version 2 of the License, or     * 
- * (at your option) any later version.                                   * 
- *                                                                       * 
- * This program is distributed in the hope that it will be useful,       * 
- * but WITHOUT ANY WARRANTY; without even the implied warranty of        * 
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         * 
- * GNU General Public License for more details.                          * 
- *                                                                       * 
- * You should have received a copy of the GNU General Public License     * 
- * along with this program; if not, write to the                         * 
- * Free Software Foundation, Inc.,                                       * 
- * 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             * 
- *                                                                       * 
- *************************************************************************
+ * This program is free software; you can redistribute it and/or modify  *
+ * it under the terms of the GNU General Public License as published by  *
+ * the Free Software Foundation; either version 2 of the License, or     *
+ * (at your option) any later version.                                   *
+ *                                                                       *
+ * This program is distributed in the hope that it will be useful,       *
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of        *
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
+ * GNU General Public License for more details.                          *
+ *                                                                       *
+ * You should have received a copy of the GNU General Public License     *
+ * along with this program; if not, write to the                         *
+ * Free Software Foundation, Inc.,                                       *
+ * 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
+ *                                                                       *
+ *************************************************************************/
 
-    Module Name:
-	cmm_info.c
- 
-    Abstract:
- 
-    Revision History:
-    Who          When          What
-    ---------    ----------    ----------------------------------------------
- */
- 
+
 #include	"rt_config.h"
 
 
@@ -153,6 +144,10 @@ INT	Show_WPAPSK_Proc(
 	IN	PRTMP_ADAPTER	pAd, 
 	OUT	PSTRING			pBuf);
 
+INT	Show_AutoReconnect_Proc(
+	IN	PRTMP_ADAPTER	pAd,
+	OUT	PSTRING			pBuf);
+
 #endif // CONFIG_STA_SUPPORT //
 
 INT	Show_AuthMode_Proc(
@@ -247,6 +242,7 @@ static struct {
 #ifdef CONFIG_STA_SUPPORT	
     {"NetworkType",				Show_NetworkType_Proc},        
 	{"WPAPSK",					Show_WPAPSK_Proc},
+	{"AutoReconnect", 			Show_AutoReconnect_Proc},
 #endif // CONFIG_STA_SUPPORT //
 	{"AuthMode",				Show_AuthMode_Proc},           
 	{"EncrypType",				Show_EncrypType_Proc},         
@@ -345,21 +341,19 @@ INT Set_CountryRegionABand_Proc(
 }
 
 
-/* 
-    ==========================================================================
-    Description:
-        Set Wireless Mode
-    Return:
-        TRUE if all parameters are OK, FALSE otherwise
-    ==========================================================================
-*/
-INT	Set_WirelessMode_Proc(
+INT	Set_Cmm_WirelessMode_Proc(
 	IN	PRTMP_ADAPTER	pAd, 
-	IN	PSTRING			arg)
+	IN	PSTRING			arg,
+	IN	BOOLEAN			FlgIsDiffMbssModeUsed)
 {
 	INT	success = TRUE;
 
+
+
+#ifdef CONFIG_STA_SUPPORT
 	success = RT_CfgSetWirelessMode(pAd, arg);
+#endif // CONFIG_STA_SUPPORT //
+
 	if (success)
 	{
 
@@ -401,7 +395,11 @@ INT	Set_WirelessMode_Proc(
 		SetCommonHT(pAd);
 #endif // DOT11_N_SUPPORT //
 
-		DBGPRINT(RT_DEBUG_TRACE, ("Set_WirelessMode_Proc::(=%d)\n", pAd->CommonCfg.PhyMode));
+
+#ifdef RT33xx
+		if (IS_RT3390(pAd))
+			RTMP_TxEvmCalibration(pAd);
+#endif // RT33xx //
 	}
 	else
 	{
@@ -409,6 +407,23 @@ INT	Set_WirelessMode_Proc(
 	}
 	
 	return success;
+}
+
+
+
+/* 
+    ==========================================================================
+    Description:
+        Set Wireless Mode
+    Return:
+        TRUE if all parameters are OK, FALSE otherwise
+    ==========================================================================
+*/
+INT	Set_WirelessMode_Proc(
+	IN	PRTMP_ADAPTER	pAd, 
+	IN	PSTRING			arg)
+{
+	return Set_Cmm_WirelessMode_Proc(pAd, arg, 0);
 }
 
 /* 
@@ -434,7 +449,12 @@ INT	Set_Channel_Proc(
 #ifdef CONFIG_STA_SUPPORT
 		IF_DEV_CONFIG_OPMODE_ON_STA(pAd)
 		{
-			pAd->CommonCfg.Channel = Channel;        
+			pAd->CommonCfg.Channel = Channel;
+
+			/*
+				Save the channel on MlmeAux for CntlOidRTBssidProc used.
+			*/
+			pAd->MlmeAux.Channel = pAd->CommonCfg.Channel;
 
 			if (MONITOR_ON(pAd))
 			{
@@ -444,8 +464,8 @@ INT	Set_Channel_Proc(
 					pAd->CommonCfg.RegTransmitSetting.field.BW == BW_40)
 				{
 					N_SetCenCh(pAd);
-						AsicSwitchChannel(pAd, pAd->CommonCfg.CentralChannel, FALSE);
-						AsicLockChannel(pAd, pAd->CommonCfg.CentralChannel);
+					AsicSwitchChannel(pAd, pAd->CommonCfg.CentralChannel, FALSE);
+					AsicLockChannel(pAd, pAd->CommonCfg.CentralChannel);
 					DBGPRINT(RT_DEBUG_TRACE, ("BW_40, control_channel(%d), CentralChannel(%d) \n", 
 								pAd->CommonCfg.Channel, pAd->CommonCfg.CentralChannel));
 				}
@@ -457,17 +477,6 @@ INT	Set_Channel_Proc(
 					DBGPRINT(RT_DEBUG_TRACE, ("BW_20, Channel(%d)\n", pAd->CommonCfg.Channel));
 				}
 
-#ifdef RT3593
-				if (IS_RT3593(pAd))
-				{
-#ifdef MONITOR_FLAG_11N_SNIFFER_SUPPORT
-					if (pAd->StaCfg.BssMonitorFlag & MONITOR_FLAG_11N_SNIFFER)
-						Set_NetworkType_Proc(pAd, "Monitor2");
-					else
-#endif // MONITOR_FLAG_11N_SNIFFER_SUPPORT //
-						Set_NetworkType_Proc(pAd, "Monitor");
-				}
-#endif // RT3593 //
 			}
 		}
 #endif // CONFIG_STA_SUPPORT //
@@ -733,6 +742,24 @@ INT	Set_TxBurst_Proc(
 	return TRUE;
 }
 
+
+#ifdef RTMP_MAC_PCI
+INT Set_ShowRF_Proc(
+	IN  PRTMP_ADAPTER		pAd,
+	IN  PSTRING			arg)
+{
+	int ShowRF = simple_strtol(arg, 0, 10);
+	
+	if (ShowRF == 1)
+		pAd->ShowRf = TRUE;
+	else
+		pAd->ShowRf = FALSE;
+	
+	return TRUE;
+}
+#endif // RTMP_MAC_PCI //
+
+
 #ifdef AGGREGATION_SUPPORT
 /* 
     ==========================================================================
@@ -765,7 +792,7 @@ INT	Set_PktAggregate_Proc(
 #endif
 
 
-#ifdef INF_AMAZON_PPA
+#ifdef INF_PPA_SUPPORT
 INT	Set_INF_AMAZON_SE_PPA_Proc(
 	IN	PRTMP_ADAPTER	pAd, 
 	IN	PUCHAR			arg)
@@ -779,7 +806,7 @@ INT	Set_INF_AMAZON_SE_PPA_Proc(
 	{
 		if(pAd->PPAEnable==TRUE)
 		{
-			printk("INF_AMAZON_SE_PPA already enabled \n");
+			DBGPRINT(RT_DEBUG_TRACE, ("INF_AMAZON_SE_PPA already enabled \n"));
 		}
 		else
 		{
@@ -789,8 +816,8 @@ INT	Set_INF_AMAZON_SE_PPA_Proc(
 				
 				if (pAd->pDirectpathCb == NULL) 
 				{
-					 pAd->pDirectpathCb = (PPA_DIRECTPATH_CB *) kmalloc (sizeof(PPA_DIRECTPATH_CB), GFP_ATOMIC);
-				        printk("Realloc memory for  pDirectpathCb ??\n");
+					pAd->pDirectpathCb = (PPA_DIRECTPATH_CB *) kmalloc (sizeof(PPA_DIRECTPATH_CB), GFP_ATOMIC);
+					DBGPRINT(RT_DEBUG_TRACE, ("Realloc memory for  pDirectpathCb ??\n"));
 				}
 
 				/* register callback */
@@ -803,18 +830,18 @@ INT	Set_INF_AMAZON_SE_PPA_Proc(
 				if(status==1)
 				{
 					pAd->g_if_id=g_if_id;
-					printk("register INF_AMAZON_SE_PPA success :ret:%d id:%d:%d\n",status,pAd->g_if_id,g_if_id);
+					DBGPRINT(RT_DEBUG_TRACE, ("register INF_AMAZON_SE_PPA success :ret:%d id:%d:%d\n",status,pAd->g_if_id,g_if_id));
 					pAd->PPAEnable=TRUE;
 				}
 				else
 				{
-					printk("register INF_AMAZON_SE_PPA fail :ret:%d\n",status);
+					DBGPRINT(RT_DEBUG_TRACE, ("register INF_AMAZON_SE_PPA fail :ret:%d\n",status));
 				}
 
 			}
 			else
 			{
-				printk("INF_AMAZON_SE_PPA enable fail : there is no INF_AMAZON_SE_PPA module . \n");	
+				DBGPRINT(RT_DEBUG_TRACE, ("INF_AMAZON_SE_PPA enable fail : there is no INF_AMAZON_SE_PPA module . \n"));
 			}
 		}
 
@@ -824,8 +851,7 @@ INT	Set_INF_AMAZON_SE_PPA_Proc(
 	{
 		if(pAd->PPAEnable==FALSE)
 		{
-			
-printk("INF_AMAZON_SE_PPA already disable \n");
+			DBGPRINT(RT_DEBUG_TRACE, ("INF_AMAZON_SE_PPA already disable \n"));
 		}
 		else
 		{
@@ -833,38 +859,39 @@ printk("INF_AMAZON_SE_PPA already disable \n");
 			{
 				UINT32 g_if_id;
 				g_if_id=pAd->g_if_id;
-				printk("g_if_id=%d \n",pAd->g_if_id);
-				status=ppa_hook_directpath_register_dev_fn(&g_if_id, pAd->net_dev, NULL, PPA_F_DIRECTPATH_DEREGISTER);
+
+				DBGPRINT(RT_DEBUG_TRACE, ("g_if_id=%d \n",pAd->g_if_id));
+				status=ppa_hook_directpath_register_dev_fn(&g_if_id, pAd->net_dev, NULL, PPA_F_DIRECTPATH_REGISTER);
 
 				if(status==1)
 				{
 					pAd->g_if_id=0;
-					printk("unregister INF_AMAZON_SE_PPA success :ret:%d\n",status);
+					DBGPRINT(RT_DEBUG_TRACE, ("unregister INF_AMAZON_SE_PPA success :ret:%d\n",status));
 					pAd->PPAEnable=FALSE;
 				}
 				else
 				{
-					printk("unregister INF_AMAZON_SE_PPA fail :ret:%d\n",status);
+					DBGPRINT(RT_DEBUG_TRACE, ("unregister INF_AMAZON_SE_PPA fail :ret:%d\n",status));
 				}
 
 			}
 			else
 			{
-				printk("INF_AMAZON_SE_PPA enable fail : there is no INF_AMAZON_SE_PPA module . \n");	
+				DBGPRINT(RT_DEBUG_TRACE, ("INF_AMAZON_SE_PPA enable fail : there is no INF_AMAZON_SE_PPA module . \n"));
 			}
 		}
 
 	}
 	else
 	{
-		printk("Invalid argument %d \n",aggre);
+		DBGPRINT(RT_DEBUG_TRACE, ("Invalid argument %d \n",aggre));
 		return FALSE;  //Invalid argument 
 	}	
 
 	return TRUE;
 
 }
-#endif // INF_AMAZON_PPA //
+#endif // INF_PPA_SUPPORT //
 
 
 /* 
@@ -994,6 +1021,7 @@ INT	Set_ResetStatCounter_Proc(
 	// Reset HotSpot counter
 
 
+
 	return TRUE;
 }
 
@@ -1026,7 +1054,7 @@ BOOLEAN RTMPCheckStrPrintAble(
     
     for (i=0; i<strLen; i++)
     {
-        if ((pInPutStr[i] < 0x21) ||
+        if ((pInPutStr[i] < 0x20) ||
             (pInPutStr[i] > 0x7E))
             return FALSE;
     }
@@ -1627,6 +1655,8 @@ VOID	RTMPSetHT(
 
 			RTMP_BBP_IO_WRITE8_BY_REG_ID(pAd, BBP_R3, BBP3Value);
 			pAd->CommonCfg.BBPCurrentBW = BW_40;
+
+
 		}
 	}
 	else
@@ -1642,6 +1672,7 @@ VOID	RTMPSetHT(
 			BBPValue &= (~0x18);
 			RTMP_BBP_IO_WRITE8_BY_REG_ID(pAd, BBP_R4, BBPValue);
 			pAd->CommonCfg.BBPCurrentBW = BW_20;
+
 		}
 	}
 		
@@ -1696,11 +1727,7 @@ VOID	RTMPSetHT(
 	}
 	
 	// We support link adaptation for unsolicit MCS feedback, set to 2.
-#ifdef RT2883_TEMP_PATCH
-	pAd->CommonCfg.HtCapability.ExtHtCapInfo.MCSFeedback = MCSFBK_MRQ; //MCSFBK_UNSOLICIT;
-#else
-	pAd->CommonCfg.HtCapability.ExtHtCapInfo.MCSFeedback = MCSFBK_NONE; //MCSFBK_UNSOLICIT;
-#endif // RT2883_TEMP_PATCH //
+	//pAd->CommonCfg.HtCapability.ExtHtCapInfo.MCSFeedback = MCSFBK_NONE; //MCSFBK_UNSOLICIT;
 	pAd->CommonCfg.AddHTInfo.ControlChan = pAd->CommonCfg.Channel;
 	// 1, the extension channel above the control channel. 
 	
@@ -1731,9 +1758,6 @@ VOID	RTMPSetHT(
 	AsicSetEdcaParm(pAd, &pAd->CommonCfg.APEdcaParm);
 	
 
-#ifdef RT2883_TEMP_PATCH
-	pAd->CommonCfg.HtCapability.TxBFCap.TxSoundCapable =  TRUE;
-#endif // RT2883_TEMP_PATCH //
 
 #ifdef CONFIG_STA_SUPPORT
 	IF_DEV_CONFIG_OPMODE_ON_STA(pAd)
@@ -1800,9 +1824,9 @@ VOID	RTMPSetIndividualHT(
 		DBGPRINT(RT_DEBUG_WARN, ("RTMPSetIndividualHT: MCS_32 is only supported in 40-MHz, reset it as MCS_0\n"));
 		DesiredMcs = MCS_0;		
 	}
-	   		
+
 #ifdef CONFIG_STA_SUPPORT
-	if ((pAd->OpMode == OPMODE_STA) && (pAd->StaCfg.BssType == BSS_INFRA))
+	if ((pAd->OpMode == OPMODE_STA) && (pAd->StaCfg.BssType == BSS_INFRA) && (apidx == MIN_NET_DEVICE_FOR_MBSSID))
 		;
 	else
 #endif // CONFIG_STA_SUPPORT //
@@ -1819,6 +1843,9 @@ VOID	RTMPSetIndividualHT(
 
 	if (pAd->CommonCfg.HT_Disable)
 	{
+#ifdef CONFIG_STA_SUPPORT
+		pAd->StaCfg.bAdhocN = FALSE;
+#endif // CONFIG_STA_SUPPORT //
 		DBGPRINT(RT_DEBUG_TRACE, ("%s : HT is disabled\n", __FUNCTION__));
 		return;
 	}
@@ -1883,12 +1910,66 @@ VOID	RTMPSetIndividualHT(
 	}
 
 	// update HT Rate setting				
-    if (pAd->OpMode == OPMODE_STA)
-        MlmeUpdateHtTxRates(pAd, BSS0);
-    else
 	    MlmeUpdateHtTxRates(pAd, apidx);
 }
 
+/*
+	========================================================================
+	Routine Description:
+		Clear the desire HT info per interface
+		
+	Arguments:
+	
+	========================================================================
+*/
+VOID RTMPDisableDesiredHtInfo(
+	IN	PRTMP_ADAPTER		pAd)
+{
+
+
+#ifdef CONFIG_STA_SUPPORT
+	IF_DEV_CONFIG_OPMODE_ON_STA(pAd)
+	{
+		RTMPZeroMemory(&pAd->StaCfg.DesiredHtPhyInfo, sizeof(RT_HT_PHY_INFO));
+	}
+#endif // CONFIG_STA_SUPPORT //
+
+}
+
+
+INT	SetCommonHT(
+	IN	PRTMP_ADAPTER	pAd)
+{
+	OID_SET_HT_PHYMODE		SetHT;
+	
+	if (pAd->CommonCfg.PhyMode < PHY_11ABGN_MIXED)
+	{
+		/* Clear previous HT information */
+		RTMPDisableDesiredHtInfo(pAd);
+		return FALSE;
+	}
+	
+	SetHT.PhyMode = (RT_802_11_PHY_MODE)pAd->CommonCfg.PhyMode;
+	SetHT.TransmitNo = ((UCHAR)pAd->Antenna.field.TxPath);
+	SetHT.HtMode = (UCHAR)pAd->CommonCfg.RegTransmitSetting.field.HTMODE;
+	SetHT.ExtOffset = (UCHAR)pAd->CommonCfg.RegTransmitSetting.field.EXTCHA;
+	SetHT.MCS = MCS_AUTO;
+	SetHT.BW = (UCHAR)pAd->CommonCfg.RegTransmitSetting.field.BW;
+	SetHT.STBC = (UCHAR)pAd->CommonCfg.RegTransmitSetting.field.STBC;
+	SetHT.SHORTGI = (UCHAR)pAd->CommonCfg.RegTransmitSetting.field.ShortGI;		
+
+	RTMPSetHT(pAd, &SetHT);
+
+	if(pAd->CommonCfg.bBssCoexEnable && pAd->CommonCfg.Bss2040NeedFallBack)	
+	{		
+		pAd->CommonCfg.AddHTInfo.AddHtInfo.RecomWidth = 0;
+		pAd->CommonCfg.AddHTInfo.AddHtInfo.ExtChanOffset = 0;
+		pAd->CommonCfg.LastBSSCoexist2040.field.BSS20WidthReq = 1;
+		pAd->CommonCfg.Bss2040CoexistFlag |= BSS_2040_COEXIST_INFO_SYNC;
+		pAd->CommonCfg.Bss2040NeedFallBack = 1;
+	}
+	return TRUE;
+}
 
 /*
 	========================================================================
@@ -2109,29 +2190,30 @@ VOID	RTMPCommSiteSurveyData(
 	NDIS_802_11_ENCRYPTION_STATUS	ap_cipher = Ndis802_11EncryptionDisabled;
 	NDIS_802_11_AUTHENTICATION_MODE	ap_auth_mode = Ndis802_11AuthModeOpen;
 
-		//Channel
-		sprintf(msg+strlen(msg),"%-4d", pBss->Channel);
+	//Channel
+	sprintf(msg+strlen(msg),"%-4d", pBss->Channel);
 
-		//SSID
+	//SSID
 	NdisZeroMemory(Ssid, (MAX_LEN_OF_SSID +1));
 	if (RTMPCheckStrPrintAble((PCHAR)pBss->Ssid, pBss->SsidLen))
 		NdisMoveMemory(Ssid, pBss->Ssid, pBss->SsidLen);
 	else
 	{
 		INT idx = 0;
-		for (idx = 0; idx < 16; idx++)
-			sprintf(Ssid, "%s%02X", Ssid, pBss->Ssid[idx]);
+		sprintf(Ssid, "0x");
+		for (idx = 0; (idx < 14) && (idx < pBss->SsidLen); idx++)
+			sprintf(Ssid + 2 + (idx*2), "%02X", (UCHAR)pBss->Ssid[idx]);
 	}
-		sprintf(msg+strlen(msg),"%-33s", Ssid);      
+	sprintf(msg+strlen(msg),"%-33s", Ssid);      
 		
-		//BSSID
-		sprintf(msg+strlen(msg),"%02x:%02x:%02x:%02x:%02x:%02x   ", 
-			pBss->Bssid[0], 
-			pBss->Bssid[1],
-			pBss->Bssid[2], 
-			pBss->Bssid[3], 
-			pBss->Bssid[4], 
-			pBss->Bssid[5]);
+	//BSSID
+	sprintf(msg+strlen(msg),"%02x:%02x:%02x:%02x:%02x:%02x   ", 
+		pBss->Bssid[0], 
+		pBss->Bssid[1],
+		pBss->Bssid[2], 
+		pBss->Bssid[3], 
+		pBss->Bssid[4], 
+		pBss->Bssid[5]);
 	
 	//Security
 	if ((Ndis802_11AuthModeWPA <= pBss->AuthMode) &&
@@ -2227,6 +2309,7 @@ VOID	RTMPCommSiteSurveyData(
 
 		// Rssi
 		Rssi = (INT)pBss->Rssi;
+		
 		if (Rssi >= -50)
 			Rssi_Quality = 100;
 		else if (Rssi >= -80)    // between -50 ~ -80dbm
@@ -2300,7 +2383,7 @@ VOID RTMPIoctlGetSiteSurvey(
 		DBGPRINT(RT_DEBUG_TRACE, ("RTMPIoctlGetSiteSurvey - msg memory alloc fail.\n"));
 		return;
 	}
-
+	
 	memset(msg, 0 ,(MAX_LEN_OF_BSS_TABLE)*max_len );
 	sprintf(msg,"%s","\n");
 	sprintf(msg+strlen(msg),"%-4s%-33s%-20s%-23s%-9s%-7s%-7s%-3s\n",
@@ -2313,9 +2396,9 @@ VOID RTMPIoctlGetSiteSurvey(
 	WaitCnt = 0;
 #ifdef CONFIG_STA_SUPPORT
 	pAdapter->StaCfg.bScanReqIsFromWebUI = TRUE;
+#endif // CONFIG_STA_SUPPORT //
 	while ((ScanRunning(pAdapter) == TRUE) && (WaitCnt++ < 200))
 		OS_WAIT(500);	
-#endif // CONFIG_STA_SUPPORT //
 
 	for(i=0; i<pAdapter->ScanTab.BssNr ;i++)
 	{
@@ -2345,6 +2428,9 @@ VOID RTMPIoctlGetSiteSurvey(
 	os_free_mem(NULL, (PUCHAR)msg);	
 }
 #endif
+
+
+
 
 #define	MAC_LINE_LEN	(14+4+4+10+10+10+6+6)	// Addr+aid+psm+datatime+rxbyte+txbyte+current tx rate+last tx rate
 VOID RTMPIoctlGetMacTable(
@@ -2382,6 +2468,7 @@ VOID RTMPIoctlGetMacTable(
 			MacTab.Entry[MacTab.Num].TxRate.field.rsv = pAd->MacTab.Content[i].HTPhyMode.field.rsv;
 			MacTab.Entry[MacTab.Num].TxRate.field.MODE = pAd->MacTab.Content[i].HTPhyMode.field.MODE;
 			MacTab.Entry[MacTab.Num].TxRate.word = pAd->MacTab.Content[i].HTPhyMode.word;
+									
 									
 			MacTab.Num += 1;
 		}
@@ -2463,7 +2550,8 @@ INT	Set_BASetup_Proc(
 	if ((token != NULL) && (strlen(token)>1))
 	{
 		tid = (UCHAR) simple_strtol((token+1), 0, 10);
-		if (tid > 15)
+		/* tid is 0 ~ 7; Or kernel will crash in BAOriSessionSetUp() */
+		if (tid > (NUM_OF_TID-1))
 			return FALSE;
 		
 		*token = '\0';
@@ -2542,7 +2630,8 @@ INT	Set_BAOriTearDown_Proc(
 	if ((token != NULL) && (strlen(token)>1))
 	{
 		tid = simple_strtol((token+1), 0, 10);
-		if (tid > NUM_OF_TID)
+		/* tid will be 0 ~ 7; Or kernel will crash in BAOriSessionTearDown() */
+		if (tid > (NUM_OF_TID-1))
 			return FALSE;
 		
 		*token = '\0';
@@ -2595,7 +2684,8 @@ INT	Set_BARecTearDown_Proc(
 	if ((token != NULL) && (strlen(token)>1))
 	{
 		tid = simple_strtol((token+1), 0, 10);
-		if (tid > NUM_OF_TID)
+		/* tid will be 0 ~ 7; Or kernel will crash in BARecSessionTearDown() */
+		if (tid > (NUM_OF_TID-1))
 			return FALSE;
 		
 		*token = '\0';
@@ -2654,6 +2744,7 @@ INT	Set_HtMcs_Proc(
 #ifdef CONFIG_STA_SUPPORT    
     BOOLEAN bAutoRate = FALSE;
 #endif // CONFIG_STA_SUPPORT //
+
 
 	Mcs_tmp = simple_strtol(arg, 0, 10);
 		
@@ -3175,34 +3266,22 @@ INT Set_HT_BssCoex_Proc(
 	
 	return TRUE;
 }
+
+
+INT Set_HT_BssCoexApCntThr_Proc(
+	IN	PRTMP_ADAPTER		pAd,
+	IN	PSTRING				pParam)
+{
+	pAd->CommonCfg.BssCoexApCntThr = simple_strtol(pParam, 0, 10);
+
+	DBGPRINT(RT_DEBUG_TRACE, ("Set BssCoexApCntThr=%d!\n", pAd->CommonCfg.BssCoexApCntThr));
+	
+	return TRUE;
+}
 #endif // DOT11N_DRAFT3 //
 
 #endif // DOT11_N_SUPPORT //
 
-
-#ifdef DOT11_N_SUPPORT
-INT	SetCommonHT(
-	IN	PRTMP_ADAPTER	pAd)
-{
-	OID_SET_HT_PHYMODE		SetHT;
-	
-	if (pAd->CommonCfg.PhyMode < PHY_11ABGN_MIXED)
-		return FALSE;
-				
-	SetHT.PhyMode = (RT_802_11_PHY_MODE)pAd->CommonCfg.PhyMode;
-	SetHT.TransmitNo = ((UCHAR)pAd->Antenna.field.TxPath);
-	SetHT.HtMode = (UCHAR)pAd->CommonCfg.RegTransmitSetting.field.HTMODE;
-	SetHT.ExtOffset = (UCHAR)pAd->CommonCfg.RegTransmitSetting.field.EXTCHA;
-	SetHT.MCS = MCS_AUTO;
-	SetHT.BW = (UCHAR)pAd->CommonCfg.RegTransmitSetting.field.BW;
-	SetHT.STBC = (UCHAR)pAd->CommonCfg.RegTransmitSetting.field.STBC;
-	SetHT.SHORTGI = (UCHAR)pAd->CommonCfg.RegTransmitSetting.field.ShortGI;		
-
-	RTMPSetHT(pAd, &SetHT);
-
-	return TRUE;
-}
-#endif // DOT11_N_SUPPORT //
 
 INT	Set_FixedTxMode_Proc(
 	IN	PRTMP_ADAPTER	pAd, 
@@ -3251,6 +3330,7 @@ INT	Set_OpMode_Proc(
 	return TRUE;
 }
 #endif // CONFIG_APSTA_MIXED_SUPPORT //
+
 
 
 
@@ -3457,7 +3537,7 @@ INT	Show_TxPreamble_Proc(
 			sprintf(pBuf, "\tAuto");
 			break;
 		default:
-			sprintf(pBuf, "\tUnknow Value(%lu)", pAd->CommonCfg.TxPreamble);
+			sprintf(pBuf, "\tUnknown Value(%lu)", pAd->CommonCfg.TxPreamble);
 			break;
 	}
 	
@@ -3747,6 +3827,14 @@ INT	Show_WPAPSK_Proc(
 	return 0;
 }
 
+INT	Show_AutoReconnect_Proc(
+	IN	PRTMP_ADAPTER	pAd,
+	OUT	PSTRING			pBuf)
+{
+	sprintf(pBuf, "\tAutoReconnect = %d", pAd->StaCfg.bAutoReconnect);
+	return 0;
+}
+
 #endif // CONFIG_STA_SUPPORT //
 
 INT	Show_AuthMode_Proc(
@@ -3881,96 +3969,9 @@ INT	Show_PMK_Proc(
 	return 0;
 }
 
-#ifdef RT2883_TEMP_PATCH
-INT	Set_ETxBfEnCond_Proc(
-	IN	PRTMP_ADAPTER	pAd, 
-	IN	PCHAR			arg)
-{
-	// insert code here
-	UCHAR i;
-	MAC_TABLE_ENTRY		*pEntry = NULL;	
-	for (i=0; i<MAX_LEN_OF_MAC_TABLE; i++){
-		pEntry =	&pAd->MacTab.Content[i];
-		pEntry->eTxBfEnCond = simple_strtol(arg, 0, 10);
-	}
 
-	return TRUE;	
-}
-INT	Set_NoSndgCntThrd_Proc(
-	IN	PRTMP_ADAPTER	pAd, 
-	IN	PCHAR			arg)
-{
-	// insert code here
-	UCHAR i;
-	MAC_TABLE_ENTRY		*pEntry = NULL;	
-	for (i=0; i<MAX_LEN_OF_MAC_TABLE; i++){
-		pEntry =	&pAd->MacTab.Content[i];
-		pEntry->noSndgCntThrd = simple_strtol(arg, 0, 10);
-	}
-	return TRUE;	
-}
 
-INT	Set_NdpSndgStreams_Proc(
-	IN	PRTMP_ADAPTER	pAd, 
-	IN	PCHAR			arg)
-{
-	// insert code here
-	UCHAR i;
-	MAC_TABLE_ENTRY		*pEntry = NULL;	
-	for (i=0; i<MAX_LEN_OF_MAC_TABLE; i++){
-		pEntry =	&pAd->MacTab.Content[i];
-		pEntry->ndpSndgStreams = simple_strtol(arg, 0, 10);
-	}
-	return TRUE;	
-}
 
-INT	Set_PerThrdAdj_Proc(
-	IN	PRTMP_ADAPTER	pAd, 
-	IN	PCHAR			arg)
-{
-	// insert code here
-	UCHAR i;
-	MAC_TABLE_ENTRY		*pEntry = NULL;	
-	for (i=0; i<MAX_LEN_OF_MAC_TABLE; i++){
-		pEntry =	&pAd->MacTab.Content[i];
-		pEntry->perThrdAdj = simple_strtol(arg, 0, 10);
-	}
-	return TRUE;	
-}
-
-INT	Set_Trigger_Sounding_Proc(
-	IN	PRTMP_ADAPTER	pAd, 
-	IN	PCHAR			arg)
-{
-	UCHAR					macAddr[MAC_ADDR_LEN];
-	CHAR					*value;
-	INT						i;
-	UCHAR HashIdx;
-	MAC_TABLE_ENTRY *pEntry = NULL;
-
-	if(strlen(arg) != 17)  //Mac address acceptable format 01:02:03:04:05:06 length 17
-		return FALSE;
-
-	for (i=0, value = rstrtok(arg,":"); value; value = rstrtok(NULL,":")) 
-	{
-		if((strlen(value) != 2) || (!isxdigit(*value)) || (!isxdigit(*(value+1))) ) 
-			return FALSE;  //Invalid
-
-		AtoH(value, &macAddr[i++], 1);
-	}
-
-	HashIdx = MAC_ADDR_HASH_INDEX(macAddr);
-	pEntry = pAd->MacTab.Hash[HashIdx];
-
-	if (pEntry)
-	{
-		//MlmeDeAuthAction(pAd, pEntry, REASON_DISASSOC_STA_LEAVING);
-		Trigger_Sounding_Packet(pAd, SNDG_TYPE_SOUNGING, 0, pEntry->sndgMcs, pEntry);
-	}
-
-	return TRUE;
-}
-#endif // RT2883_TEMP_PATCH //
 
 #ifdef APCLI_SUPPORT
  INT RTMPIoctlConnStatus(

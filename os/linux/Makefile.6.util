@@ -3,14 +3,12 @@ include $(RT28xx_DIR)/os/linux/config.mk
 #ifdef CONFIG_AP_SUPPORT
 ifeq ($(RT28xx_MODE),AP)
 MOD_NAME = rtutil$(CHIPSET)ap
-DAT_PATH = /etc/Wireless/RT$(CHIPSET)AP
 endif
 #endif // CONFIG_AP_SUPPORT //
 
 #ifdef CONFIG_STA_SUPPORT
 ifeq ($(RT28xx_MODE), STA)
 MOD_NAME = rtutil$(CHIPSET)sta
-DAT_PATH = /etc/Wireless/RT$(CHIPSET)STA
 endif
 #endif // CONFIG_STA_SUPPORT //
 
@@ -26,6 +24,16 @@ obj-m := $(MOD_NAME).o
 
 rtutil$(CHIPSET)ap-objs := \
 	../../os/linux/rt_linux.o
+
+ifeq ($(PLATFORM),BL2348)
+rtutil$(CHIPSET)ap-objs += \
+	../../os/linux/vr_bdlt.o
+endif
+
+ifeq ($(HAS_BGFP_SUPPORT),y)
+rtutil$(CHIPSET)ap-objs += \
+	../../os/linux/br_ftph.o
+endif
 
 #ifdef RT2860
 ifeq ($(CHIPSET),2860)
@@ -225,6 +233,8 @@ clean:
 	rm -f ../../os/linux/.*.{cmd,flags,d}
 	rm -fr ../../os/linux/.tmp_versions
 	rm -f ../../os/linux/Module.symvers
+	rm -f ../../os/linux/Module.markers
+	rm -f ../../os/linux/modules.order
 	rm -f ../../chips/*.o
 	rm -f ../../chips/.*.{cmd,flags,d}
 ifeq ($(RT28xx_MODE),AP)
@@ -236,3 +246,12 @@ ifeq ($(RT28xx_MODE),STA)
 	rm -f ../../sta/.*.{cmd,flags,d}
 endif
 endif
+
+install:
+	install -d $(LINUX_SRC_MODULE)
+	install -m 644 -c $(addsuffix .ko,$(MOD_NAME)) $(LINUX_SRC_MODULE)
+	/sbin/depmod -a ${shell uname -r}
+
+uninstall:
+	rm -rf $(addprefix $(LINUX_SRC_MODULE),$(addsuffix .ko,$(MOD_NAME)))
+	/sbin/depmod -a ${shell uname -r}

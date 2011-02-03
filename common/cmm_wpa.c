@@ -5,36 +5,26 @@
  * Hsinchu County 302,
  * Taiwan, R.O.C.
  *
- * (c) Copyright 2002-2007, Ralink Technology, Inc.
+ * (c) Copyright 2002-2010, Ralink Technology, Inc.
  *
- * This program is free software; you can redistribute it and/or modify  * 
- * it under the terms of the GNU General Public License as published by  * 
- * the Free Software Foundation; either version 2 of the License, or     * 
- * (at your option) any later version.                                   * 
- *                                                                       * 
- * This program is distributed in the hope that it will be useful,       * 
- * but WITHOUT ANY WARRANTY; without even the implied warranty of        * 
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         * 
- * GNU General Public License for more details.                          * 
- *                                                                       * 
- * You should have received a copy of the GNU General Public License     * 
- * along with this program; if not, write to the                         * 
- * Free Software Foundation, Inc.,                                       * 
- * 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             * 
- *                                                                       * 
- *************************************************************************
+ * This program is free software; you can redistribute it and/or modify  *
+ * it under the terms of the GNU General Public License as published by  *
+ * the Free Software Foundation; either version 2 of the License, or     *
+ * (at your option) any later version.                                   *
+ *                                                                       *
+ * This program is distributed in the hope that it will be useful,       *
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of        *
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
+ * GNU General Public License for more details.                          *
+ *                                                                       *
+ * You should have received a copy of the GNU General Public License     *
+ * along with this program; if not, write to the                         *
+ * Free Software Foundation, Inc.,                                       *
+ * 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
+ *                                                                       *
+ *************************************************************************/
 
-	Module Name:
-	wpa.c
 
-	Abstract:
-
-	Revision History:
-	Who			When			What
-	--------	----------		----------------------------------------------
-	Jan	Lee		03-07-22		Initial
-	Paul Lin	03-11-28		Modify for supplicant
-*/
 #include "rt_config.h"
 
 // WPA OUI
@@ -153,13 +143,6 @@ VOID WpaEAPOLStartAction(
     PHEADER_802_11      pHeader;
 
 #ifdef CONFIG_STA_SUPPORT
-	IF_DEV_CONFIG_OPMODE_ON_STA(pAd)
-	{			    
-    	if (ADHOC_ON(pAd)) {
-            Adhoc_WpaEAPOLStartAction(pAd, Elem);
-            return;
-        }
-    }        
 #endif // CONFIG_STA_SUPPORT //    
 
     DBGPRINT(RT_DEBUG_TRACE, ("WpaEAPOLStartAction ===> \n"));
@@ -217,13 +200,6 @@ VOID WpaEAPOLKeyAction(
 	UINT				eapol_len;
 
 #ifdef CONFIG_STA_SUPPORT
-	IF_DEV_CONFIG_OPMODE_ON_STA(pAd)
-	{			    
-    	if (ADHOC_ON(pAd)) {
-            Adhoc_WpaEAPOLKeyAction(pAd, Elem);
-            return;
-        }
-    }
 #endif // CONFIG_STA_SUPPORT //   
 
     DBGPRINT(RT_DEBUG_TRACE, ("WpaEAPOLKeyAction ===>\n"));
@@ -650,6 +626,9 @@ VOID WPAStart4WayHS(
     PEAPOL_PACKET	pEapolFrame;
 	PUINT8			pBssid = NULL;
 	UCHAR			group_cipher = Ndis802_11WEPDisabled;
+
+#ifdef CONFIG_STA_SUPPORT
+#endif // CONFIG_STA_SUPPORT //  
 
     DBGPRINT(RT_DEBUG_TRACE, ("===> WPAStart4WayHS\n"));
 
@@ -1088,8 +1067,6 @@ VOID PeerPairMsg3Action(
 
 #ifdef CONFIG_STA_SUPPORT
 		STA_PORT_SECURED(pAd);
-	    // Indicate Connected for GUI
-	    pAd->IndicateMediaState = NdisMediaStateConnected;
 #endif // CONFIG_STA_SUPPORT //
 		DBGPRINT(RT_DEBUG_TRACE, ("PeerPairMsg3Action: AuthMode(%s) PairwiseCipher(%s) GroupCipher(%s) \n",
 									GetAuthMode(pEntry->AuthMode),
@@ -1126,44 +1103,44 @@ VOID PeerPairMsg4Action(
     IN MLME_QUEUE_ELEM  *Elem) 
 {    
 	PEAPOL_PACKET   	pMsg4;    
-    PHEADER_802_11      pHeader;
-    UINT            	MsgLen;
-    BOOLEAN             Cancelled;
+	PHEADER_802_11      pHeader;
+	UINT            	MsgLen;
+	BOOLEAN             Cancelled;
 	UCHAR				group_cipher = Ndis802_11WEPDisabled;
 
-    DBGPRINT(RT_DEBUG_TRACE, ("===> PeerPairMsg4Action\n"));
+	DBGPRINT(RT_DEBUG_TRACE, ("===> PeerPairMsg4Action\n"));
 
-    do
-    {
-        if ((!pEntry) || !IS_ENTRY_CLIENT(pEntry))
-            break;
-		
-        if (Elem->MsgLen < (LENGTH_802_11 + LENGTH_802_1_H + LENGTH_EAPOL_H + MIN_LEN_OF_EAPOL_KEY_MSG ) )
-            break;
+	do
+	{
+		if ((!pEntry) || !IS_ENTRY_CLIENT(pEntry))
+			break;
 
-        if (pEntry->WpaState < AS_PTKINIT_NEGOTIATING)
-            break;
+		if (Elem->MsgLen < (LENGTH_802_11 + LENGTH_802_1_H + LENGTH_EAPOL_H + MIN_LEN_OF_EAPOL_KEY_MSG ) )
+			break;
+
+		if (pEntry->WpaState < AS_PTKINIT_NEGOTIATING)
+			break;
 
 
-        // pointer to 802.11 header
-        pHeader = (PHEADER_802_11)Elem->Msg;
+		// pointer to 802.11 header
+		pHeader = (PHEADER_802_11)Elem->Msg;
 
 		// skip 802.11_header(24-byte) and LLC_header(8) 
 		pMsg4 = (PEAPOL_PACKET)&Elem->Msg[LENGTH_802_11 + LENGTH_802_1_H]; 
 		MsgLen = Elem->MsgLen - LENGTH_802_11 - LENGTH_802_1_H;
 
-        // Sanity Check peer Pairwise message 4 - Replay Counter, MIC
+		// Sanity Check peer Pairwise message 4 - Replay Counter, MIC
 		if (PeerWpaMessageSanity(pAd, pMsg4, MsgLen, EAPOL_PAIR_MSG_4, pEntry) == FALSE)
 			break;
 
-        /* 3. Install pairwise key */
+		/* 3. Install pairwise key */
 		WPAInstallPairwiseKey(pAd, pEntry->apidx, pEntry, TRUE);
         
-        /* 4. upgrade state */
-        pEntry->PrivacyFilter = Ndis802_11PrivFilterAcceptAll;
-        pEntry->WpaState = AS_PTKINITDONE;
+		/* 4. upgrade state */
+		pEntry->PrivacyFilter = Ndis802_11PrivFilterAcceptAll;
+		pEntry->WpaState = AS_PTKINITDONE;
 		pEntry->PortSecured = WPA_802_1X_PORT_SECURED;
-        
+
 
 		if (pEntry->AuthMode == Ndis802_11AuthModeWPA2 || 
 			pEntry->AuthMode == Ndis802_11AuthModeWPA2PSK)
@@ -1173,9 +1150,9 @@ VOID PeerPairMsg4Action(
 
 
 			// send wireless event - for set key done WPA2
-				RTMPSendWirelessEvent(pAd, IW_SET_KEY_DONE_WPA2_EVENT_FLAG, pEntry->Addr, pEntry->apidx, 0); 
+			RTMPSendWirelessEvent(pAd, IW_SET_KEY_DONE_WPA2_EVENT_FLAG, pEntry->Addr, pEntry->apidx, 0); 
 	 
-	        DBGPRINT(RT_DEBUG_OFF, ("AP SETKEYS DONE - WPA2, AuthMode(%d)=%s, WepStatus(%d)=%s, GroupWepStatus(%d)=%s\n\n", 
+			DBGPRINT(RT_DEBUG_OFF, ("AP SETKEYS DONE - WPA2, AuthMode(%d)=%s, WepStatus(%d)=%s, GroupWepStatus(%d)=%s\n\n", 
 									pEntry->AuthMode, GetAuthMode(pEntry->AuthMode), 
 									pEntry->WepStatus, GetEncryptType(pEntry->WepStatus), 
 									group_cipher, 
@@ -1183,14 +1160,13 @@ VOID PeerPairMsg4Action(
 		}
 		else
 		{
-        	// 5. init Group 2-way handshake if necessary.
-	        WPAStart2WayGroupHS(pAd, pEntry);
+			// 5. init Group 2-way handshake if necessary.
+			WPAStart2WayGroupHS(pAd, pEntry);
 
-        	pEntry->ReTryCounter = GROUP_MSG1_RETRY_TIMER_CTR;
+			pEntry->ReTryCounter = GROUP_MSG1_RETRY_TIMER_CTR;
 			RTMPModTimer(&pEntry->RetryTimer, PEER_MSG3_RETRY_EXEC_INTV);
 		}
-    }while(FALSE);
-    
+	}while(FALSE);
 }
 
 /*
@@ -1352,8 +1328,6 @@ VOID	PeerGroupMsg1Action(
 
 #ifdef CONFIG_STA_SUPPORT
 	STA_PORT_SECURED(pAd);
-    // Indicate Connected for GUI
-    pAd->IndicateMediaState = NdisMediaStateConnected;
 #endif // CONFIG_STA_SUPPORT //
 	
 	DBGPRINT(RT_DEBUG_TRACE, ("PeerGroupMsg1Action: AuthMode(%s) PairwiseCipher(%s) GroupCipher(%s) \n",
@@ -1709,23 +1683,25 @@ VOID	PRF(
 static void F(char *password, unsigned char *ssid, int ssidlength, int iterations, int count, unsigned char *output) 
 { 
     unsigned char digest[36], digest1[SHA1_DIGEST_SIZE]; 
-    int i, j; 
-
+    int i, j, len; 
+	
+	len = strlen(password);
+		
     /* U1 = PRF(P, S || int(i)) */ 
     memcpy(digest, ssid, ssidlength); 
     digest[ssidlength] = (unsigned char)((count>>24) & 0xff); 
     digest[ssidlength+1] = (unsigned char)((count>>16) & 0xff); 
     digest[ssidlength+2] = (unsigned char)((count>>8) & 0xff); 
     digest[ssidlength+3] = (unsigned char)(count & 0xff); 
-    RT_HMAC_SHA1((unsigned char*) password, (int) strlen(password), digest, ssidlength+4, digest1, SHA1_DIGEST_SIZE); // for WPA update
+    RT_HMAC_SHA1((unsigned char*) password, len, digest, ssidlength+4, digest1, SHA1_DIGEST_SIZE); // for WPA update
 
     /* output = U1 */ 
     memcpy(output, digest1, SHA1_DIGEST_SIZE); 
-
     for (i = 1; i < iterations; i++) 
     { 
+    
         /* Un = PRF(P, Un-1) */ 
-        RT_HMAC_SHA1((unsigned char*) password, (int) strlen(password), digest1, SHA1_DIGEST_SIZE, digest, SHA1_DIGEST_SIZE); // for WPA update
+        RT_HMAC_SHA1((unsigned char*) password, len, digest1, SHA1_DIGEST_SIZE, digest, SHA1_DIGEST_SIZE); // for WPA update
         memcpy(digest1, digest, SHA1_DIGEST_SIZE); 
 
         /* output = output xor Un */ 
@@ -1744,7 +1720,7 @@ static void F(char *password, unsigned char *ssid, int ssidlength, int iteration
 */ 
 int RtmpPasswordHash(PSTRING password, PUCHAR ssid, INT ssidlength, PUCHAR output) 
 { 
-    if ((strlen(password) > 63) || (ssidlength > 32)) 
+    if ((strlen(password) > 63) || (ssidlength > 32))
         return 0; 
 
     F(password, ssid, ssidlength, 4096, 1, output); 
@@ -2744,7 +2720,7 @@ BOOLEAN RTMPParseEapolKeyData(
 			hex_dump("Receive RSN_IE ", pKeyData, KeyDataLen);
 			hex_dump("Desired RSN_IE ", pEntry->RSN_IE, pEntry->RSNIE_Len);	
 					
-			return FALSE;			
+			//return FALSE;			
     	}
     	else
 		{
@@ -2832,14 +2808,7 @@ BOOLEAN RTMPParseEapolKeyData(
 #ifdef CONFIG_STA_SUPPORT
 	IF_DEV_CONFIG_OPMODE_ON_STA(pAd)
 	{			
-        if (ADHOC_ON(pAd)) {
-            if (pAd->StaCfg.GroupCipher == Ndis802_11Encryption3Enabled) {
-                NdisZeroMemory(&pEntry->RxGTK, sizeof(CIPHER_KEY));                                
-      			NdisMoveMemory(pEntry->RxGTK.Key, GTK, LEN_TK);
-                pEntry->RxGTK.CipherAlg = CIPHER_AES;
-                pEntry->RxGTK.KeyLen= LEN_TK;
-            }                
-        } else {                        
+        {                        
     		// set key material, TxMic and RxMic		
     		NdisMoveMemory(pAd->StaCfg.GTK, GTK, GTKLEN);
     		pAd->StaCfg.DefaultKeyId = DefaultIdx;
@@ -3415,9 +3384,6 @@ PCIPHER_KEY RTMPSwCipherKeySelection(
 			pKey = &pEntry->PairwiseKey;
 		else {
 #ifdef CONFIG_STA_SUPPORT
-            if (ADHOC_ON(pAd))
-    			pKey = &pEntry->RxGTK;
-            else
 #endif // CONFIG_STA_SUPPORT //	    	                
 		    	pKey = &pAd->SharedKey[pEntry->apidx][keyIdx];
         }
@@ -4007,8 +3973,6 @@ VOID WPAInstallSharedKey(
 		pSharedKey->CipherAlg = CIPHER_TKIP;
 	else if (GroupCipher == Ndis802_11Encryption3Enabled)
 		pSharedKey->CipherAlg = CIPHER_AES;
-	else if (GroupCipher == Ndis802_11GroupWEP104Enabled)
-		pSharedKey->CipherAlg = CIPHER_WEP128;
 	else
 	{
 		DBGPRINT(RT_DEBUG_ERROR, ("%s : fails (IF/ra%d) \n", 

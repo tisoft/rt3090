@@ -5,36 +5,25 @@
  * Hsinchu County 302,
  * Taiwan, R.O.C.
  *
- * (c) Copyright 2002-2007, Ralink Technology, Inc.
+ * (c) Copyright 2002-2010, Ralink Technology, Inc.
  *
- * This program is free software; you can redistribute it and/or modify  * 
- * it under the terms of the GNU General Public License as published by  * 
- * the Free Software Foundation; either version 2 of the License, or     * 
- * (at your option) any later version.                                   * 
- *                                                                       * 
- * This program is distributed in the hope that it will be useful,       * 
- * but WITHOUT ANY WARRANTY; without even the implied warranty of        * 
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         * 
- * GNU General Public License for more details.                          * 
- *                                                                       * 
- * You should have received a copy of the GNU General Public License     * 
- * along with this program; if not, write to the                         * 
- * Free Software Foundation, Inc.,                                       * 
- * 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             * 
- *                                                                       * 
- *************************************************************************
+ * This program is free software; you can redistribute it and/or modify  *
+ * it under the terms of the GNU General Public License as published by  *
+ * the Free Software Foundation; either version 2 of the License, or     *
+ * (at your option) any later version.                                   *
+ *                                                                       *
+ * This program is distributed in the hope that it will be useful,       *
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of        *
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
+ * GNU General Public License for more details.                          *
+ *                                                                       *
+ * You should have received a copy of the GNU General Public License     *
+ * along with this program; if not, write to the                         *
+ * Free Software Foundation, Inc.,                                       *
+ * 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
+ *                                                                       *
+ *************************************************************************/
 
-	Module Name:
-	mlme.c
-
-	Abstract:
-
-	Revision History:
-	Who			When			What
-	--------	----------		----------------------------------------------
-	John Chang	2004-08-25		Modify from RT2500 code base
-	John Chang	2004-09-06		modified for RT2600
-*/
 
 #include "rt_config.h"
 #include <stdarg.h>
@@ -148,6 +137,7 @@ UCHAR RateSwitchTable11N1S[] = {
     0x0b, 0x23,  7,  8, 14,
 };
 
+
 UCHAR RateSwitchTable11N2S[] = {
 // Item No.   Mode   Curr-MCS   TrainUp   TrainDown		// Mode- Bit0: STBC, Bit1: Short GI, Bit4,5: Mode(0:CCK, 1:OFDM, 2:HT Mix, 3:HT GF)
     0x0e, 0x0c,  0,  0,  0,						// Initial used item after association
@@ -167,13 +157,14 @@ UCHAR RateSwitchTable11N2S[] = {
     0x0d, 0x22, 15,  8, 15,
 };
 
+
 #ifdef NEW_RATE_ADAPT_SUPPORT
+// 3x3 rate switch table for new rate adaption (default: for good siganl environment (RSSI > -65))
+// Target: Good throughput
+
 UCHAR RateSwitchTable11N3S[] = {
-// Item No.	Mode	Curr-MCS	TrainUp	TrainDown	// Mode- Bit0: STBC, Bit1: Short GI, Bit4,5: Mode(0:CCK, 1:OFDM, 2:HT Mix, 3:HT GF)
-// item no.     mcs     highPERThrd
-//          mode     lowPERThrd
-//                                    downMcs upMcs2 
-//                                           upMcs3 upMcs1
+	// item no.     mcs   highPERThrd  upMcs3   upMcs1    // Mode- Bit0: STBC, Bit1: Short GI, Bit4,5: Mode(0:CCK, 1:OFDM, 2:HT Mix, 3:HT GF)
+	//        mode    lowPERThrd  downMcs   upMcs2
     0x19, 0x18,  0,  0,   0,   0,   0,   0,   0,   0,// Initial used item after association: the number of rate indexes, the initial mcs
     0x00, 0x21,  0, 30, 101,   0,  16,   8,   1,   7,//mcs0
     0x01, 0x21,  1, 20,  50,   0,  16,   9,   2,  13,//mcs1
@@ -189,8 +180,8 @@ UCHAR RateSwitchTable11N3S[] = {
     0x0b, 0x20, 11, 15,  30,  10,  18,  12,   6,  52,//mcs11
     0x0c, 0x20, 12, 15,  30,  11,  20,  13,  12,  78,//mcs12
     0x0d, 0x20, 13,  8,  20,  12,  20,  14,  13, 104,//mcs13
-    0x0e, 0x20, 14,  8,  20,  13,  21,  15,  14, 117,//mcs14
-    0x0f, 0x20, 15,  8,  25,  14,  21,  15,  15, 130,//mcs15
+    0x0e, 0x20, 14,  8,  18,  13,  21,  15,  14, 117,//mcs14
+    0x0f, 0x20, 15,  8,  14,  14,  21,  15,  15, 130,//mcs15
     0x10, 0x20, 16, 30,  50,   8,  17,   9,   3,  20,//mcs16
     0x11, 0x20, 17, 20,  50,  16,  18,  11,   5,  39,//mcs17
     0x12, 0x20, 18, 20,  50,  17,  19,  12,   7,  59,//mcs18
@@ -198,32 +189,67 @@ UCHAR RateSwitchTable11N3S[] = {
     0x14, 0x20, 20, 15,  30,  19,  21,  15,  20, 117,//mcs20
     0x15, 0x20, 21,  8,  20,  20,  22,  21,  21, 156,//mcs21
     0x16, 0x20, 22,  8,  20,  21,  23,  22,  22, 176,//mcs22
-    0x17, 0x20, 23,  8,  25,  22,  24,  23,  23, 196,//mcs23
-    0x18, 0x22, 23,  8,  25,  23,  24,  24,  24, 217,//mcs23+shortGI
-
+    0x17, 0x20, 23,  6,  18,  22,  24,  23,  23, 196,//mcs23
+    0x18, 0x22, 23,  6,  14,  23,  24,  24,  24, 217,//mcs23+shortGI
 		};
 #else
 UCHAR RateSwitchTable11N3S[] = {
 // Item No.	Mode	Curr-MCS	TrainUp	TrainDown	// Mode- Bit0: STBC, Bit1: Short GI, Bit4,5: Mode(0:CCK, 1:OFDM, 2:HT Mix, 3:HT GF)
-	0x0e, 0x00,  0,  0,  0,	// 0x0a, 0x00,  0,  0,  0,      // Initial used item after association
-    0x00, 0x21,  0, 30, 101,
-    0x01, 0x21,  1, 20, 50,
-    0x02, 0x21,  2, 20, 50,
-    0x03, 0x21,  3, 15, 50,
-    0x04, 0x21,  4, 15, 30,
-    0x05, 0x20, 11, 15, 30,	// Required by System-Alan @ 20080812 
-    0x06, 0x20, 12, 15, 30,	// 0x05, 0x20, 12, 15, 30,
-    0x07, 0x20, 13,  8, 20,	// 0x06, 0x20, 13,  8, 20,
-    0x08, 0x20, 14,  8, 20,	// 0x07, 0x20, 14,  8, 20,
-    0x09, 0x20, 15,  8, 25,	// 0x08, 0x20, 15,  8, 25,
-	//0x0a, 0x22, 15,  8, 15,	// 0x09, 0x22, 15,  8, 25,
-	//0x0a, 0x20, 20, 15, 30,
-	0x0a, 0x20, 21,  8, 20,
-	0x0b, 0x20, 22,  8, 20,
-	0x0c, 0x20, 23,  8, 25,
-	0x0d, 0x22, 23,  8, 25,
+    0x11, 0x0c,  0,  0,  0,						// Initial used item after association
+    0x00, 0x00,  0, 40, 101,
+    0x01, 0x00,  1, 40, 50,
+    0x02, 0x00,  2, 25, 45,
+    0x03, 0x21,  0, 20, 35,
+    0x04, 0x21,  1, 20, 35,
+    0x05, 0x21,  2, 20, 35,
+    0x06, 0x21,  3, 15, 35,
+    0x07, 0x21,  4, 15, 30,
+    0x08, 0x20, 11, 15, 30,
+    0x09, 0x20, 12, 15, 22,
+    0x0a, 0x20, 13,  8, 20,
+    0x0b, 0x20, 14,  8, 20,
+    0x0c, 0x20, 20,  8, 20,
+    0x0d, 0x20, 21,  8, 20,
+    0x0e, 0x20, 22,  8, 20,
+    0x0f, 0x20, 23,  8, 20,
+    0x10, 0x22, 23,  8, 15,
 };
 #endif // NEW_RATE_ADAPT_SUPPORT //
+
+// SYNC with Rory!! In order to solve the issue that the throughput drop dramatically at middle-long rage!! 
+// 3x3 rate switch table for new rate adaption (replacement: for bad siganl environment (RSSI < -65))
+// Target: Good sensibility
+
+UCHAR RateSwitchTable11N3SReplacement[] = {
+	// item no.     mcs   highPERThrd  upMcs3   upMcs1    // Mode- Bit0: STBC, Bit1: Short GI, Bit4,5: Mode(0:CCK, 1:OFDM, 2:HT Mix, 3:HT GF)
+	//        mode    lowPERThrd  downMcs   upMcs2
+	0x19, 0x18,	 0,   0,    0,	 0,   0,   0,  0,   0,	// Initial used item after association: the number of rate indexes, the initial mcs
+	0x00, 0x21,	 0,  30,  101,	 0,  16,   8,  1,   7,	// MCS 0
+	0x01, 0x21,	 1,  20,   50,	 0,  16,   9,  2,  13,	// MCS 1
+	0x02, 0x21,	 2,  20,   50,	 1,  17,   9,  3,  20,	// MCS 2
+	0x03, 0x21,	 3,  15,   50,	 2,  17,  10,  4,  26,	// MCS 3
+	0x04, 0x21,	 4,  15,   30,	 3,  18,  11,  5,  39,	// MCS 4
+	0x05, 0x21,	 5,  10,   25,	 4,  18,  12,  6,  52,	// MCS 5
+	0x06, 0x21,	 6,   8,   14,	 5,  19,  12,  7,  59,	// MCS 6
+	0x07, 0x21,	 7,   8,   14,	 6,  19,  12,  7,  65,	// MCS 7
+	0x08, 0x20,	 8,  30,   50,	 0,  16,   9,  8,  13,	// MCS 8
+	0x09, 0x20,	 9,  20,   50,	 8,  17,  10,  9,  26,	// MCS 9
+	0x0a, 0x20,	10,  20,   50,	 9,  18,  11, 10,  39,	// MCS 10
+	0x0b, 0x20,	11,  15,   30,	10,  18,  12, 11,  52,	// MCS 11
+	0x0c, 0x20,	12,  15,   30,	11,  20,  13, 12,  78,	// MCS 12
+	0x0d, 0x20,	13,   8,   20,	12,  20,  14, 13, 104,	// MCS 13
+	0x0e, 0x20,	14,   8,   18,	13,  21,  15, 14, 117,	// MCS 14
+	0x0f, 0x20,	15,   8,   14,	14,  21,  15, 15, 130,	// MCS 15
+	0x10, 0x20,	16,  30,   50,	 8,  17,  16, 16,  20,	// MCS 16
+	0x11, 0x20,	17,  20,   50,	16,  18,  17, 17,  39,	// MCS 17
+	0x12, 0x20,	18,  20,   50,	17,  19,  18, 18,  59,	// MCS 18
+	0x13, 0x20,	19,  15,   30,	18,  20,  19, 19,  78,	// MCS 19
+	0x14, 0x20,	20,  15,   30,	19,  21,  20, 20, 117,	// MCS 20
+	0x15, 0x20,	21,   8,   20,	20,  22,  21, 21, 156,	// MCS 21
+	0x16, 0x20,	22,   8,   20,	21,  23,  22, 22, 176,	// MCS 22
+	0x17, 0x20,	23,   6,   18,	22,  24,  23, 23, 196,	// MCS 23
+	0x18, 0x22,	23,   6,   14,	23,  24,  24, 24, 217,	// MCS 23 + Short GI
+};
 
 UCHAR RateSwitchTable11N2SForABand[] = {
 // Item No.   Mode   Curr-MCS   TrainUp   TrainDown		// Mode- Bit0: STBC, Bit1: Short GI, Bit4,5: Mode(0:CCK, 1:OFDM, 2:HT Mix, 3:HT GF)
@@ -243,7 +269,7 @@ UCHAR RateSwitchTable11N2SForABand[] = {
 
 UCHAR RateSwitchTable11N3SForABand[] = { // 3*3
 // Item No.   Mode   Curr-MCS   TrainUp   TrainDown		// Mode- Bit0: STBC, Bit1: Short GI, Bit4,5: Mode(0:CCK, 1:OFDM, 2:HT Mix, 3:HT GF)
-    0x0b, 0x09,  0,  0,  0,						// Initial used item after association
+    0x0e, 0x09,  0,  0,  0,						// Initial used item after association
     0x00, 0x21,  0, 30, 101,
     0x01, 0x21,  1, 20, 50,
     0x02, 0x21,  2, 20, 50,
@@ -254,7 +280,12 @@ UCHAR RateSwitchTable11N3SForABand[] = { // 3*3
     0x07, 0x20, 13,  8, 20,
     0x08, 0x20, 14,  8, 20,
     0x09, 0x20, 15,  8, 25,
-    0x0a, 0x22, 15,  8, 25,
+    //0x0a, 0x22, 15,  8, 25,
+    //0x0a, 0x20, 20, 15, 30,
+    0x0a, 0x20, 21,  8, 20,
+    0x0b, 0x20, 22,  8, 20,
+    0x0c, 0x20, 23,  8, 25,
+    0x0d, 0x22, 23,  8, 25,
 };
 
 UCHAR RateSwitchTable11BGN1S[] = {
@@ -273,6 +304,7 @@ UCHAR RateSwitchTable11BGN1S[] = {
     0x0a, 0x21,  7,  8, 14,
     0x0b, 0x23,  7,  8, 14,
 };
+
 
 UCHAR RateSwitchTable11BGN2S[] = {
 // Item No.   Mode   Curr-MCS   TrainUp   TrainDown		// Mode- Bit0: STBC, Bit1: Short GI, Bit4,5: Mode(0:CCK, 1:OFDM, 2:HT Mix, 3:HT GF)
@@ -293,20 +325,27 @@ UCHAR RateSwitchTable11BGN2S[] = {
     0x0d, 0x22, 15,  8, 15,
 };
 
+
 UCHAR RateSwitchTable11BGN3S[] = { // 3*3
 // Item No.   Mode   Curr-MCS   TrainUp   TrainDown		// Mode- Bit0: STBC, Bit1: Short GI, Bit4,5: Mode(0:CCK, 1:OFDM, 2:HT Mix, 3:HT GF)
-    0x0a, 0x00,  0,  0,  0,						// Initial used item after association
+    0x0e, 0x00,  0,  0,  0,						// Initial used item after association
     0x00, 0x21,  0, 30,101,	//50
     0x01, 0x21,  1, 20, 50,
     0x02, 0x21,  2, 20, 50,
     0x03, 0x21,  3, 20, 50,
     0x04, 0x21,  4, 15, 50,
-    0x05, 0x20, 20, 15, 30,
-    0x06, 0x20, 21,  8, 20,
-    0x07, 0x20, 22,  8, 20,
-    0x08, 0x20, 23,  8, 25,
-    0x09, 0x22, 23,  8, 25,
+    0x05, 0x20, 11, 15, 30,
+    0x06, 0x20, 12, 15, 30,
+    0x07, 0x20, 13,  8, 20,
+    0x08, 0x20, 14,  8, 20,
+    0x09, 0x20, 15,  8, 25,
+    //0x0a, 0x20, 20, 15, 30,
+    0x0a, 0x20, 21,  8, 20,
+    0x0b, 0x20, 22,  8, 20,
+    0x0c, 0x20, 23,  8, 25,
+    0x0d, 0x22, 23,  8, 25,
 };
+
 
 UCHAR RateSwitchTable11BGN2SForABand[] = {
 // Item No.   Mode   Curr-MCS   TrainUp   TrainDown		// Mode- Bit0: STBC, Bit1: Short GI, Bit4,5: Mode(0:CCK, 1:OFDM, 2:HT Mix, 3:HT GF)
@@ -324,29 +363,49 @@ UCHAR RateSwitchTable11BGN2SForABand[] = {
     0x0a, 0x22, 15,  8, 25,
 };
 
+
 UCHAR RateSwitchTable11BGN3SForABand[] = { // 3*3
 // Item No.   Mode   Curr-MCS   TrainUp   TrainDown		// Mode- Bit0: STBC, Bit1: Short GI, Bit4,5: Mode(0:CCK, 1:OFDM, 2:HT Mix, 3:HT GF)
-    0x0c, 0x09,  0,  0,  0,						// Initial used item after association
+    0x0e, 0x09,  0,  0,  0,						// Initial used item after association
     0x00, 0x21,  0, 30,101,	//50
     0x01, 0x21,  1, 20, 50,
     0x02, 0x21,  2, 20, 50,
     0x03, 0x21,  3, 15, 50,
     0x04, 0x21,  4, 15, 30,
     0x05, 0x21,  5, 15, 30,
-    0x06, 0x21, 12, 15, 30,
-    0x07, 0x20, 20, 15, 30,
-    0x08, 0x20, 21,  8, 20,
-    0x09, 0x20, 22,  8, 20,
-    0x0a, 0x20, 23,  8, 25,
-    0x0b, 0x22, 23,  8, 25,
+    0x06, 0x20, 12, 15, 30,
+    0x07, 0x20, 13,  8, 20,
+    0x08, 0x20, 14,  8, 20,
+    0x09, 0x20, 15,  8, 25,
+    //0x0a, 0x22, 15,  8, 25,
+    //0x0a, 0x20, 20, 15, 30,
+    0x0a, 0x20, 21,  8, 20,
+    0x0b, 0x20, 22,  8, 20,
+    0x0c, 0x20, 23,  8, 25,
+    0x0d, 0x22, 23,  8, 25,
 };
+
+
 #endif // DOT11_N_SUPPORT //
 
 
 extern UCHAR	 OfdmRateToRxwiMCS[];
+// since RT61 has better RX sensibility, we have to limit TX ACK rate not to exceed our normal data TX rate.
+// otherwise the WLAN peer may not be able to receive the ACK thus downgrade its data TX rate
+ULONG BasicRateMask[12]				= {0xfffff001 /* 1-Mbps */, 0xfffff003 /* 2 Mbps */, 0xfffff007 /* 5.5 */, 0xfffff00f /* 11 */,
+									  0xfffff01f /* 6 */	 , 0xfffff03f /* 9 */	  , 0xfffff07f /* 12 */ , 0xfffff0ff /* 18 */,
+									  0xfffff1ff /* 24 */	 , 0xfffff3ff /* 36 */	  , 0xfffff7ff /* 48 */ , 0xffffffff /* 54 */};
+
 UCHAR BROADCAST_ADDR[MAC_ADDR_LEN] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
 UCHAR ZERO_MAC_ADDR[MAC_ADDR_LEN]  = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-unsigned char  RateIdToMbps[]	 = { 1, 2, 5, 11, 6, 9, 12, 18, 24, 36, 48, 54, 72, 100};
+
+// e.g. RssiSafeLevelForTxRate[RATE_36]" means if the current RSSI is greater than
+//		this value, then it's quaranteed capable of operating in 36 mbps TX rate in
+//		clean environment.
+//								  TxRate: 1   2   5.5	11	 6	  9    12	18	 24   36   48	54	 72  100
+CHAR RssiSafeLevelForTxRate[] ={  -92, -91, -90, -87, -88, -86, -85, -83, -81, -78, -72, -71, -40, -40 };
+
+UCHAR  RateIdToMbps[]	 = { 1, 2, 5, 11, 6, 9, 12, 18, 24, 36, 48, 54, 72, 100};
 USHORT RateIdTo500Kbps[] = { 2, 4, 11, 22, 12, 18, 24, 36, 48, 72, 96, 108, 144, 200};
 
 UCHAR  SsidIe	 = IE_SSID;
@@ -521,6 +580,23 @@ NDIS_STATUS MlmeInit(
 			// Since we are using switch/case to implement it, the init is different from the above 
 			// state machine init
 			MlmeCntlInit(pAd, &pAd->Mlme.CntlMachine, NULL);
+
+#ifdef PCIE_PS_SUPPORT
+			if (OPSTATUS_TEST_FLAG(pAd, fOP_STATUS_ADVANCE_POWER_SAVE_PCIE_DEVICE))
+			{
+			    // only PCIe cards need these two timers
+				RTMPInitTimer(pAd, &pAd->Mlme.PsPollTimer, GET_TIMER_FUNCTION(PsPollWakeExec), pAd, FALSE);
+				RTMPInitTimer(pAd, &pAd->Mlme.RadioOnOffTimer, GET_TIMER_FUNCTION(RadioOnExec), pAd, FALSE);
+			}
+#endif // PCIE_PS_SUPPORT //
+
+			RTMPInitTimer(pAd, &pAd->Mlme.LinkDownTimer, GET_TIMER_FUNCTION(LinkDownExec), pAd, FALSE);
+			RTMPInitTimer(pAd, &pAd->StaCfg.StaQuickResponeForRateUpTimer, GET_TIMER_FUNCTION(StaQuickResponeForRateUpExec), pAd, FALSE);
+			pAd->StaCfg.StaQuickResponeForRateUpTimerRunning = FALSE;
+			RTMPInitTimer(pAd, &pAd->StaCfg.WpaDisassocAndBlockAssocTimer, GET_TIMER_FUNCTION(WpaDisassocApAndBlockAssoc), pAd, FALSE);
+
+
+
 		}
 #endif // CONFIG_STA_SUPPORT //
 		
@@ -538,24 +614,6 @@ NDIS_STATUS MlmeInit(
 
 		// software-based RX Antenna diversity
 		RTMPInitTimer(pAd, &pAd->Mlme.RxAntEvalTimer, GET_TIMER_FUNCTION(AsicRxAntEvalTimeout), pAd, FALSE);
-
-
-#ifdef CONFIG_STA_SUPPORT
-		IF_DEV_CONFIG_OPMODE_ON_STA(pAd)
-		{
-#ifdef PCIE_PS_SUPPORT
-			if (OPSTATUS_TEST_FLAG(pAd, fOP_STATUS_ADVANCE_POWER_SAVE_PCIE_DEVICE))
-			{
-			    // only PCIe cards need these two timers
-				RTMPInitTimer(pAd, &pAd->Mlme.PsPollTimer, GET_TIMER_FUNCTION(PsPollWakeExec), pAd, FALSE);
-				RTMPInitTimer(pAd, &pAd->Mlme.RadioOnOffTimer, GET_TIMER_FUNCTION(RadioOnExec), pAd, FALSE);
-			}
-#endif // PCIE_PS_SUPPORT //
-
-			RTMPInitTimer(pAd, &pAd->Mlme.LinkDownTimer, GET_TIMER_FUNCTION(LinkDownExec), pAd, FALSE);
-
-		}
-#endif // CONFIG_STA_SUPPORT //
 
 	} while (FALSE);
 
@@ -725,6 +783,8 @@ VOID MlmeHalt(
 		AsicDisableSync(pAd);
 	}
 
+	RTMPCancelTimer(&pAd->Mlme.PeriodicTimer,		&Cancelled);
+
 #ifdef CONFIG_STA_SUPPORT
 	IF_DEV_CONFIG_OPMODE_ON_STA(pAd)
 	{
@@ -759,10 +819,16 @@ VOID MlmeHalt(
 
 
 
+
+		if (pAd->StaCfg.StaQuickResponeForRateUpTimerRunning)
+		{
+			RTMPCancelTimer(&pAd->StaCfg.StaQuickResponeForRateUpTimer, &Cancelled);
+			pAd->StaCfg.StaQuickResponeForRateUpTimerRunning = FALSE;
+		}
+		RTMPCancelTimer(&pAd->StaCfg.WpaDisassocAndBlockAssocTimer, &Cancelled);
 	}
 #endif // CONFIG_STA_SUPPORT //
 
-	RTMPCancelTimer(&pAd->Mlme.PeriodicTimer,		&Cancelled);
 	RTMPCancelTimer(&pAd->Mlme.RxAntEvalTimer,		&Cancelled);
 
 	if ((pAd->bHWCoexistenceInit == TRUE) && IS_ENABLE_MISC_TIMER(pAd))
@@ -834,6 +900,9 @@ VOID MlmePeriodicExec(
 {
 	ULONG			TxTotalCnt;
 	PRTMP_ADAPTER	pAd = (RTMP_ADAPTER *)FunctionContext;
+#ifdef ANT_DIVERSITY_SUPPORT
+	SHORT	realavgrssi;
+#endif // ANT_DIVERSITY_SUPPORT //
 
 #ifdef RTMP_MAC_PCI
 #ifdef CONFIG_STA_SUPPORT
@@ -847,7 +916,7 @@ VOID MlmePeriodicExec(
 		(!RTMP_TEST_FLAG(pAd, fRTMP_ADAPTER_NIC_NOT_EXIST)) &&
 		(!RTMP_TEST_FLAG(pAd, fRTMP_ADAPTER_HALT_IN_PROGRESS)))
 	{
-		AsicSendCommandToMcu(pAd, 0x84, 0xff, 0xff, 0xff); 
+		AsicSendCommandToMcu(pAd, TRUE, 0x84, 0xff, 0xff, 0xff); 
 	}
 #endif // RT30xx //
 #endif // CONFIG_STA_SUPPORT //
@@ -921,6 +990,12 @@ else
 				{
 					pAd->StaCfg.bHwRadio = FALSE;
 				}
+#ifdef RT_CFG80211_SUPPORT
+#ifdef RFKILL_HW_SUPPORT
+                                RFKillStatusUpdate(pAd, pAd->StaCfg.bHwRadio);
+#endif // RFKILL_HW_SUPPORT //
+#endif /* RT_CFG80211_SUPPORT */
+
 			}
 
 			// Always read HW radio configuration.
@@ -946,6 +1021,10 @@ else
 		}
 	}
 #endif // RTMP_MAC_PCI //
+	IF_DEV_CONFIG_OPMODE_ON_STA(pAd)
+	{
+		RTMP_MLME_PRE_SANITY_CHECK(pAd);
+	}
 #endif // CONFIG_STA_SUPPORT //
 
 	// Do nothing if the driver is starting halt state.
@@ -953,11 +1032,10 @@ else
 	if ((RTMP_TEST_FLAG(pAd, (fRTMP_ADAPTER_HALT_IN_PROGRESS |
 								fRTMP_ADAPTER_RADIO_OFF |
 								fRTMP_ADAPTER_RADIO_MEASUREMENT |
-								fRTMP_ADAPTER_RESET_IN_PROGRESS))))
+								fRTMP_ADAPTER_RESET_IN_PROGRESS |
+								fRTMP_ADAPTER_NIC_NOT_EXIST))))
 		return;
 	
-	RTMP_MLME_PRE_SANITY_CHECK(pAd);
-
 #ifdef RALINK_ATE
 	/* Do not show RSSI until "Normal 1 second Mlme PeriodicExec". */
 	if (ATE_ON(pAd))
@@ -1043,6 +1121,12 @@ else
 				else
 					ate_print(KERN_EMERG "MlmePeriodicExec: Rx AvgRssi=%d\n\n", pAd->ate.AvgRssi0);
 			}
+
+			if (pAd->ate.bAutoTxAlc == TRUE)
+			{
+				ATEAsicAdjustTxPower(pAd);
+			}
+
 			MlmeResetRalinkCounters(pAd);
 			return;
     	}
@@ -1051,23 +1135,6 @@ else
 
 
 		//ORIBATimerTimeout(pAd);
-		
-		// Media status changed, report to NDIS
-		if (RTMP_TEST_FLAG(pAd, fRTMP_ADAPTER_MEDIA_STATE_CHANGE)) 
-		{
-			RTMP_CLEAR_FLAG(pAd, fRTMP_ADAPTER_MEDIA_STATE_CHANGE);
-			if (OPSTATUS_TEST_FLAG(pAd, fOP_STATUS_MEDIA_STATE_CONNECTED))
-			{
-				pAd->IndicateMediaState = NdisMediaStateConnected;
-				RTMP_IndicateMediaState(pAd);
-			}
-			else
-			{
-				pAd->IndicateMediaState = NdisMediaStateDisconnected;
-				RTMP_IndicateMediaState(pAd);
-			}
-		}
-
 		NdisGetSystemUpTime(&pAd->Mlme.Now32);
 
 		// add the most up-to-date h/w raw counters into software variable, so that
@@ -1090,6 +1157,20 @@ else
 	//		pAd->RalinkCounters.MgmtRingFullCount = 0;
 
 		// The time period for checking antenna is according to traffic
+#ifdef ANT_DIVERSITY_SUPPORT
+		if ((pAd->NicConfig2.field.AntDiversity) && 
+			(pAd->CommonCfg.bRxAntDiversity == ANT_DIVERSITY_ENABLE) && 
+			(!pAd->EepromAccess))
+			AsicAntennaSelect(pAd, pAd->MlmeAux.Channel);
+		else if(pAd->CommonCfg.bRxAntDiversity == ANT_FIX_ANT1 || pAd->CommonCfg.bRxAntDiversity == ANT_FIX_ANT2)
+		{
+#ifdef CONFIG_STA_SUPPORT
+			realavgrssi = (pAd->RxAnt.Pair1AvgRssi[pAd->RxAnt.Pair1PrimaryRxAnt] >> 3);
+#endif // CONFIG_STA_SUPPORT //
+			DBGPRINT(RT_DEBUG_TRACE,("Ant-realrssi0(%d), Lastrssi0(%d), EvaluateStableCnt=%d\n", realavgrssi, pAd->RxAnt.Pair1LastAvgRssi, pAd->RxAnt.EvaluateStableCnt));
+		}
+		else
+#endif // ANT_DIVERSITY_SUPPORT //
 		{
 			if (pAd->Mlme.bEnableAutoAntennaCheck)
 			{
@@ -1114,6 +1195,24 @@ else
 				}
 			}
 		}
+
+#ifdef VIDEO_TURBINE_SUPPORT
+		//VideoTurbineUpdate(pAd);
+		//VideoTurbineDynamicTune(pAd);
+#endif // VIDEO_TURBINE_SUPPORT //
+
+
+#ifdef RT30xx
+		if (((pAd->Mlme.OneSecPeriodicRound % 10) == 0))
+		{
+			UCHAR 	RFValue;
+
+			//Enable RF tuning
+			RT30xxReadRFRegister(pAd, RF_R07, (PUCHAR)&RFValue);
+			RFValue = RFValue | 0x1;
+			RT30xxWriteRFRegister(pAd, RF_R07, (UCHAR)RFValue);
+		}
+#endif // RT30xx //
 
 #ifdef CONFIG_STA_SUPPORT
 		IF_DEV_CONFIG_OPMODE_ON_STA(pAd)
@@ -1151,7 +1250,7 @@ else
 				}
 				else
 				{
-					RTMP_IO_WRITE32(pAd, MAC_SYS_CTRL, 0xC);
+				RTMP_IO_WRITE32(pAd, MAC_SYS_CTRL, 0xC);
 				}
 
 				DBGPRINT(RT_DEBUG_WARN,("Warning, MAC specific condition occurs \n"));
@@ -1196,6 +1295,12 @@ BOOLEAN MlmeValidateSSID(
 	return (TRUE);
 }
 
+VOID MlmeSelectRateSwitchTable11N3SReplacement(
+		IN PUCHAR               *ppTable)
+{
+	*ppTable = RateSwitchTable11N3SReplacement;
+}
+
 VOID MlmeSelectTxRateTable(
 	IN PRTMP_ADAPTER		pAd,
 	IN PMAC_TABLE_ENTRY		pEntry,
@@ -1203,6 +1308,14 @@ VOID MlmeSelectTxRateTable(
 	IN PUCHAR				pTableSize,
 	IN PUCHAR				pInitTxRateIdx)
 {
+#ifdef NEW_RATE_ADAPT_SUPPORT
+	UCHAR tempUchar[] = {
+							0x0f, 0x20, 15,  8,   25,  14, 21, 16, 15, 130,//mcs15
+							0x10, 0x22, 15,  8,   25,  15, 21, 16, 16, 144};//mcs15+short gi
+	UCHAR tempUchar1[] = {
+							0x07, 0x21,  7,  8, 14,  6,  19,  12,  8, 65,//mcs7
+							0x08, 0x23,  7,  8, 14,  7,  19,  12,  8, 72};//mcs7+short gi  
+#endif // NEW_RATE_ADAPT_SUPPORT //
 
 	do
 	{
@@ -1219,21 +1332,51 @@ VOID MlmeSelectTxRateTable(
 #ifdef CONFIG_STA_SUPPORT
 		if ((pAd->OpMode == OPMODE_STA) && ADHOC_ON(pAd))
 		{
+			/* for ADHOC mode */
 #ifdef DOT11_N_SUPPORT
 			if ((pAd->CommonCfg.PhyMode >= PHY_11ABGN_MIXED) && 
 				(pEntry->HTCapability.MCSSet[0] == 0xff) && 
 				((pEntry->HTCapability.MCSSet[1] == 0x00) || (pAd->Antenna.field.TxPath == 1)))
 			{// 11N 1S Adhoc
+
+#ifdef AGS_SUPPORT
+				if (SUPPORT_AGS(pAd))
+				{
+					*ppTable = AGS1x1HTRateTable;
+					*pTableSize = AGS1x1HTRateTable[0];
+					*pInitTxRateIdx = AGS1x1HTRateTable[1];
+
+					DBGPRINT_RAW(RT_DEBUG_TRACE,("AGS: %s: 11N 1S adhoc, AGS1x1HTRateTable\n", 
+						__FUNCTION__));
+				}
+				else
+#endif // AGS_SUPPORT //
+				{
 				*ppTable = RateSwitchTable11N1S;
 				*pTableSize = RateSwitchTable11N1S[0];
 				*pInitTxRateIdx = RateSwitchTable11N1S[1];
+				}
 				
 			}
 			else if ((pAd->CommonCfg.PhyMode >= PHY_11ABGN_MIXED) && 
 					(pEntry->HTCapability.MCSSet[0] == 0xff) && 
 					(pEntry->HTCapability.MCSSet[1] == 0xff) &&
-					(pAd->Antenna.field.TxPath == 2))
+					(((pAd->Antenna.field.TxPath == 3) && (pEntry->HTCapability.MCSSet[2] == 0x00)) || (pAd->Antenna.field.TxPath == 2)))
 			{// 11N 2S Adhoc
+
+#ifdef AGS_SUPPORT
+				if (SUPPORT_AGS(pAd))
+				{
+					*ppTable = AGS2x2HTRateTable;
+					*pTableSize = AGS2x2HTRateTable[0];
+					*pInitTxRateIdx = AGS2x2HTRateTable[1];
+
+					DBGPRINT_RAW(RT_DEBUG_TRACE,("AGS: %s: 11N 2S adhoc, AGS2x2HTRateTable\n", 
+						__FUNCTION__));
+				}
+				else
+#endif // AGS_SUPPORT //
+				{
 				if (pAd->LatchRfRegs.Channel <= 14)
 				{
 					*ppTable = RateSwitchTable11N2S;
@@ -1248,6 +1391,22 @@ VOID MlmeSelectTxRateTable(
 				}
 				
 			}
+			}
+#ifdef AGS_SUPPORT
+			else if (SUPPORT_AGS(pAd) && 
+					(pEntry->HTCapability.MCSSet[0] == 0xFF) && 
+					(pEntry->HTCapability.MCSSet[1] == 0xFF) && 
+					(pEntry->HTCapability.MCSSet[2] == 0xFF) && 
+					(pAd->Antenna.field.TxPath == 3))
+			{// 11N 3S Adhoc
+				*ppTable = AGS3x3HTRateTable;
+				*pTableSize = AGS3x3HTRateTable[0];
+				*pInitTxRateIdx = AGS3x3HTRateTable[1];
+
+				DBGPRINT_RAW(RT_DEBUG_TRACE,("AGS: %s: 11N 3S adhoc, AGS3x3HTRateTable\n", 
+					__FUNCTION__));
+			}
+#endif // AGS_SUPPORT //
 			else
 #endif // DOT11_N_SUPPORT //				
 				if ((pEntry->RateLen == 4)
@@ -1285,18 +1444,64 @@ VOID MlmeSelectTxRateTable(
 		if (((pEntry->RateLen == 12) || (pAd->OpMode == OPMODE_STA)) && (pEntry->HTCapability.MCSSet[0] == 0xff) &&
 			((pEntry->HTCapability.MCSSet[1] == 0x00) || (pAd->CommonCfg.TxStream == 1)))
 		{// 11BGN 1S AP
+#ifdef AGS_SUPPORT
+			if (SUPPORT_AGS(pAd))
+			{
+				*ppTable = AGS1x1HTRateTable;
+				*pTableSize = AGS1x1HTRateTable[0];
+				*pInitTxRateIdx = AGS1x1HTRateTable[1];
+
+				DBGPRINT_RAW(RT_DEBUG_TRACE,("AGS: %s: 11N 1S AP, AGS1x1HTRateTable\n", 
+					__FUNCTION__));
+			}
+			else
+#endif // AGS_SUPPORT //
+			{
 			*ppTable = RateSwitchTable11BGN1S;
 			*pTableSize = RateSwitchTable11BGN1S[0];
 			*pInitTxRateIdx = RateSwitchTable11BGN1S[1];
 			
+			}
+
 			break;
 		}
 
+#ifdef AGS_SUPPORT
+		/* only for station */
+		if (SUPPORT_AGS(pAd) && 
+			(pEntry->HTCapability.MCSSet[0] == 0xFF) && 
+			(pEntry->HTCapability.MCSSet[1] == 0xFF) && 
+			(pEntry->HTCapability.MCSSet[2] == 0xFF) && 
+			(pAd->CommonCfg.TxStream == 3))
+		{// 11N 3S 
+			*ppTable = AGS3x3HTRateTable;
+			*pTableSize = AGS3x3HTRateTable[0];
+			*pInitTxRateIdx = AGS3x3HTRateTable[1];
+
+			DBGPRINT_RAW(RT_DEBUG_INFO,("AGS: %s: 11N 3S AP, AGS3x3HTRateTable\n", 
+				__FUNCTION__));
+			break;
+		}
+		else
+#endif // AGS_SUPPORT //
 		//else if ((pAd->StaActive.SupRateLen + pAd->StaActive.ExtRateLen == 12) && (pAd->StaActive.SupportedPhyInfo.MCSSet[0] == 0xff) &&
 		//	(pAd->StaActive.SupportedPhyInfo.MCSSet[1] == 0xff) && (pAd->Antenna.field.TxPath == 2))
 		if (((pEntry->RateLen == 12) || (pAd->OpMode == OPMODE_STA)) && (pEntry->HTCapability.MCSSet[0] == 0xff) &&
-			(pEntry->HTCapability.MCSSet[1] == 0xff) && (pAd->CommonCfg.TxStream == 2))
+			(pEntry->HTCapability.MCSSet[1] == 0xff) && (((pAd->Antenna.field.TxPath == 3) && (pEntry->HTCapability.MCSSet[2] == 0x00)) || (pAd->CommonCfg.TxStream == 2)))
 		{// 11BGN 2S AP
+#ifdef AGS_SUPPORT
+			if (SUPPORT_AGS(pAd))
+			{
+				*ppTable = AGS2x2HTRateTable;
+				*pTableSize = AGS2x2HTRateTable[0];
+				*pInitTxRateIdx = AGS2x2HTRateTable[1];
+
+				DBGPRINT_RAW(RT_DEBUG_TRACE,("AGS: %s: 11N 2S AP, AGS2x2HTRateTable\n", 
+					__FUNCTION__));
+			}
+			else
+#endif // AGS_SUPPORT //
+			{
 			if (pAd->LatchRfRegs.Channel <= 14)
 			{
 				*ppTable = RateSwitchTable11BGN2S;
@@ -1311,6 +1516,7 @@ VOID MlmeSelectTxRateTable(
 				*pInitTxRateIdx = RateSwitchTable11BGN2SForABand[1];
                 		
 			}
+			}
 			break;
 		}
 
@@ -1318,16 +1524,43 @@ VOID MlmeSelectTxRateTable(
 		//else if ((pAd->StaActive.SupportedPhyInfo.MCSSet[0] == 0xff) && ((pAd->StaActive.SupportedPhyInfo.MCSSet[1] == 0x00) || (pAd->Antenna.field.TxPath == 1)))
 		if ((pEntry->HTCapability.MCSSet[0] == 0xff) && ((pEntry->HTCapability.MCSSet[1] == 0x00) || (pAd->CommonCfg.TxStream == 1)))
 		{// 11N 1S AP
+#ifdef AGS_SUPPORT
+			if (SUPPORT_AGS(pAd))
+			{
+				*ppTable = AGS1x1HTRateTable;
+				*pTableSize = AGS1x1HTRateTable[0];
+				*pInitTxRateIdx = AGS1x1HTRateTable[1];
+
+				DBGPRINT_RAW(RT_DEBUG_TRACE,("AGS: %s: 11N 1S AP, AGS1x1HTRateTable\n", 
+					__FUNCTION__));
+			}
+			else
+#endif // AGS_SUPPORT //
+			{
 			*ppTable = RateSwitchTable11N1S;
 			*pTableSize = RateSwitchTable11N1S[0];
 			*pInitTxRateIdx = RateSwitchTable11N1S[1];
 			
+			}
 			break;
 		}
 
 		//else if ((pAd->StaActive.SupportedPhyInfo.MCSSet[0] == 0xff) && (pAd->StaActive.SupportedPhyInfo.MCSSet[1] == 0xff) && (pAd->Antenna.field.TxPath == 2))
 		if ((pEntry->HTCapability.MCSSet[0] == 0xff) && (pEntry->HTCapability.MCSSet[1] == 0xff) && (pAd->CommonCfg.TxStream == 2))
 		{// 11N 2S AP
+#ifdef AGS_SUPPORT
+			if (SUPPORT_AGS(pAd))
+			{
+				*ppTable = AGS2x2HTRateTable;
+				*pTableSize = AGS2x2HTRateTable[0];
+				*pInitTxRateIdx = AGS2x2HTRateTable[1];
+
+				DBGPRINT_RAW(RT_DEBUG_TRACE,("AGS: %s: 11N 2S AP, AGS2x2HTRateTable\n", 
+					__FUNCTION__));
+			}
+			else
+#endif // AGS_SUPPORT //
+			{
 			if (pAd->LatchRfRegs.Channel <= 14)
 			{
 			*ppTable = RateSwitchTable11N2S;
@@ -1341,6 +1574,7 @@ VOID MlmeSelectTxRateTable(
 				*pInitTxRateIdx = RateSwitchTable11N2SForABand[1];
 			}
 			
+			}
 			break;
 		}
 
@@ -1421,6 +1655,19 @@ VOID MlmeSelectTxRateTable(
 				break;
 			}
 #ifdef DOT11_N_SUPPORT
+#ifdef AGS_SUPPORT
+			if (SUPPORT_AGS(pAd) && (pAd->CommonCfg.TxStream == 3))
+			{
+				*ppTable = AGS3x3HTRateTable;
+				*pTableSize = AGS3x3HTRateTable[0];
+				*pInitTxRateIdx = AGS3x3HTRateTable[1];
+
+				DBGPRINT_RAW(RT_DEBUG_TRACE,("AGS: %s: Unknown adhoc, DLS or AP, AGS3x3HTRateTable\n", 
+					__FUNCTION__));
+			}
+			else
+#endif // AGS_SUPPORT //
+			{
 			if (pAd->LatchRfRegs.Channel <= 14)
 			{
 				if (pAd->CommonCfg.TxStream == 1)
@@ -1429,6 +1676,13 @@ VOID MlmeSelectTxRateTable(
 					*pTableSize = RateSwitchTable11N1S[0];
 					*pInitTxRateIdx = RateSwitchTable11N1S[1];
 					DBGPRINT_RAW(RT_DEBUG_ERROR,("DRS: unkown mode,default use 11N 1S AP \n"));
+				}
+				else if (pAd->CommonCfg.TxStream == 2)
+				{
+					*ppTable = RateSwitchTable11N2S;
+					*pTableSize = RateSwitchTable11N2S[0];
+					*pInitTxRateIdx = RateSwitchTable11N2S[1];
+					DBGPRINT_RAW(RT_DEBUG_ERROR,("DRS: unkown mode,default use 11N 2S AP \n"));	
 				}
 				else
 				{
@@ -1446,6 +1700,13 @@ VOID MlmeSelectTxRateTable(
 					*pInitTxRateIdx = RateSwitchTable11N1S[1];
 					DBGPRINT_RAW(RT_DEBUG_ERROR,("DRS: unkown mode,default use 11N 1S AP \n"));
 				}
+				else if (pAd->CommonCfg.TxStream == 2)
+				{
+					*ppTable = RateSwitchTable11N2S;
+					*pTableSize = RateSwitchTable11N2S[0];
+					*pInitTxRateIdx = RateSwitchTable11N2S[1];
+					DBGPRINT_RAW(RT_DEBUG_ERROR,("DRS: unkown mode,default use 11N 2S AP \n"));	
+				}
 				else
 				{
 					*ppTable = RateSwitchTable11N2SForABand;
@@ -1453,13 +1714,31 @@ VOID MlmeSelectTxRateTable(
 					*pInitTxRateIdx = RateSwitchTable11N2SForABand[1];
 				}
 			}
+			}
 #endif // DOT11_N_SUPPORT //
 			DBGPRINT_RAW(RT_DEBUG_ERROR,("DRS: unkown mode (SupRateLen=%d, ExtRateLen=%d, MCSSet[0]=0x%x, MCSSet[1]=0x%x)\n",
-				pAd->StaActive.SupRateLen, pAd->StaActive.ExtRateLen, pAd->StaActive.SupportedPhyInfo.MCSSet[0], pAd->StaActive.SupportedPhyInfo.MCSSet[1]));
+						pAd->StaActive.SupRateLen,
+						pAd->StaActive.ExtRateLen,
+						pAd->StaActive.SupportedPhyInfo.MCSSet[0],
+						pAd->StaActive.SupportedPhyInfo.MCSSet[1]));
 		}
 #endif // CONFIG_STA_SUPPORT //
 	} while(FALSE);
 
+#ifdef NEW_RATE_ADAPT_SUPPORT
+	if (*ppTable == RateSwitchTable11N3S)
+	{
+
+	 	if ((pEntry->HTCapability.MCSSet[0] == 0xff) &&
+			(pEntry->HTCapability.MCSSet[1] == 0xff) &&
+			(pAd->CommonCfg.TxStream > 1) && 
+			((pAd->CommonCfg.TxStream == 2) || (pEntry->HTCapability.MCSSet[2] == 0x0)))
+			NdisMoveMemory((*ppTable)+10*16, tempUchar, 20);
+		else if ((pEntry->HTCapability.MCSSet[0] == 0xff) &&
+				((pEntry->HTCapability.MCSSet[1] == 0x00) || (pAd->CommonCfg.TxStream == 1))) 
+			NdisMoveMemory((*ppTable)+10*8, tempUchar1, 20);				
+	}
+#endif // NEW_RATE_ADAPT_SUPPORT //
 }
 
 
@@ -1480,6 +1759,8 @@ VOID STAMlmePeriodicExec(
 	return;
 #endif // RALINK_ATE //
 
+
+
 #ifdef WPA_SUPPLICANT_SUPPORT
     if (pAd->StaCfg.WpaSupplicantUP == WPA_SUPPLICANT_DISABLE)    
 #endif // WPA_SUPPLICANT_SUPPORT //        
@@ -1489,15 +1770,6 @@ VOID STAMlmePeriodicExec(
 			RTMP_TIME_AFTER(pAd->Mlme.Now32, pAd->StaCfg.LastMicErrorTime + (60*OS_HZ)))
     		pAd->StaCfg.bBlockAssoc = FALSE;
     }
-
-    if (pAd->PreMediaState != pAd->IndicateMediaState)
-	{
-		if (pAd->IndicateMediaState == NdisMediaStateConnected)
-		{
-			RTMPSendWirelessEvent(pAd, IW_STA_LINKUP_EVENT_FLAG, NULL, BSS0, 0); 
-		}
-		pAd->PreMediaState = pAd->IndicateMediaState;  
-	}
 
 
 	
@@ -1614,7 +1886,9 @@ VOID STAMlmePeriodicExec(
     		    // Send out a NULL frame every 10 sec to inform AP that STA is still alive (Avoid being age out)
     			if ((pAd->Mlme.OneSecPeriodicRound % 10) == 8)
 			{
-				RTMPSendNullFrame(pAd, pAd->CommonCfg.TxRate, pAd->CommonCfg.bWmmCapable);
+				RTMPSendNullFrame(pAd, 
+								  pAd->CommonCfg.TxRate, 
+								  (pAd->CommonCfg.bWmmCapable & pAd->CommonCfg.APEdcaParm.bValid));
 			}
     		}
         }
@@ -1623,6 +1897,9 @@ VOID STAMlmePeriodicExec(
 			{
 			DBGPRINT(RT_DEBUG_TRACE, ("MMCHK - No BEACON. Dead CQI. Auto Recovery attempt #%ld\n", pAd->RalinkCounters.BadCQIAutoRecoveryCount));
 
+			if (pAd->StaCfg.bAutoConnectByBssid)
+				pAd->StaCfg.bAutoConnectByBssid = FALSE;
+			
 #ifdef WPA_SUPPLICANT_SUPPORT
 			if ((pAd->StaCfg.WpaSupplicantUP != WPA_SUPPLICANT_DISABLE) &&
 				(pAd->StaCfg.AuthMode == Ndis802_11AuthModeWPA2))
@@ -1667,6 +1944,9 @@ VOID STAMlmePeriodicExec(
 										  pAd->StaCfg.RssiSample.LastRssi1, 
 										  pAd->StaCfg.RssiSample.LastRssi2);			
 			
+			if (pAd->StaCfg.bAutoConnectByBssid)
+				pAd->StaCfg.bAutoConnectByBssid = FALSE;
+			
 			// Scanning, ignore Roaming
 			if (!RTMP_TEST_FLAG(pAd, fRTMP_ADAPTER_BSS_SCAN_IN_PROGRESS) &&
 				(pAd->Mlme.SyncMachine.CurrState == SYNC_IDLE) &&
@@ -1697,9 +1977,9 @@ VOID STAMlmePeriodicExec(
 		// If all peers leave, and this STA becomes the last one in this IBSS, then change MediaState
 		// to DISCONNECTED. But still holding this IBSS (i.e. sending BEACON) so that other STAs can
 		// join later.
-		if ((RTMP_TIME_AFTER(pAd->Mlme.Now32, pAd->StaCfg.LastBeaconRxTime + ADHOC_BEACON_LOST_TIME)
+		if (/*(RTMP_TIME_AFTER(pAd->Mlme.Now32, pAd->StaCfg.LastBeaconRxTime + ADHOC_BEACON_LOST_TIME)
 			|| (pAd->StaCfg.AuthMode == Ndis802_11AuthModeWPA2PSK))
-			&& OPSTATUS_TEST_FLAG(pAd, fOP_STATUS_MEDIA_STATE_CONNECTED))
+			&&*/ OPSTATUS_TEST_FLAG(pAd, fOP_STATUS_MEDIA_STATE_CONNECTED))
 		{
 
 			for (i = 1; i < MAX_LEN_OF_MAC_TABLE; i++) 
@@ -1716,8 +1996,7 @@ VOID STAMlmePeriodicExec(
             if (pAd->MacTab.Size == 0)
             {			                
     			OPSTATUS_CLEAR_FLAG(pAd, fOP_STATUS_MEDIA_STATE_CONNECTED);
-    			pAd->IndicateMediaState = NdisMediaStateDisconnected;
-    			RTMP_IndicateMediaState(pAd);
+    			RTMP_IndicateMediaState(pAd, NdisMediaStateDisconnected);
             }            
 			pAd->StaCfg.LastScanTime = pAd->Mlme.Now32;
 		}
@@ -1727,7 +2006,7 @@ VOID STAMlmePeriodicExec(
 	{
 
 #ifdef WPA_SUPPLICANT_SUPPORT
-		if (pAd->StaCfg.WpaSupplicantUP & 0x80)
+		if (pAd->StaCfg.WpaSupplicantUP & WPA_SUPPLICANT_ENABLE_WPS)
 			goto SKIP_AUTO_SCAN_CONN;
 #endif // WPA_SUPPLICANT_SUPPORT //
 
@@ -1736,7 +2015,7 @@ VOID STAMlmePeriodicExec(
 			goto SKIP_AUTO_SCAN_CONN;
 		else
 			pAd->StaCfg.bScanReqIsFromWebUI = FALSE;
-       
+        
 		if ((pAd->StaCfg.bAutoReconnect == TRUE)
 			&& RTMP_TEST_FLAG(pAd, fRTMP_ADAPTER_START_UP)
 			&& (MlmeValidateSSID(pAd->MlmeAux.AutoReconnectSsid, pAd->MlmeAux.AutoReconnectSsidLen) == TRUE))
@@ -1749,14 +2028,15 @@ VOID STAMlmePeriodicExec(
 					||(pAd->StaCfg.bNotFirstScan == FALSE))
 				{
 					DBGPRINT(RT_DEBUG_TRACE, ("STAMlmePeriodicExec():CNTL - ScanTab.BssNr==0, start a new ACTIVE scan SSID[%s]\n", pAd->MlmeAux.AutoReconnectSsid));
-					pAd->StaCfg.bNotFirstScan = TRUE;
+					if (pAd->StaCfg.BssType == BSS_ADHOC)	
+						pAd->StaCfg.bNotFirstScan = TRUE;
 					ScanParmFill(pAd, &ScanReq, (PSTRING) pAd->MlmeAux.AutoReconnectSsid, pAd->MlmeAux.AutoReconnectSsidLen, BSS_ANY, SCAN_ACTIVE);
 					MlmeEnqueue(pAd, SYNC_STATE_MACHINE, MT2_MLME_SCAN_REQ, sizeof(MLME_SCAN_REQ_STRUCT), &ScanReq, 0);
 					pAd->Mlme.CntlMachine.CurrState = CNTL_WAIT_OID_LIST_SCAN;
 					// Reset Missed scan number
 					pAd->StaCfg.LastScanTime = pAd->Mlme.Now32;
 				}
-				else if (pAd->StaCfg.BssType == BSS_ADHOC)	// Quit the forever scan when in a very clean room
+				else
 					MlmeAutoReconnectLastSSID(pAd);
 			}
 			else if (pAd->Mlme.CntlMachine.CurrState == CNTL_IDLE)
@@ -1767,9 +2047,17 @@ VOID STAMlmePeriodicExec(
 					if ((pAd->Mlme.OneSecPeriodicRound % 5) == 1)
 						MlmeAutoReconnectLastSSID(pAd);
 				}
-				else
+                                 else
 #endif // CARRIER_DETECTION_SUPPORT // 
+#ifdef WPA_SUPPLICANT_SUPPORT
+			  	 {
+				 }
+#else
+				  {
 					MlmeAutoReconnectLastSSID(pAd);
+				  }
+#endif // WPA_SUPPLICANT_SUPPORT //
+
 			}
 		}
 	}
@@ -1850,8 +2138,7 @@ VOID LinkDownExec(
 						sizeof(MLME_DISASSOC_REQ_STRUCT), &DisassocReq, 0);
 			pAd->Mlme.CntlMachine.CurrState = CNTL_WAIT_DISASSOC;
 
-			pAd->IndicateMediaState = NdisMediaStateDisconnected;
-			RTMP_IndicateMediaState(pAd);
+			RTMP_IndicateMediaState(pAd, NdisMediaStateDisconnected);
 		    pAd->ExtraInfo = GENERAL_LINK_DOWN;
 		}	
 	}
@@ -1945,7 +2232,7 @@ VOID MlmeCheckForRoaming(
 	{
 		pBss = &pAd->ScanTab.BssEntry[i];
 
-		if ((pBss->LastBeaconRxTime + pAd->StaCfg.BeaconLostTime) < Now32) 
+		if (RTMP_TIME_AFTER(Now32, pBss->LastBeaconRxTime + pAd->StaCfg.BeaconLostTime))
 			continue;	 // AP disappear
 		if (pBss->Rssi <= RSSI_THRESHOLD_FOR_ROAMING)
 			continue;	 // RSSI too weak. forget it.
@@ -2176,6 +2463,10 @@ VOID MlmeDynamicTxRateSwitching(
 	ULONG					TxRetransmit = 0, TxSuccess = 0, TxFailCount = 0;
 	MAC_TABLE_ENTRY			*pEntry;
 	RSSI_SAMPLE				*pRssi = &pAd->StaCfg.RssiSample;
+	UCHAR					tmpTxRate = 0;
+#ifdef AGS_SUPPORT
+	AGS_STATISTICS_INFO		AGSStatisticsInfo = {0};
+#endif // AGS_SUPPORT //
 
 #ifdef RALINK_ATE
 	if (ATE_ON(pAd))
@@ -2211,9 +2502,22 @@ VOID MlmeDynamicTxRateSwitching(
 	{
 		pEntry = &pAd->MacTab.Content[i];
 		
+		if (IS_ENTRY_NONE(pEntry))
+			continue;
+
 	// check if this entry need to switch rate automatically
 		if (RTMPCheckEntryEnableAutoRateSwitch(pAd, pEntry) == FALSE)
 			continue;
+
+		MlmeSelectTxRateTable(pAd, pEntry, &pTable, &TableSize, &InitTxRateIdx);
+
+#ifdef NEW_RATE_ADAPT_SUPPORT
+		if (pTable == RateSwitchTable11N3S)
+		{
+			MlmeDynamicTxRateSwitchingAdapt(pAd, i);
+			continue;
+		}
+#endif // NEW_RATE_ADAPT_SUPPORT //
 
 		if ((pAd->MacTab.Size == 1) || IS_ENTRY_DLS(pEntry))
 		{
@@ -2231,6 +2535,22 @@ VOID MlmeDynamicTxRateSwitching(
 			
 			if (TxTotalCnt)
 				TxErrorRatio = ((TxRetransmit + TxFailCount) * 100) / TxTotalCnt;
+
+#ifdef AGS_SUPPORT
+			if (SUPPORT_AGS(pAd))
+			{
+				//
+				// Gather the statistics information
+				//
+				AGSStatisticsInfo.RSSI = Rssi;
+				AGSStatisticsInfo.TxErrorRatio = TxErrorRatio;
+				AGSStatisticsInfo.AccuTxTotalCnt = TxTotalCnt;
+				AGSStatisticsInfo.TxTotalCnt = TxTotalCnt;
+				AGSStatisticsInfo.TxSuccess = TxSuccess;
+				AGSStatisticsInfo.TxRetransmit = TxRetransmit;
+				AGSStatisticsInfo.TxFailCount = TxFailCount;
+			}
+#endif // AGS_SUPPORT //
 		}
 		else
 		{
@@ -2251,6 +2571,22 @@ VOID MlmeDynamicTxRateSwitching(
 
 			if (TxTotalCnt)
 				TxErrorRatio = ((pEntry->OneSecTxRetryOkCount + pEntry->OneSecTxFailCount) * 100) / TxTotalCnt;
+
+#ifdef AGS_SUPPORT
+			if (SUPPORT_AGS(pAd))
+			{
+				//
+				// Gather the statistics information
+				//
+				AGSStatisticsInfo.RSSI = Rssi;
+				AGSStatisticsInfo.TxErrorRatio = TxErrorRatio;
+				AGSStatisticsInfo.AccuTxTotalCnt = TxTotalCnt;
+				AGSStatisticsInfo.TxTotalCnt = TxTotalCnt;
+				AGSStatisticsInfo.TxSuccess = pEntry->OneSecTxNoRetryOkCount;
+				AGSStatisticsInfo.TxRetransmit = pEntry->OneSecTxRetryOkCount;
+				AGSStatisticsInfo.TxFailCount = pEntry->OneSecTxFailCount;
+			}
+#endif // AGS_SUPPORT //
 		}
 
 		if (TxTotalCnt)
@@ -2263,7 +2599,7 @@ VOID MlmeDynamicTxRateSwitching(
 			{
 				TX_RTY_CFG_STRUC	TxRtyCfg,TxRtyCfgtmp;
 				ULONG	Index;
-				ULONG	MACValue;			
+				UINT32	MACValue;			
 
 				RTMP_IO_READ32(pAd, TX_RTY_CFG, &TxRtyCfg.word);
 				TxRtyCfgtmp.word = TxRtyCfg.word; 
@@ -2293,7 +2629,24 @@ VOID MlmeDynamicTxRateSwitching(
 
 		CurrRateIdx = pEntry->CurrTxRateIndex;
 
-		MlmeSelectTxRateTable(pAd, pEntry, &pTable, &TableSize, &InitTxRateIdx);
+		//MlmeSelectTxRateTable(pAd, pEntry, &pTable, &TableSize, &InitTxRateIdx);
+
+#ifdef AGS_SUPPORT
+		if (AGS_IS_USING(pAd, pTable))
+		{
+/*
+			*ppTable = AGS3x3HTRateTable;
+			*pTableSize = AGS3x3HTRateTable[0];
+			*pInitTxRateIdx = AGS3x3HTRateTable[1];
+*/
+			//
+			// The dynamic Tx rate switching for AGS (Adaptive Group Switching)
+			//
+			MlmeDynamicTxRateSwitchingAGS(pAd, pEntry, pTable, TableSize, &AGSStatisticsInfo, InitTxRateIdx);
+
+			continue; // Skip the remaining procedure of the old Tx rate switching
+		}
+#endif // AGS_SUPPORT //
 
 		if (CurrRateIdx >= TableSize)
 		{
@@ -2372,7 +2725,6 @@ VOID MlmeDynamicTxRateSwitching(
 			UCHAR	TxRateIdx;
 			UCHAR	MCS0 = 0, MCS1 = 0, MCS2 = 0, MCS3 = 0, MCS4 = 0,  MCS5 =0, MCS6 = 0, MCS7 = 0;			
 	        UCHAR	MCS12 = 0, MCS13 = 0, MCS14 = 0, MCS15 = 0;
-			UCHAR	MCS20 = 0, MCS21 = 0, MCS22 = 0, MCS23 = 0; // 3*3
 
 			// check the existence and index of each needed MCS
 			while (idx < pTable[0])
@@ -2407,7 +2759,6 @@ VOID MlmeDynamicTxRateSwitching(
 	            {
 	                MCS6 = idx;
 	            }
-				//else if (pCurrTxRate->CurrMCS == MCS_7)
 				else if ((pCurrTxRate->CurrMCS == MCS_7) && (pCurrTxRate->ShortGI == GI_800))	// prevent the highest MCS using short GI when 1T and low throughput
 				{
 					MCS7 = idx;
@@ -2428,22 +2779,6 @@ VOID MlmeDynamicTxRateSwitching(
 				else if ((pCurrTxRate->CurrMCS == MCS_15) && (pCurrTxRate->ShortGI == GI_800))	//we hope to use ShortGI as initial rate, however Atheros's chip has bugs when short GI
 				{
 					MCS15 = idx;
-				}
-				else if (pCurrTxRate->CurrMCS == MCS_20) // 3*3
-				{
-					MCS20 = idx;
-				}
-				else if (pCurrTxRate->CurrMCS == MCS_21)
-				{
-					MCS21 = idx;
-				}
-				else if (pCurrTxRate->CurrMCS == MCS_22)
-				{
-					MCS22 = idx;
-				}
-				else if (pCurrTxRate->CurrMCS == MCS_23)
-				{
-					MCS23 = idx;
 				}
 				idx ++;
 			}
@@ -2471,32 +2806,7 @@ VOID MlmeDynamicTxRateSwitching(
 				}
 			}
 #ifdef DOT11_N_SUPPORT			
-			/*if (MCS15)*/
-			if ((pTable == RateSwitchTable11BGN3S) ||
-				(pTable == RateSwitchTable11N3S) ||
-				(pTable == RateSwitchTable))
-			{// N mode with 3 stream // 3*3
-				if (MCS23 && (Rssi >= -70))
-					TxRateIdx = MCS23;
-				else if (MCS22 && (Rssi >= -72))
-					TxRateIdx = MCS22;
-        	    else if (MCS21 && (Rssi >= -76))
-					TxRateIdx = MCS21;
-				else if (MCS20 && (Rssi >= -78))
-					TxRateIdx = MCS20;
-			else if (MCS4 && (Rssi >= -82))
-				TxRateIdx = MCS4;
-			else if (MCS3 && (Rssi >= -84))
-				TxRateIdx = MCS3;
-			else if (MCS2 && (Rssi >= -86))
-				TxRateIdx = MCS2;
-			else if (MCS1 && (Rssi >= -88))
-				TxRateIdx = MCS1;
-			else
-				TxRateIdx = MCS0;
-		}
-//		else if ((pTable == RateSwitchTable11BGN2S) || (pTable == RateSwitchTable11BGN2SForABand) ||(pTable == RateSwitchTable11N2S) ||(pTable == RateSwitchTable11N2SForABand) || (pTable == RateSwitchTable))
-		else if ((pTable == RateSwitchTable11BGN2S) || (pTable == RateSwitchTable11BGN2SForABand) ||(pTable == RateSwitchTable11N2S) ||(pTable == RateSwitchTable11N2SForABand)) // 3*3
+		if ((pTable == RateSwitchTable11BGN2S) || (pTable == RateSwitchTable11BGN2SForABand) ||(pTable == RateSwitchTable11N2S) ||(pTable == RateSwitchTable11N2SForABand)) // 3*3
 			{// N mode with 2 stream
 				if (MCS15 && (Rssi >= (-70+RssiOffset)))
 					TxRateIdx = MCS15;
@@ -2695,15 +3005,945 @@ VOID MlmeDynamicTxRateSwitching(
 
 		pEntry->LastTxOkCount = TxSuccess;
 
-		pNextTxRate = (PRTMP_TX_RATE_SWITCH) &pTable[(pEntry->CurrTxRateIndex+1)*5];
+		tmpTxRate = pEntry->CurrTxRateIndex;
+
+		//turn off RDG when 3s and rx count > tx count*5
+
+		pNextTxRate = (PRTMP_TX_RATE_SWITCH) &pTable[(tmpTxRate+1)*5];
 		if (bTxRateChanged && pNextTxRate)
 		{
 			MlmeSetTxRate(pAd, pEntry, pNextTxRate);
 		}
+
 		// reset all OneSecTx counters
 		RESET_ONE_SEC_TX_CNT(pEntry);
 	}
 }
+
+#ifdef TXBF_SUPPORT
+VOID staETxBFProbing(
+ 	IN PRTMP_ADAPTER pAd,
+	IN 	MAC_TABLE_ENTRY		*pEntry,
+	IN PRTMP_TX_RATE_SWITCH	pNextTxRate)
+{
+		if (pEntry->eTxBfEnCond !=0)
+		{
+			// if ETXBF_EN_COND is not defined, there are two opportunities to activate the procedure:
+			// 1: mfb changes
+			// 2: timer expires
+			if (((pEntry->eTxBfEnCond == 1 || pEntry->eTxBfEnCond == 3) && (pEntry->bfState == READY_FOR_SNDG0 && pEntry->noSndgCnt >= pEntry->noSndgCntThrd))
+			    ||(pEntry->eTxBfEnCond == 2 && pEntry->LastSecTxRateChangeAction !=0))
+			{
+//to be uncommented!!!				txSndgSameMcs(pAd, pEntry, pNextTxRate->CurrMCS);
+			}
+			else if (pEntry->bfState == READY_FOR_SNDG0)
+			{
+				pEntry->noSndgCnt ++;
+			}
+			else
+				pEntry->noSndgCnt = 0;
+		}
+}
+#endif // TXBF_SUPPORT //
+
+#ifdef NEW_RATE_ADAPT_SUPPORT
+VOID MlmeDynamicTxRateSwitchingAdapt(
+    IN PRTMP_ADAPTER pAd,
+    IN ULONG i)
+{
+	UCHAR			  UpRateIdx = 0, DownRateIdx = 0, CurrRateIdx;
+	ULONG			  AccuTxTotalCnt = 0, TxTotalCnt;
+	ULONG			  TxErrorRatio = 0;
+	BOOLEAN			  bTxRateChanged, bUpgradeQuality = FALSE;
+	PRTMP_TX_RATE_SWITCH_3S	  pCurrTxRate, pNextTxRateIdx;
+	PRTMP_TX_RATE_SWITCH	  pNextTxRate = NULL;
+	PUCHAR			  pTable;
+	UCHAR			  TableSize = 0;
+	UCHAR			  InitTxRateIdx = 0, TrainUp, TrainDown;
+	CHAR			  Rssi, RssiOffset = 0;
+	TX_STA_CNT1_STRUC	  StaTx1;
+	TX_STA_CNT0_STRUC	  TxStaCnt0;
+	ULONG			  TxRetransmit = 0, TxSuccess = 0, TxFailCount = 0;
+	MAC_TABLE_ENTRY		  *pEntry;
+	ULONG			  phyRateLimit20 = 0;
+	UCHAR 			  tmpTxRate = 0;
+	PRTMP_TX_RATE_SWITCH_3S   pTempTxRate = NULL;
+
+#ifdef RALINK_ATE
+	if (ATE_ON(pAd))
+	{
+		return;
+	}
+#endif // RALINK_ATE //
+
+	pEntry = &pAd->MacTab.Content[i];
+
+	MlmeSelectTxRateTable(pAd, pEntry, &pTable, &TableSize, &InitTxRateIdx);
+
+	if ((pAd->MacTab.Size == 1) || (IS_ENTRY_DLS(pEntry)))
+	{
+		//Rssi = RTMPMaxRssi(pAd, (CHAR)pAd->StaCfg.RssiSample.AvgRssi0, (CHAR)pAd->StaCfg.RssiSample.AvgRssi1, (CHAR)pAd->StaCfg.RssiSample.AvgRssi2);
+		// Sync with Rory.
+
+		if(pAd->Antenna.field.RxPath == 3)
+		{
+			Rssi = ((CHAR)pAd->StaCfg.RssiSample.AvgRssi0 + (CHAR)pAd->StaCfg.RssiSample.AvgRssi1 + (CHAR)pAd->StaCfg.RssiSample.AvgRssi2)/3;
+		}
+		else if(pAd->Antenna.field.RxPath == 2)
+		{
+			Rssi = ((CHAR)pAd->StaCfg.RssiSample.AvgRssi0 + (CHAR)pAd->StaCfg.RssiSample.AvgRssi1)>>1;
+		}
+		else
+		{
+			Rssi = (CHAR)pAd->StaCfg.RssiSample.AvgRssi0;
+		}
+
+		// Update statistic counter
+		RTMP_IO_READ32(pAd, TX_STA_CNT0, &TxStaCnt0.word);
+		RTMP_IO_READ32(pAd, TX_STA_CNT1, &StaTx1.word);
+		pAd->bUpdateBcnCntDone = TRUE;
+		TxRetransmit = StaTx1.field.TxRetransmit;
+		TxSuccess = StaTx1.field.TxSuccess;
+		TxFailCount = TxStaCnt0.field.TxFailCount;
+		TxTotalCnt = TxRetransmit + TxSuccess + TxFailCount;
+
+		pAd->RalinkCounters.OneSecTxRetryOkCount += StaTx1.field.TxRetransmit;
+		pAd->RalinkCounters.OneSecTxNoRetryOkCount += StaTx1.field.TxSuccess;
+		pAd->RalinkCounters.OneSecTxFailCount += TxStaCnt0.field.TxFailCount;
+		pAd->WlanCounters.TransmittedFragmentCount.u.LowPart += StaTx1.field.TxSuccess;
+		pAd->WlanCounters.RetryCount.u.LowPart += StaTx1.field.TxRetransmit;
+		pAd->WlanCounters.FailedCount.u.LowPart += TxStaCnt0.field.TxFailCount;
+
+		// if no traffic in the past 1-sec period, don't change TX rate,
+		// but clear all bad history. because the bad history may affect the next
+		// Chariot throughput test
+		AccuTxTotalCnt = pAd->RalinkCounters.OneSecTxNoRetryOkCount +
+						pAd->RalinkCounters.OneSecTxRetryOkCount +
+						pAd->RalinkCounters.OneSecTxFailCount;
+
+		if (TxTotalCnt)
+			TxErrorRatio = ((TxRetransmit + TxFailCount) * 100) / TxTotalCnt;
+	}
+	else
+	{
+			//Rssi = RTMPMaxRssi(pAd, (CHAR)pEntry->RssiSample.AvgRssi0, (CHAR)pEntry->RssiSample.AvgRssi1, (CHAR)pEntry->RssiSample.AvgRssi2);
+
+			// Sync with Rory.
+			if(pAd->Antenna.field.RxPath == 3)
+			{
+				Rssi = ((CHAR)pEntry->RssiSample.AvgRssi0 + (CHAR)pEntry->RssiSample.AvgRssi1 + (CHAR)pEntry->RssiSample.AvgRssi2)/3;
+			}
+			else if(pAd->Antenna.field.RxPath == 2)
+			{
+				Rssi = ((CHAR)pEntry->RssiSample.AvgRssi0 + (CHAR)pEntry->RssiSample.AvgRssi1)>>1;
+			}
+			else
+			{
+				Rssi = (CHAR)pEntry->RssiSample.AvgRssi0;
+			}
+
+			TxTotalCnt = pEntry->OneSecTxNoRetryOkCount +
+				 pEntry->OneSecTxRetryOkCount +
+				 pEntry->OneSecTxFailCount;
+
+			if (TxTotalCnt)
+				TxErrorRatio = ((pEntry->OneSecTxRetryOkCount + pEntry->OneSecTxFailCount) * 100) / TxTotalCnt;
+	}
+
+
+	CurrRateIdx = pEntry->CurrTxRateIndex;
+
+	if (CurrRateIdx >= TableSize)
+	{
+		CurrRateIdx = TableSize - 1;
+	}
+
+
+#if defined (CONFIG_RALINK_RT2883) || defined (CONFIG_RALINK_RT3883)
+	phyRateLimit20 = pEntry->HTPhyMode.field.BW==BW_20? pAd->CommonCfg.PhyRateLimit: pAd->CommonCfg.PhyRateLimit*13/27;
+#endif
+
+	pCurrTxRate = (PRTMP_TX_RATE_SWITCH_3S) &pTable[(CurrRateIdx+1)*10];
+
+	// decide the next upgrade rate and downgrade rate, if any
+	do
+	{
+		if ((pEntry->HTCapability.MCSSet[2] == 0xff) && (pAd->CommonCfg.TxStream == 3))
+		{
+			switch (pEntry->mcsGroup)
+			{
+				case 0://improvement: use round robin mcs when group == 0
+					UpRateIdx = pCurrTxRate->upMcs3;
+					if (pEntry->TxQuality[UpRateIdx] > pEntry->TxQuality[pCurrTxRate->upMcs2] && pCurrTxRate->upMcs2 != pCurrTxRate->ItemNo)
+						UpRateIdx = pCurrTxRate->upMcs2;
+
+					if (pEntry->TxQuality[UpRateIdx] > pEntry->TxQuality[pCurrTxRate->upMcs1] && pCurrTxRate->upMcs1 != pCurrTxRate->ItemNo)
+						UpRateIdx = pCurrTxRate->upMcs1;
+					break;
+
+				case 3:
+					UpRateIdx = pCurrTxRate->upMcs3;
+					break;
+
+				case 2:
+					UpRateIdx = pCurrTxRate->upMcs2;
+					break;
+
+				case 1:
+					UpRateIdx = pCurrTxRate->upMcs1;
+					break;
+
+				default:
+					DBGPRINT_RAW(RT_DEBUG_TRACE, ("wrong mcsGroup value\n"));
+					break;
+			}
+
+			if ((pEntry->mcsGroup == 0) && 
+				(((pEntry->TxQuality[pCurrTxRate->upMcs3] > pEntry->TxQuality[pCurrTxRate->upMcs2]) && (pCurrTxRate->upMcs2 != pCurrTxRate->ItemNo)) ||
+					((pEntry->TxQuality[pCurrTxRate->upMcs3] > pEntry->TxQuality[pCurrTxRate->upMcs1]) && (pCurrTxRate->upMcs1 != pCurrTxRate->ItemNo))))
+					DBGPRINT_RAW(RT_DEBUG_TRACE,("DRS: Before- mcsGroup=%d, TxQuality2[%d]=%d,  TxQuality1[%d]=%d, TxQuality0[%d]=%d\n",
+						pEntry->mcsGroup,
+						pCurrTxRate->upMcs3,
+						pEntry->TxQuality[pCurrTxRate->upMcs3],
+						pCurrTxRate->upMcs2,
+						pEntry->TxQuality[pCurrTxRate->upMcs2],
+						pCurrTxRate->upMcs1,
+						pEntry->TxQuality[pCurrTxRate->upMcs1]));
+		}
+		else if ((pEntry->HTCapability.MCSSet[0] == 0xff) &&
+					(pEntry->HTCapability.MCSSet[1] == 0xff) &&
+					(pAd->CommonCfg.TxStream > 1) &&
+					((pAd->CommonCfg.TxStream == 2) || (pEntry->HTCapability.MCSSet[2] == 0x0)))
+		{
+			switch (pEntry->mcsGroup)
+			{
+				case 0:
+					UpRateIdx = pCurrTxRate->upMcs2;
+					if (pEntry->TxQuality[UpRateIdx] > pEntry->TxQuality[pCurrTxRate->upMcs1] && pCurrTxRate->upMcs1 != pCurrTxRate->ItemNo)
+						UpRateIdx = pCurrTxRate->upMcs1;
+					break;
+
+				case 2:
+					UpRateIdx = pCurrTxRate->upMcs2;
+					break;
+
+				case 1:
+					UpRateIdx = pCurrTxRate->upMcs1;
+					break;
+
+				default:
+					DBGPRINT_RAW(RT_DEBUG_TRACE, ("wrong mcsGroup value %d\n", pEntry->mcsGroup));
+					break;
+			}
+
+			if ((pEntry->mcsGroup == 0) && 
+				(pEntry->TxQuality[pCurrTxRate->upMcs2] > pEntry->TxQuality[pCurrTxRate->upMcs1]) &&
+				(pCurrTxRate->upMcs1 != pCurrTxRate->ItemNo))
+			{
+				DBGPRINT_RAW(RT_DEBUG_TRACE,("DRS: Before- mcsGroup=%d,  TxQuality1[%d]=%d, TxQuality0[%d]=%d\n",
+						pEntry->mcsGroup,
+						pCurrTxRate->upMcs2,
+						pEntry->TxQuality[pCurrTxRate->upMcs2],
+						pCurrTxRate->upMcs1,
+						pEntry->TxQuality[pCurrTxRate->upMcs1]));
+			}
+		}
+		else
+		{
+			switch (pEntry->mcsGroup)
+			{
+				case 1:
+				case 0:
+					UpRateIdx = pCurrTxRate->upMcs1;
+					break;
+	
+				default:
+					DBGPRINT_RAW(RT_DEBUG_TRACE, ("wrong mcsGroup value %d\n", pEntry->mcsGroup));
+					break;
+			}
+		}
+
+		if (UpRateIdx == pEntry->CurrTxRateIndex)
+		{
+			pEntry->mcsGroup = 0;
+			break;
+		}
+	
+		if ((pEntry->TxQuality[UpRateIdx] > 0) && (pEntry->mcsGroup > 0))
+		{
+			pEntry->mcsGroup --;
+		}
+		else
+		{
+			break;
+		}
+	} while (1);
+	
+	DownRateIdx = pCurrTxRate->downMcs;
+
+	pCurrTxRate = (PRTMP_TX_RATE_SWITCH_3S) &pTable[(CurrRateIdx+1)*10];//repeated line and thus redundant!!!
+
+	// Debug Option: Use lower thresholds
+	if (pAd->CommonCfg.DebugFlags & DBF_LOW_RA_THRESHOLDS)
+	{
+		TrainUp		= 2;
+		TrainDown	= 10;
+	}
+	else
+#ifdef DOT11_N_SUPPORT
+	if ((Rssi > -65) && (pCurrTxRate->Mode >= MODE_HTMIX) && pEntry->perThrdAdj == 1)
+	{
+		TrainUp		= (pCurrTxRate->TrainUp + (pCurrTxRate->TrainUp >> 1));
+		TrainDown	= (pCurrTxRate->TrainDown + (pCurrTxRate->TrainDown >> 1));
+	}
+	else
+#endif // DOT11_N_SUPPORT //
+	{
+		TrainUp		= pCurrTxRate->TrainUp;
+		TrainDown	= pCurrTxRate->TrainDown;
+	}
+
+	//pAd->DrsCounters.LastTimeTxRateChangeAction = pAd->DrsCounters.LastSecTxRateChangeAction;
+
+	//
+	// Keep the last time TxRateChangeAction status.
+	//
+	pEntry->LastTimeTxRateChangeAction = pEntry->LastSecTxRateChangeAction;
+
+#ifdef RELASE_EXCLUDE
+	DBGPRINT(RT_DEBUG_TRACE, ("DRS: TxSuccess=%lu, TxRetransmit=%lu, TxFailCount=%lu, TxErrorRatio=%lu\n",
+			TxSuccess, TxRetransmit, TxFailCount, TxErrorRatio));
+
+	DBGPRINT_RAW(RT_DEBUG_TRACE,("DRS: Before- CurrTxRateIdx=%d, MCS=%d, STBC=%d, ShortGI=%d, Mode=%d, TrainUp=%d, TrainDown=%d, NextUp=%d, NextDown=%d, CurrMCS=%d, mcsGroup=%d, PER=%lu%%, Retry=%lu, NoRetry=%lu\n",
+			CurrRateIdx,
+			pCurrTxRate->CurrMCS,
+			pCurrTxRate->STBC,
+			pCurrTxRate->ShortGI,
+			pCurrTxRate->Mode,
+			TrainUp,
+			TrainDown,
+			UpRateIdx,
+			DownRateIdx,
+			pEntry->HTPhyMode.field.MCS,
+			pEntry->mcsGroup,
+			TxErrorRatio,
+			TxRetransmit,
+			TxSuccess));
+#endif // RELASE_EXCLUDE //
+
+	if (pEntry->fLastChangeAccordingMfb == TRUE)
+	{
+		pEntry->fLastChangeAccordingMfb = FALSE;
+		pEntry->LastSecTxRateChangeAction = 0;//not increment or decrement --> set to 0
+		DBGPRINT_RAW(RT_DEBUG_TRACE,("DRS: MCS is according to MFB, and ignore tuning this sec \n"));
+		
+		// reset all OneSecTx counters
+		RESET_ONE_SEC_TX_CNT(pEntry);
+//		continue;
+		return;
+	}
+
+	//
+	// CASE 1. when TX samples are fewer than 15, then decide TX rate solely on RSSI
+	//         (criteria copied from RT2500 for Netopia case)
+	//
+	if (TxTotalCnt <= 15)
+	{
+		CHAR	idx = 0;
+		UCHAR	TxRateIdx;
+		//UCHAR	MCS0 = 0, MCS1 = 0, MCS2 = 0, MCS3 = 0, MCS4 = 0, MCS7 = 0, MCS12 = 0, MCS13 = 0, MCS14 = 0, MCS15 = 0;
+		UCHAR	MCS0 = 0, MCS1 = 0, MCS2 = 0, MCS3 = 0, MCS4 = 0,  MCS5 =0, MCS6 = 0, MCS7 = 0;
+		UCHAR	MCS8 = 0, MCS9 = 0, MCS10 = 0, MCS11 = 0;
+		UCHAR	MCS12 = 0, MCS13 = 0, MCS14 = 0, MCS15 = 0;
+		UCHAR	MCS16 = 0, MCS17 = 0, MCS18 = 0, MCS19 = 0;
+		UCHAR	MCS20 = 0, MCS21 = 0, MCS22 = 0, MCS23 = 0; // 3*3
+
+		// check the existence and index of each needed MCS
+		while (idx < pTable[0])
+		{
+			pCurrTxRate = (PRTMP_TX_RATE_SWITCH_3S) &pTable[(idx+1)*10];
+
+			if (pCurrTxRate->CurrMCS == MCS_0)
+			{
+				MCS0 = idx;
+			}
+			else if (pCurrTxRate->CurrMCS == MCS_1)
+			{
+				MCS1 = idx;
+			}
+			else if (pCurrTxRate->CurrMCS == MCS_2)
+			{
+				MCS2 = idx;
+			}
+			else if (pCurrTxRate->CurrMCS == MCS_3)
+			{
+				MCS3 = idx;
+			}
+			else if (pCurrTxRate->CurrMCS == MCS_4)
+			{
+				MCS4 = idx;
+			}
+			else if (pCurrTxRate->CurrMCS == MCS_5)
+			{
+				MCS5 = idx;
+			}
+			else if (pCurrTxRate->CurrMCS == MCS_6)
+			{
+				MCS6 = idx;
+			}
+			else if (pCurrTxRate->CurrMCS == MCS_7)
+			{
+				MCS7 = idx;
+			}
+			else if (pCurrTxRate->CurrMCS == MCS_8 && pAd->CommonCfg.TxStream > 1)
+			{
+				MCS8 = idx;
+			}
+			else if (pCurrTxRate->CurrMCS == MCS_9 && pAd->CommonCfg.TxStream > 1)
+			{
+				MCS9 = idx;
+			}
+			else if (pCurrTxRate->CurrMCS == MCS_10 && pAd->CommonCfg.TxStream > 1)
+			{
+				MCS10 = idx;
+			}
+			else if (pCurrTxRate->CurrMCS == MCS_11 && pAd->CommonCfg.TxStream > 1)
+			{
+				MCS11 = idx;
+			}
+			else if (pCurrTxRate->CurrMCS == MCS_12 && pAd->CommonCfg.TxStream > 1)
+			{
+				MCS12 = idx;
+			}
+			else if (pCurrTxRate->CurrMCS == MCS_13 && pAd->CommonCfg.TxStream > 1)
+			{
+				MCS13 = idx;
+			}
+			else if (pCurrTxRate->CurrMCS == MCS_14 && pAd->CommonCfg.TxStream > 1)
+			{
+				MCS14 = idx;
+			}
+			else if (pCurrTxRate->CurrMCS == MCS_15 && pAd->CommonCfg.TxStream > 1)
+			{
+				MCS15 = idx;
+			}
+			else if (pCurrTxRate->CurrMCS == MCS_16 && pAd->CommonCfg.TxStream > 2)
+			{
+				MCS16 = idx;
+			}
+			else if (pCurrTxRate->CurrMCS == MCS_17 && pAd->CommonCfg.TxStream > 2)
+			{
+				MCS17 = idx;
+			}
+			else if (pCurrTxRate->CurrMCS == MCS_18 && pAd->CommonCfg.TxStream > 2)
+			{
+				MCS18 = idx;
+			}
+			else if (pCurrTxRate->CurrMCS == MCS_19 && pAd->CommonCfg.TxStream > 2)
+			{
+				MCS19 = idx;
+			}
+			else if (pCurrTxRate->CurrMCS == MCS_20 && pAd->CommonCfg.TxStream > 2)
+			{
+				MCS20 = idx;
+			}
+			else if (pCurrTxRate->CurrMCS == MCS_21 && pAd->CommonCfg.TxStream > 2)
+			{
+				MCS21 = idx;
+			}
+			else if (pCurrTxRate->CurrMCS == MCS_22 && pAd->CommonCfg.TxStream > 2)
+			{
+				MCS22 = idx;
+			}
+			else if ((pCurrTxRate->CurrMCS == MCS_23) && (pAd->CommonCfg.TxStream > 2) && (pCurrTxRate->ShortGI == GI_800))	//we hope to use ShortGI as initial rate
+			{
+				MCS23 = idx;
+			}
+
+			idx ++;
+		}
+
+		if (pAd->LatchRfRegs.Channel <= 14)
+		{
+			if (pAd->NicConfig2.field.ExternalLNAForG)
+			{
+				RssiOffset = 2;
+			}
+			else if (pTable == RateSwitchTable11N3S)
+			{
+				RssiOffset = 0;
+			}
+			else
+			{
+				RssiOffset = 5;
+			}
+		}
+		else
+		{
+			if (pAd->NicConfig2.field.ExternalLNAForA)
+			{
+				RssiOffset = 5;
+			}
+			else if (pTable == RateSwitchTable11N3S)
+			{
+				RssiOffset = 2;
+			}
+			else
+			{
+				RssiOffset = 8;
+			}
+		}
+
+		// Debug option: Add 6 dB of margin
+		if (pAd->CommonCfg.DebugFlags & DBF_INIT_MCS_MARGIN)
+			RssiOffset += 6;
+
+		// Debug Option: Disable highest MCSs when picking initial MCS based on RSSI
+		if (pAd->CommonCfg.DebugFlags & DBF_INIT_MCS_DIS1)
+			MCS23 = MCS15 = MCS7 = 0;
+		if (pAd->CommonCfg.DebugFlags & DBF_INIT_MCS_DIS2)
+			MCS22 = MCS14 = MCS6 = 0;
+
+		// Debug Option: If PHY limit disable all PHY > 85. Also check for 65 and 40 Mbps
+		if (phyRateLimit20 != 0)
+		{
+			MCS13 = MCS14 = MCS15 = MCS20 = MCS21 = MCS22 = MCS23 = 0;
+
+			if (phyRateLimit20 <= 65)
+				MCS7 = MCS12 = MCS19 = 0;
+
+			if (phyRateLimit20 <= 40)
+				MCS5 = MCS6 = MCS11 = MCS18 = 0;
+
+			if (phyRateLimit20 <= 20)
+				MCS3 = MCS4 = MCS9 = MCS10 = MCS17 = 0;
+		}
+
+#ifdef DOT11_N_SUPPORT
+			/*if (MCS15)*/
+		if ((pTable == RateSwitchTable11BGN3S) ||
+			(pTable == RateSwitchTable11BGN3SForABand) ||
+			(pTable == RateSwitchTable11N3S))
+		{// N mode with 3 stream // 3*3
+			// Note we may be using RateSwitchTable11N3S and have only 1 or 2 TX antennas so we need to handle those cases
+			if (MCS23 && (Rssi >= (-64+RssiOffset)))
+				TxRateIdx = MCS23;
+			else if (MCS22 && (Rssi >= (-66+RssiOffset)))
+				TxRateIdx = MCS22;
+			else if (MCS21 && (Rssi >= (-68+RssiOffset)))
+				TxRateIdx = MCS21;
+			else if (MCS15 && (Rssi >= (-70+RssiOffset)))
+				TxRateIdx = MCS15;
+			else if (MCS14 && (Rssi >= (-72+RssiOffset)))
+				TxRateIdx = MCS14;
+			else if (MCS13 && (Rssi >= (-76+RssiOffset)))
+				TxRateIdx = MCS13;
+			else if (MCS12 && (Rssi >= (-78+RssiOffset)))
+				TxRateIdx = MCS12;
+			else if (MCS4 && (Rssi >= (-82+RssiOffset)))
+				TxRateIdx = MCS4;
+			else if (MCS3 && (Rssi >= (-84+RssiOffset)))
+				TxRateIdx = MCS3;
+			else if (MCS2 && (Rssi >= (-86+RssiOffset)))
+				TxRateIdx = MCS2;
+			else if (MCS1 && (Rssi >= (-88+RssiOffset)))
+				TxRateIdx = MCS1;
+			else
+				TxRateIdx = MCS0;
+		}
+//		else if ((pTable == RateSwitchTable11BGN2S) || (pTable == RateSwitchTable11BGN2SForABand) ||(pTable == RateSwitchTable11N2S) ||(pTable == RateSwitchTable11N2SForABand) || (pTable == RateSwitchTable))
+		else if ((pTable == RateSwitchTable11BGN2S) ||
+				(pTable == RateSwitchTable11BGN2SForABand) ||
+				(pTable == RateSwitchTable11N2S) ||
+				(pTable == RateSwitchTable11N2SForABand)) // 3*3
+		{// N mode with 2 stream
+			if (MCS15 && (Rssi >= (-70+RssiOffset)))
+				TxRateIdx = MCS15;
+			else if (MCS14 && (Rssi >= (-72+RssiOffset)))
+				TxRateIdx = MCS14;
+			else if (MCS13 && (Rssi >= (-76+RssiOffset)))
+				TxRateIdx = MCS13;
+			else if (MCS12 && (Rssi >= (-78+RssiOffset)))
+				TxRateIdx = MCS12;
+			else if (MCS4 && (Rssi >= (-82+RssiOffset)))
+				TxRateIdx = MCS4;
+			else if (MCS3 && (Rssi >= (-84+RssiOffset)))
+				TxRateIdx = MCS3;
+			else if (MCS2 && (Rssi >= (-86+RssiOffset)))
+				TxRateIdx = MCS2;
+			else if (MCS1 && (Rssi >= (-88+RssiOffset)))
+				TxRateIdx = MCS1;
+			else
+				TxRateIdx = MCS0;
+		}
+		else if ((pTable == RateSwitchTable11BGN1S) || (pTable == RateSwitchTable11N1S))
+		{// N mode with 1 stream
+			if (MCS7 && (Rssi > (-72+RssiOffset)))
+				TxRateIdx = MCS7;
+			else if (MCS6 && (Rssi > (-74+RssiOffset)))
+				TxRateIdx = MCS6;
+			else if (MCS5 && (Rssi > (-77+RssiOffset)))
+				TxRateIdx = MCS5;
+			else if (MCS4 && (Rssi > (-79+RssiOffset)))
+				TxRateIdx = MCS4;
+			else if (MCS3 && (Rssi > (-81+RssiOffset)))
+				TxRateIdx = MCS3;
+			else if (MCS2 && (Rssi > (-83+RssiOffset)))
+				TxRateIdx = MCS2;
+			else if (MCS1 && (Rssi > (-86+RssiOffset)))
+				TxRateIdx = MCS1;
+			else
+				TxRateIdx = MCS0;
+		}
+		else if (pTable == RateSwitchTable11N3S)
+		{// N mode with 3 stream
+			if ((pEntry->HTCapability.MCSSet[2] == 0xff) && (pAd->CommonCfg.TxStream == 3))
+			{
+				if (MCS23 && (Rssi > (-72+RssiOffset)))
+					TxRateIdx = MCS23;
+				else if (MCS22 && (Rssi > (-74+RssiOffset)))
+					TxRateIdx = MCS22;
+				else if (MCS21 && (Rssi > (-77+RssiOffset)))
+					TxRateIdx = MCS21;
+				else if (MCS20 && (Rssi > (-79+RssiOffset)))
+					TxRateIdx = MCS20;
+				else if (MCS19 && (Rssi > (-81+RssiOffset)))
+					TxRateIdx = MCS19;
+				else if (MCS18 && (Rssi > (-83+RssiOffset)))
+					TxRateIdx = MCS18;
+				else if (MCS17 && (Rssi > (-86+RssiOffset)))
+					TxRateIdx = MCS17;
+				else
+					TxRateIdx = MCS16;
+
+				pEntry->mcsGroup = 3;
+			}
+			else if ((pEntry->HTCapability.MCSSet[0] == 0xff) &&
+					(pEntry->HTCapability.MCSSet[1] == 0xff) &&
+					(pAd->CommonCfg.TxStream > 1) &&
+					((pAd->CommonCfg.TxStream == 2) || (pEntry->HTCapability.MCSSet[2] == 0x0)))
+			{
+				if (MCS15 && (Rssi > (-72+RssiOffset)))
+					TxRateIdx = MCS15;
+				else if (MCS14 && (Rssi > (-74+RssiOffset)))
+					TxRateIdx = MCS14;
+				else if (MCS13 && (Rssi > (-77+RssiOffset)))
+					TxRateIdx = MCS13;
+				else if (MCS12 && (Rssi > (-79+RssiOffset)))
+					TxRateIdx = MCS12;
+				else if (MCS11 && (Rssi > (-81+RssiOffset)))
+					TxRateIdx = MCS11;
+				else if (MCS10 && (Rssi > (-83+RssiOffset)))
+					TxRateIdx = MCS10;
+				else if (MCS9 && (Rssi > (-86+RssiOffset)))
+					TxRateIdx = MCS9;
+				else
+					TxRateIdx = MCS8;
+
+				pEntry->mcsGroup = 2;
+		 	}
+			else
+			{
+				if (MCS7 && (Rssi > (-72+RssiOffset)))
+					TxRateIdx = MCS7;
+				else if (MCS6 && (Rssi > (-74+RssiOffset)))
+					TxRateIdx = MCS6;
+				else if (MCS5 && (Rssi > (-77+RssiOffset)))
+					TxRateIdx = MCS5;
+				else if (MCS4 && (Rssi > (-79+RssiOffset)))
+					TxRateIdx = MCS4;
+				else if (MCS3 && (Rssi > (-81+RssiOffset)))
+					TxRateIdx = MCS3;
+				else if (MCS2 && (Rssi > (-83+RssiOffset)))
+					TxRateIdx = MCS2;
+				else if (MCS1 && (Rssi > (-86+RssiOffset)))
+					TxRateIdx = MCS1;
+				else
+					TxRateIdx = MCS0;
+
+				pEntry->mcsGroup = 1;
+		 	}
+		}
+		else
+#endif // DOT11_N_SUPPORT //
+		{// Legacy mode
+			if (MCS7 && (Rssi > -70))
+				TxRateIdx = MCS7;
+			else if (MCS6 && (Rssi > -74))
+				TxRateIdx = MCS6;
+			else if (MCS5 && (Rssi > -78))
+				TxRateIdx = MCS5;
+			else if (MCS4 && (Rssi > -82))
+				TxRateIdx = MCS4;
+			else if (MCS4 == 0)	// for B-only mode
+				TxRateIdx = MCS3;
+			else if (MCS3 && (Rssi > -85))
+				TxRateIdx = MCS3;
+			else if (MCS2 && (Rssi > -87))
+				TxRateIdx = MCS2;
+			else if (MCS1 && (Rssi > -90))
+				TxRateIdx = MCS1;
+			else
+				TxRateIdx = MCS0;
+		}
+
+		(pEntry->fewPktsCnt) ++;
+		DBGPRINT(RT_DEBUG_WARN, ("f-s%d\n", pEntry->fewPktsCnt));
+
+		if (pEntry->fewPktsCnt == FEW_PKTS_CNT_THRD)
+		{
+			pEntry->fewPktsCnt = 0;
+		//	if (TxRateIdx != pAd->CommonCfg.TxRateIndex)
+			{
+				pEntry->lastRateIdx = pEntry->CurrTxRateIndex;
+
+				if ((pEntry->HTCapability.MCSSet[2] == 0xff) && (pAd->CommonCfg.TxStream == 3))
+					pEntry->mcsGroup = 3;
+				else if ((pEntry->HTCapability.MCSSet[0] == 0xff) &&
+						(pEntry->HTCapability.MCSSet[1] == 0xff) &&
+						(pAd->CommonCfg.TxStream > 1) &&
+						(pAd->CommonCfg.TxStream == 2 || pEntry->HTCapability.MCSSet[2] == 0x0))
+					pEntry->mcsGroup = 2;
+				else
+					pEntry->mcsGroup = 1;
+
+				pEntry->CurrTxRateIndex = TxRateIdx;
+				pNextTxRate = (PRTMP_TX_RATE_SWITCH) &pTable[(pEntry->CurrTxRateIndex+1)*10];
+
+				MlmeSetTxRate(pAd, pEntry, pNextTxRate);
+				DBGPRINT(RT_DEBUG_WARN, ("c-s%d\n", pNextTxRate->CurrMCS));
+			}
+
+			NdisZeroMemory(pEntry->TxQuality, sizeof(USHORT) * MAX_STEP_OF_TX_RATE_SWITCH);
+			NdisZeroMemory(pEntry->PER, sizeof(UCHAR) * MAX_STEP_OF_TX_RATE_SWITCH);
+			pEntry->fLastSecAccordingRSSI = TRUE;
+	#ifdef RELASE_EXCLUDE
+			DBGPRINT_RAW(RT_DEBUG_TRACE,("DRS: AccuTxTotalCnt <= 15, switch TxRateIndex as (%d) according to RSSI(%d), RssiOffset=%d\n", pEntry->CurrTxRateIndex, Rssi, RssiOffset));
+	#endif // RELASE_EXCLUDE //
+		}
+
+		// reset all OneSecTx counters
+		RESET_ONE_SEC_TX_CNT(pEntry);
+
+		return;
+	}
+
+	pEntry->fewPktsCnt = 0;
+	if (pEntry->fLastSecAccordingRSSI == TRUE)
+	{
+		pEntry->fLastSecAccordingRSSI = FALSE;
+		pEntry->LastSecTxRateChangeAction = 0;
+#ifdef RELASE_EXCLUDE
+		DBGPRINT_RAW(RT_DEBUG_TRACE,("DRS: MCS is according to RSSI, and ignore tuning this sec \n"));
+#endif // RELASE_EXCLUDE //
+
+		// reset all OneSecTx counters
+		RESET_ONE_SEC_TX_CNT(pEntry);
+
+		pNextTxRate = (PRTMP_TX_RATE_SWITCH) &pTable[(pEntry->CurrTxRateIndex+1)*10];
+#ifdef TXBF_SUPPORT
+		staETxBFProbing(pAd, pEntry, pNextTxRate);
+#endif // TXBF_SUPPORT //
+		return;
+	}
+
+	do
+	{
+		BOOLEAN	bTrainUpDown = FALSE;
+
+		pEntry->CurrTxRateStableTime ++;
+
+		// downgrade TX quality if PER >= Rate-Down threshold
+		if (TxErrorRatio >= TrainDown ||
+			(phyRateLimit20!=0 && pCurrTxRate->dataRate>=phyRateLimit20) )
+		{
+			bTrainUpDown = TRUE;
+			pEntry->TxQuality[CurrRateIdx] = DRS_TX_QUALITY_WORST_BOUND;
+		}
+		// upgrade TX quality if PER <= Rate-Up threshold
+		else if (TxErrorRatio <= TrainUp)
+		{
+			bTrainUpDown = TRUE;
+			bUpgradeQuality = TRUE;
+
+			if (pEntry->TxQuality[CurrRateIdx])
+				pEntry->TxQuality[CurrRateIdx] --;  // quality very good in CurrRate
+
+			if (pEntry->TxRateUpPenalty)
+				pEntry->TxRateUpPenalty --;
+			else
+			{
+				if (pEntry->TxQuality[pCurrTxRate->upMcs3] && pCurrTxRate->upMcs3 != CurrRateIdx)
+					pEntry->TxQuality[pCurrTxRate->upMcs3] --;
+
+				if (pEntry->TxQuality[pCurrTxRate->upMcs2] && pCurrTxRate->upMcs2 != CurrRateIdx)
+					pEntry->TxQuality[pCurrTxRate->upMcs2] --;
+
+				if (pEntry->TxQuality[pCurrTxRate->upMcs1] && pCurrTxRate->upMcs1 != CurrRateIdx)
+					pEntry->TxQuality[pCurrTxRate->upMcs1] --;
+
+//				if (pEntry->TxQuality[UpRateIdx])
+//					pEntry->TxQuality[UpRateIdx] --;    // may improve next UP rate's quality
+			}
+		}
+		else if (pEntry->mcsGroup > 0)//even if TxErrorRatio > TrainUp
+		{//moderate per but some groups are not tried
+			if (UpRateIdx != 0)
+			{
+				bTrainUpDown = TRUE;
+
+				if (pEntry->TxQuality[CurrRateIdx])
+					pEntry->TxQuality[CurrRateIdx] --;  // quality very good in CurrRate
+
+//				if (pEntry->TxRateUpPenalty)//always == 0, always go to else
+//					pEntry->TxRateUpPenalty --;
+				//else if (pEntry->TxQuality[UpRateIdx])
+
+				if (pEntry->TxQuality[UpRateIdx])
+					pEntry->TxQuality[UpRateIdx] --;    // may improve next UP rate's quality
+			}
+		}
+
+		pEntry->PER[CurrRateIdx] = (UCHAR)TxErrorRatio;
+
+		if (bTrainUpDown)
+		{
+			PRTMP_TX_RATE_SWITCH_3S pUpRateIdx = (PRTMP_TX_RATE_SWITCH_3S) &pTable[(UpRateIdx+1)*10];
+
+			// perform DRS - consider TxRate Down first, then rate up.
+			if ((CurrRateIdx != DownRateIdx) && (pEntry->TxQuality[CurrRateIdx] >= DRS_TX_QUALITY_WORST_BOUND))
+			{
+				pEntry->CurrTxRateIndex = DownRateIdx;
+				pEntry->LastSecTxRateChangeAction = 2; // rate down
+			}
+			else if ((CurrRateIdx != UpRateIdx) &&
+					(pEntry->TxQuality[UpRateIdx] <= 0) &&
+					(phyRateLimit20==0 || pUpRateIdx->dataRate<phyRateLimit20))
+			{
+				pEntry->CurrTxRateIndex = UpRateIdx;
+				pEntry->LastSecTxRateChangeAction = 1; // rate UP
+			}
+		}
+	} while (FALSE);
+
+	// if rate-up happen, clear all bad history of all TX rates
+	//if (pEntry->CurrTxRateIndex > CurrRateIdx)
+	if (pEntry->CurrTxRateIndex != CurrRateIdx && pEntry->LastSecTxRateChangeAction == 1)//ys
+	{
+#ifdef RELASE_EXCLUDE
+		DBGPRINT_RAW(RT_DEBUG_TRACE,("DRS: ++TX rate from %d to %d \n", CurrRateIdx, pEntry->CurrTxRateIndex));
+#endif // RELASE_EXCLUDE //
+		pEntry->CurrTxRateStableTime = 0;
+		pEntry->TxRateUpPenalty = 0;
+		pEntry->LastSecTxRateChangeAction = 1; // rate UP
+//		NdisZeroMemory(pEntry->TxQuality, sizeof(USHORT) * MAX_STEP_OF_TX_RATE_SWITCH);
+		pNextTxRateIdx = (PRTMP_TX_RATE_SWITCH_3S) &pTable[(pEntry->CurrTxRateIndex+1)*10];
+		NdisZeroMemory(pEntry->PER, sizeof(UCHAR) * MAX_STEP_OF_TX_RATE_SWITCH);
+		pEntry->lastRateIdx = CurrRateIdx;
+
+		//
+		// For TxRate fast train up
+		//
+		if (!pAd->StaCfg.StaQuickResponeForRateUpTimerRunning)
+		{
+			RTMPSetTimer(&pAd->StaCfg.StaQuickResponeForRateUpTimer, 100);
+
+			pAd->StaCfg.StaQuickResponeForRateUpTimerRunning = TRUE;
+		}
+
+		bTxRateChanged = TRUE;
+	}
+	// if rate-down happen, only clear DownRate's bad history
+	//else if (pEntry->CurrTxRateIndex < CurrRateIdx)
+	else if (pEntry->CurrTxRateIndex != CurrRateIdx && pEntry->LastSecTxRateChangeAction == 2)
+	{
+#ifdef RELASE_EXCLUDE
+		DBGPRINT_RAW(RT_DEBUG_TRACE,("DRS: --TX rate from %d to %d \n", CurrRateIdx, pEntry->CurrTxRateIndex));
+#endif // RELASE_EXCLUDE //
+		pEntry->CurrTxRateStableTime = 0;
+		pEntry->TxRateUpPenalty = 0;           // no penalty
+		pEntry->LastSecTxRateChangeAction = 2; // rate DOWN
+		pEntry->TxQuality[pEntry->CurrTxRateIndex] = 0;
+		pEntry->PER[pEntry->CurrTxRateIndex] = 0;
+		pEntry->lastRateIdx = CurrRateIdx;
+
+		//
+		// For TxRate fast train down
+		//
+		if (!pAd->StaCfg.StaQuickResponeForRateUpTimerRunning)
+		{
+			RTMPSetTimer(&pAd->StaCfg.StaQuickResponeForRateUpTimer, 100);
+
+			pAd->StaCfg.StaQuickResponeForRateUpTimerRunning = TRUE;
+		}
+		bTxRateChanged = TRUE;
+	}
+	else
+	{
+		pEntry->LastSecTxRateChangeAction = 0; // rate no change
+		bTxRateChanged = FALSE;
+	}
+
+	pEntry->LastTxOkCount = TxSuccess;
+
+	tmpTxRate = pEntry->CurrTxRateIndex;
+
+	//turn off RDG when 3s and rx count > tx count*5
+	if (((pTable == RateSwitchTable11BGN3S) || (pTable == RateSwitchTable11BGN3SForABand) || (pTable == RateSwitchTable11N3S)) &&
+				pAd->RalinkCounters.OneSecReceivedByteCount > 50000 &&
+				pAd->RalinkCounters.OneSecTransmittedByteCount > 50000 &&
+				CLIENT_STATUS_TEST_FLAG(pEntry, fCLIENT_STATUS_RDG_CAPABLE))
+	{
+		TX_LINK_CFG_STRUC	TxLinkCfg;
+		ULONG				TxOpThres;
+
+		pTempTxRate = (PRTMP_TX_RATE_SWITCH)(&pTable[(tmpTxRate + 1)*10]);
+		RTMP_IO_READ32(pAd, TX_LINK_CFG, &TxLinkCfg.word);
+
+		if ((pAd->RalinkCounters.OneSecReceivedByteCount > (pAd->RalinkCounters.OneSecTransmittedByteCount * 5)) &&
+			(pTempTxRate->CurrMCS != 23))
+		{
+			DBGPRINT_RAW(RT_DEBUG_WARN,("DRS: Rx(%d) > 5*Tx(%d)\n",
+						pAd->RalinkCounters.OneSecReceivedByteCount, pAd->RalinkCounters.OneSecTransmittedByteCount));
+
+			if (TxLinkCfg.field.TxRDGEn == 1)
+			{
+				TxLinkCfg.field.TxRDGEn = 0;
+				RTMP_IO_WRITE32(pAd, TX_LINK_CFG, TxLinkCfg.word);
+				RTMP_IO_READ32(pAd, TXOP_THRES_CFG, &TxOpThres);
+				TxOpThres |= 0xff00;
+				RTMP_IO_WRITE32(pAd, TXOP_THRES_CFG, TxOpThres);
+				DBGPRINT_RAW(RT_DEBUG_WARN,("DRS: RDG off!\n"));
+			}
+		}
+		else
+		{
+			DBGPRINT_RAW(RT_DEBUG_WARN,("DRS: Rx(%d) <= 5*Tx(%d)\n",
+						pAd->RalinkCounters.OneSecReceivedByteCount, pAd->RalinkCounters.OneSecTransmittedByteCount));
+
+			if (TxLinkCfg.field.TxRDGEn == 0)
+			{
+				TxLinkCfg.field.TxRDGEn = 1;
+				RTMP_IO_WRITE32(pAd, TX_LINK_CFG, TxLinkCfg.word);
+				RTMP_IO_READ32(pAd, TXOP_THRES_CFG, &TxOpThres);
+				TxOpThres &= 0xffff00ff;
+				RTMP_IO_WRITE32(pAd, TXOP_THRES_CFG, TxOpThres);
+				DBGPRINT_RAW(RT_DEBUG_WARN,("DRS: RDG on!\n"));
+			}
+		}
+	}
+
+	pNextTxRate = (PRTMP_TX_RATE_SWITCH) &pTable[(tmpTxRate+1)*10];
+	if (bTxRateChanged && pNextTxRate)
+	{
+		MlmeSetTxRate(pAd, pEntry, pNextTxRate);
+		DBGPRINT(RT_DEBUG_WARN, ("--s%d\n", pNextTxRate->CurrMCS));
+	}
+
+	// reset all OneSecTx counters
+	RESET_ONE_SEC_TX_CNT(pEntry);
+}
+#endif // NEW_RATE_ADAPT_SUPPORT //
 
 /*
 	========================================================================
@@ -2729,7 +3969,7 @@ VOID StaQuickResponeForRateUpExec(
 {
 	PRTMP_ADAPTER			pAd = (PRTMP_ADAPTER)FunctionContext;
 	UCHAR					UpRateIdx = 0, DownRateIdx = 0, CurrRateIdx = 0;
-	ULONG					TxTotalCnt;
+	ULONG					TxTotalCnt = 0;
 	ULONG					TxErrorRatio = 0;
 	BOOLEAN					bTxRateChanged; //, bUpgradeQuality = FALSE;
 	PRTMP_TX_RATE_SWITCH	pCurrTxRate, pNextTxRate = NULL;
@@ -2791,8 +4031,6 @@ VOID StaQuickResponeForRateUpExec(
 	pCurrTxRate = (PRTMP_TX_RATE_SWITCH) &pTable[(CurrRateIdx+1)*5];
 
 #ifdef DOT11_N_SUPPORT
-	McsDown(pAd, CurrRateIdx, pCurrTxRate, &UpRateIdx, &DownRateIdx);
-
 	if ((Rssi > -65) && (pCurrTxRate->Mode >= MODE_HTMIX))
 	{
 		TrainUp		= (pCurrTxRate->TrainUp + (pCurrTxRate->TrainUp >> 1));
@@ -2906,15 +4144,6 @@ VOID StaQuickResponeForRateUpExec(
 		}
 	}while (FALSE);
 
-#ifdef DOT11_N_SUPPORT
-	if ((pAd->bHWCoexistenceInit == TRUE) && 
-		IS_ENABLE_RATE_ADAPTIVE_BY_TIMER(pAd) &&
-		(CurrRateIdx > UpRateIdx)) // force to downgrade TX
-	{
-		pEntry->CurrTxRateIndex = DownRateIdx;
-	}
-#endif // DOT11_N_SUPPORT //
-
 	// if rate-up happen, clear all bad history of all TX rates
 	if (pAd->CommonCfg.TxRateIndex > CurrRateIdx)
 	{
@@ -2945,6 +4174,276 @@ VOID StaQuickResponeForRateUpExec(
 		}
 	}
 }
+
+#ifdef NEW_RATE_ADAPT_SUPPORT
+VOID StaQuickResponeForRateUpExecAdapt(
+	IN PRTMP_ADAPTER	pAd,
+	IN ULONG i) 
+{
+	UCHAR					UpRateIdx = 0, DownRateIdx = 0, CurrRateIdx = 0;
+	ULONG					TxTotalCnt;
+	ULONG					TxErrorRatio = 0;
+	BOOLEAN					bTxRateChanged = TRUE; //, bUpgradeQuality = FALSE;
+	PRTMP_TX_RATE_SWITCH_3S	pCurrTxRate;
+	PRTMP_TX_RATE_SWITCH	pNextTxRate = NULL;
+	PUCHAR					pTable;
+	UCHAR					TableSize = 0;
+	UCHAR					InitTxRateIdx = 0, TrainUp, TrainDown;
+	TX_STA_CNT1_STRUC		StaTx1;
+	TX_STA_CNT0_STRUC		TxStaCnt0;
+	CHAR					Rssi, ratio;
+	ULONG					TxRetransmit = 0, TxSuccess = 0, TxFailCount = 0;
+	PMAC_TABLE_ENTRY		pEntry;
+	
+	pAd->StaCfg.StaQuickResponeForRateUpTimerRunning = FALSE;
+
+	pEntry = &pAd->MacTab.Content[i];
+
+	MlmeSelectTxRateTable(pAd, pEntry, &pTable, &TableSize, &InitTxRateIdx);
+
+	//Rssi = RTMPMaxRssi(pAd, (CHAR)pAd->StaCfg.AvgRssi0, (CHAR)pAd->StaCfg.AvgRssi1, (CHAR)pAd->StaCfg.AvgRssi2);
+	/*
+	if (pAd->Antenna.field.TxPath > 1)
+		Rssi = (pAd->StaCfg.RssiSample.AvgRssi0 + pAd->StaCfg.RssiSample.AvgRssi1) >> 1;
+	else
+		Rssi = pAd->StaCfg.RssiSample.AvgRssi0;
+	*/
+		
+	// Sync with Rory.
+	if(pAd->Antenna.field.RxPath == 3)
+	{
+		Rssi = ((CHAR)pAd->StaCfg.RssiSample.AvgRssi0 + (CHAR)pAd->StaCfg.RssiSample.AvgRssi1 + (CHAR)pAd->StaCfg.RssiSample.AvgRssi2)/3;
+	}	
+	else if(pAd->Antenna.field.RxPath == 2)
+	{
+		Rssi = ((CHAR)pAd->StaCfg.RssiSample.AvgRssi0 + (CHAR)pAd->StaCfg.RssiSample.AvgRssi1)>>1;
+	}
+	else
+	{
+		Rssi = (CHAR)pAd->StaCfg.RssiSample.AvgRssi0;
+	}
+
+
+
+	pAd->CommonCfg.TxRateIndex = pEntry->CurrTxRateIndex;
+	CurrRateIdx = pAd->CommonCfg.TxRateIndex;
+	//CurrRateIdx = pEntry->CurrTxRateIndex;
+
+	//MlmeSelectTxRateTable(pAd, pEntry, &pTable, &TableSize, &InitTxRateIdx);
+
+	// decide the next upgrade rate and downgrade rate, if any
+	UpRateIdx = DownRateIdx = pEntry->lastRateIdx;
+
+	pCurrTxRate = (PRTMP_TX_RATE_SWITCH_3S) &pTable[(CurrRateIdx+1)*10];
+
+#ifdef DOT11_N_SUPPORT
+	McsDown(pAd, CurrRateIdx, pCurrTxRate, &UpRateIdx, &DownRateIdx);
+
+	if ((Rssi > -65) && (pCurrTxRate->Mode >= MODE_HTMIX) && pEntry->perThrdAdj == 1)
+	{
+		TrainUp		= (pCurrTxRate->TrainUp + (pCurrTxRate->TrainUp >> 1));
+		TrainDown	= (pCurrTxRate->TrainDown + (pCurrTxRate->TrainDown >> 1));
+	}
+	else
+#endif // DOT11_N_SUPPORT //
+	{
+		TrainUp		= pCurrTxRate->TrainUp;
+		TrainDown	= pCurrTxRate->TrainDown;
+	}
+
+	if (pAd->MacTab.Size == 1)
+	{
+		// Update statistic counter
+		RTMP_IO_READ32(pAd, TX_STA_CNT0, &TxStaCnt0.word);
+		RTMP_IO_READ32(pAd, TX_STA_CNT1, &StaTx1.word);
+
+		TxRetransmit = StaTx1.field.TxRetransmit;
+		TxSuccess = StaTx1.field.TxSuccess;
+		TxFailCount = TxStaCnt0.field.TxFailCount;
+		TxTotalCnt = TxRetransmit + TxSuccess + TxFailCount;
+
+		pAd->RalinkCounters.OneSecTxRetryOkCount += StaTx1.field.TxRetransmit;
+		pAd->RalinkCounters.OneSecTxNoRetryOkCount += StaTx1.field.TxSuccess;
+		pAd->RalinkCounters.OneSecTxFailCount += TxStaCnt0.field.TxFailCount;
+		pAd->WlanCounters.TransmittedFragmentCount.u.LowPart += StaTx1.field.TxSuccess;
+		pAd->WlanCounters.RetryCount.u.LowPart += StaTx1.field.TxRetransmit;
+		pAd->WlanCounters.FailedCount.u.LowPart += TxStaCnt0.field.TxFailCount;
+
+		if (TxTotalCnt)
+			TxErrorRatio = ((TxRetransmit + TxFailCount) * 100) / TxTotalCnt;
+	}
+	else
+	{
+		TxTotalCnt = pEntry->OneSecTxNoRetryOkCount + 
+				 pEntry->OneSecTxRetryOkCount + 
+				 pEntry->OneSecTxFailCount;
+
+		if (TxTotalCnt)
+			TxErrorRatio = ((pEntry->OneSecTxRetryOkCount + pEntry->OneSecTxFailCount) * 100) / TxTotalCnt;
+	}
+
+	if (pEntry->fLastChangeAccordingMfb == TRUE)
+	{
+		pEntry->fLastChangeAccordingMfb = FALSE;
+		pEntry->LastSecTxRateChangeAction = 0;//not increment or decrement --> set to 0 
+		DBGPRINT_RAW(RT_DEBUG_TRACE,("DRS: MCS is according to MFB, and ignore tuning this sec \n"));
+
+		// reset all OneSecTx counters
+		RESET_ONE_SEC_TX_CNT(pEntry);
+		return;
+	}
+
+
+	//
+	// CASE 1. when TX samples are fewer than 15, then decide TX rate solely on RSSI
+	//         (criteria copied from RT2500 for Netopia case)
+	//
+	if (TxTotalCnt <= 12)
+	{
+		NdisZeroMemory(pAd->DrsCounters.TxQuality, sizeof(USHORT) * MAX_STEP_OF_TX_RATE_SWITCH);
+		NdisZeroMemory(pAd->DrsCounters.PER, sizeof(UCHAR) * MAX_STEP_OF_TX_RATE_SWITCH);
+
+		if ((pAd->DrsCounters.LastSecTxRateChangeAction == 1) && (CurrRateIdx != DownRateIdx))
+		{
+			pAd->CommonCfg.TxRateIndex = DownRateIdx;
+			pAd->DrsCounters.TxQuality[CurrRateIdx] = DRS_TX_QUALITY_WORST_BOUND;
+		}
+		else if ((pAd->DrsCounters.LastSecTxRateChangeAction == 2) && (CurrRateIdx != UpRateIdx))
+		{
+			pAd->CommonCfg.TxRateIndex = UpRateIdx;
+		}
+
+		DBGPRINT_RAW(RT_DEBUG_TRACE,("QuickDRS: TxTotalCnt <= 15, train back to original rate \n"));
+		return;
+	}
+
+	do
+	{
+		ULONG OneSecTxNoRetryOKRationCount;
+
+		if (pAd->DrsCounters.LastTimeTxRateChangeAction == 0)
+			ratio = 5;
+		else
+			ratio = 4;
+
+		// downgrade TX quality if PER >= Rate-Down threshold
+		if (TxErrorRatio >= TrainDown)
+		{
+			pAd->DrsCounters.TxQuality[CurrRateIdx] = DRS_TX_QUALITY_WORST_BOUND;
+		}
+
+		pAd->DrsCounters.PER[CurrRateIdx] = (UCHAR)TxErrorRatio;
+
+		OneSecTxNoRetryOKRationCount = (TxSuccess * ratio);
+
+		// perform DRS - consider TxRate Down first, then rate up.
+		if ((pAd->DrsCounters.LastSecTxRateChangeAction == 1) && (CurrRateIdx != DownRateIdx))
+		{
+			if ((pAd->DrsCounters.LastTxOkCount + 2) >= OneSecTxNoRetryOKRationCount)
+			{
+				pAd->CommonCfg.TxRateIndex = DownRateIdx;
+				pAd->DrsCounters.TxQuality[CurrRateIdx] = DRS_TX_QUALITY_WORST_BOUND;
+					
+			}
+		}
+		else if ((pAd->DrsCounters.LastSecTxRateChangeAction == 2) && (CurrRateIdx != UpRateIdx))
+		{
+			if ((TxErrorRatio >= 50) || (TxErrorRatio >= TrainDown))
+			{
+				if ((pEntry->HTCapability.MCSSet[2] == 0xff) && (pAd->CommonCfg.TxStream == 3))
+					pEntry->mcsGroup = 3;
+				else if ((pEntry->HTCapability.MCSSet[0] == 0xff) &&
+						(pEntry->HTCapability.MCSSet[1] == 0xff) &&
+						(pAd->CommonCfg.TxStream > 1) &&
+						(pAd->CommonCfg.TxStream == 2 || pEntry->HTCapability.MCSSet[2] == 0x0))
+					pEntry->mcsGroup = 2;
+				else
+					pEntry->mcsGroup = 1;
+			}
+			else if ((pAd->DrsCounters.LastTxOkCount + 2) >= OneSecTxNoRetryOKRationCount)
+			{
+				pAd->CommonCfg.TxRateIndex = UpRateIdx;
+			}
+		}
+	}while (FALSE);
+
+#ifdef DOT11_N_SUPPORT
+	if ((pAd->bHWCoexistenceInit == TRUE) && 
+		IS_ENABLE_BT_RATE_ADAPTIVE_BY_TIMER(pAd) &&
+		(CurrRateIdx > UpRateIdx)) // force to downgrade TX
+	{
+		pEntry->CurrTxRateIndex = DownRateIdx;
+	}
+#endif // DOT11_N_SUPPORT //
+
+	if (pEntry->LastSecTxRateChangeAction == 1) 
+	{//last action is up
+		//looking for the next group with valid mcs
+		if (pAd->CommonCfg.TxRateIndex != CurrRateIdx && pEntry->mcsGroup > 0)
+		{//move back
+			pEntry->mcsGroup --;				
+			pCurrTxRate = (PRTMP_TX_RATE_SWITCH_3S) &pTable[(DownRateIdx+1)*10];
+		}
+		//UpRateIdx is for temp use in this section
+		switch (pEntry->mcsGroup)
+		{
+			case 3:
+				UpRateIdx = pCurrTxRate->upMcs3;
+				break;
+
+			case 2:
+				UpRateIdx = pCurrTxRate->upMcs2;
+				break;
+
+			case 1:
+				UpRateIdx = pCurrTxRate->upMcs1;
+				break;
+
+			case 0:
+				UpRateIdx = CurrRateIdx;
+				break;
+
+			default:
+				DBGPRINT_RAW(RT_DEBUG_TRACE, ("wrong mcsGroup value\n"));
+				break;
+		}
+
+		if (UpRateIdx == pAd->CommonCfg.TxRateIndex)
+			pEntry->mcsGroup = 0;
+
+		DBGPRINT_RAW(RT_DEBUG_TRACE,("              QuickDRS: next mcsGroup =%d \n", pEntry->mcsGroup));			
+	}
+
+	// if rate-up happen, clear all bad history of all TX rates
+	if (pAd->CommonCfg.TxRateIndex != CurrRateIdx && pEntry->LastSecTxRateChangeAction == 2)
+	{
+		pAd->DrsCounters.TxRateUpPenalty = 0;
+		NdisZeroMemory(pAd->DrsCounters.TxQuality, sizeof(USHORT) * MAX_STEP_OF_TX_RATE_SWITCH);
+		NdisZeroMemory(pAd->DrsCounters.PER, sizeof(UCHAR) * MAX_STEP_OF_TX_RATE_SWITCH);
+			bTxRateChanged = TRUE;
+	}
+	// if rate-down happen, only clear DownRate's bad history
+	else if (pAd->CommonCfg.TxRateIndex != CurrRateIdx && pEntry->LastSecTxRateChangeAction == 1) 
+	{
+		DBGPRINT_RAW(RT_DEBUG_TRACE,("QuickDRS: --TX rate from %d to %d \n", CurrRateIdx, pAd->CommonCfg.TxRateIndex));
+		
+		pAd->DrsCounters.TxRateUpPenalty = 0;           // no penalty
+		pAd->DrsCounters.TxQuality[pAd->CommonCfg.TxRateIndex] = 0;
+		pAd->DrsCounters.PER[pAd->CommonCfg.TxRateIndex] = 0;
+			bTxRateChanged = TRUE;
+	}
+	else
+	{
+		bTxRateChanged = FALSE;
+	}
+
+	pNextTxRate = (PRTMP_TX_RATE_SWITCH) &pTable[(pAd->CommonCfg.TxRateIndex+1)*10];
+	if (bTxRateChanged && pNextTxRate)
+	{
+			MlmeSetTxRate(pAd, pEntry, pNextTxRate);
+	}
+}
+#endif // NEW_RATE_ADAPT_SUPPORT //
 
 /*
 	==========================================================================
@@ -2997,12 +4496,13 @@ VOID MlmeCheckPsmChange(
 		RTMP_SET_PSM_BIT(pAd, PWR_SAVE);
 		if (!(pAd->CommonCfg.bAPSDCapable && pAd->CommonCfg.APEdcaParm.bAPSDCapable))
 		{
-			RTMPSendNullFrame(pAd, pAd->CommonCfg.TxRate, FALSE);
+			RTMPSendNullFrame(pAd, pAd->CommonCfg.TxRate, (OPSTATUS_TEST_FLAG(pAd, fOP_STATUS_WMM_INUSED) ? TRUE:FALSE));
 		}
 		else
 		{
 			RTMPSendNullFrame(pAd, pAd->CommonCfg.TxRate, TRUE);
 		}
+
 	}
 }
 
@@ -3116,9 +4616,9 @@ VOID MlmeCalculateChannelQuality(
 	if ((pAd->OpMode == OPMODE_STA) &&
 		INFRA_ON(pAd) && 
 		(OneSecTxNoRetryOkCount < 2) && // no heavy traffic
-		((pAd->StaCfg.LastBeaconRxTime + BeaconLostTime) < Now32))
+		RTMP_TIME_AFTER(Now32, pAd->StaCfg.LastBeaconRxTime + BeaconLostTime))
 	{
-		DBGPRINT(RT_DEBUG_TRACE, ("BEACON lost > %ld msec with TxOkCnt=%ld -> CQI=0\n", BeaconLostTime, TxOkCnt)); 
+		DBGPRINT(RT_DEBUG_TRACE, ("BEACON lost > %ld msec with TxOkCnt=%ld -> CQI=0\n", BeaconLostTime * (1000 / OS_HZ) , TxOkCnt)); 
 		ChannelQuality = 0;
 	}
 	else
@@ -3196,12 +4696,23 @@ VOID UpdateBasicRateBitmap(
     UCHAR *ext_p = pAdapter->CommonCfg.ExtRate;
     ULONG bitmap = pAdapter->CommonCfg.BasicRateBitmap;
 
-
     /* if A mode, always use fix BasicRateBitMap */
     //if (pAdapter->CommonCfg.Channel == PHY_11A)
 	if (pAdapter->CommonCfg.Channel > 14)
-        pAdapter->CommonCfg.BasicRateBitmap = 0x150; /* 6, 12, 24M */
-    /* End of if */
+	{
+		if (pAdapter->CommonCfg.BasicRateBitmap & 0xF)
+		{
+			/* no 11b rate in 5G band */
+			pAdapter->CommonCfg.BasicRateBitmapOld = pAdapter->CommonCfg.BasicRateBitmap;
+			pAdapter->CommonCfg.BasicRateBitmap &= (~0xF); /* no 11b */
+			pAdapter->CommonCfg.BasicRateBitmap |= 0x150; /* 6, 12, 24M */
+		}
+    }
+	else
+	{
+		/* no need to modify in 2.4G */
+		pAdapter->CommonCfg.BasicRateBitmap = pAdapter->CommonCfg.BasicRateBitmapOld;
+	} /* End of if */
 
     if (pAdapter->CommonCfg.BasicRateBitmap > 4095)
     {
@@ -3450,16 +4961,6 @@ VOID MlmeUpdateTxRates(
 
 		pAd->CommonCfg.TxRateIndex = 0;
 
-#ifdef RT3593
-		//Enable AutoFallback ; RT3593 support disable Tx auto fallback per packet
-		if (IS_RT3593(pAd))
-		{
-			TX_RTY_CFG_STRUC	TxRtyCfg;				
-			RTMP_IO_READ32(pAd, TX_RTY_CFG, &TxRtyCfg.word);
-			TxRtyCfg.field.TxautoFBEnable = 1;
-			RTMP_IO_WRITE32(pAd, TX_RTY_CFG, TxRtyCfg.word);
-		}
-#endif // RT3593 //
 	}
 	else
 	{
@@ -3488,16 +4989,6 @@ VOID MlmeUpdateTxRates(
 		pAd->MacTab.Content[BSSID_WCID].HTPhyMode.field.MCS		= pHtPhy->field.MCS;
 		pAd->MacTab.Content[BSSID_WCID].HTPhyMode.field.MODE	= pHtPhy->field.MODE;
 
-#ifdef RT3593
-		//Disable AutoFallback; RT3593 support disable Tx auto fallback per packet
-		if (!IS_RT3593(pAd))
-		{
-			TX_RTY_CFG_STRUC	TxRtyCfg;				
-			RTMP_IO_READ32(pAd, TX_RTY_CFG, &TxRtyCfg.word);
-			TxRtyCfg.field.TxautoFBEnable = 0;
-			RTMP_IO_WRITE32(pAd, TX_RTY_CFG, TxRtyCfg.word);
-		}
-#endif // RT3593 //	
 	}
 
 	if (pAd->CommonCfg.TxRate <= RATE_11)
@@ -3605,6 +5096,7 @@ VOID MlmeUpdateTxRates(
 		else
 			pAd->MacTab.Content[MCAST_WCID].HTPhyMode.field.MCS = RATE_1;
 		pAd->CommonCfg.BasicMlmeRate = pAd->CommonCfg.MlmeRate;
+
 	}
 
 	DBGPRINT(RT_DEBUG_TRACE, (" MlmeUpdateTxRates (MaxDesire=%d, MaxSupport=%d, MaxTxRate=%d, MinRate=%d, Rate Switching =%d)\n", 
@@ -3652,6 +5144,7 @@ VOID MlmeUpdateHtTxRates(
 #ifdef CONFIG_STA_SUPPORT
 	IF_DEV_CONFIG_OPMODE_ON_STA(pAd)
 	{		
+		{
 		pDesireHtPhy	= &pAd->StaCfg.DesiredHtPhyInfo;
 		pActiveHtPhy	= &pAd->StaCfg.DesiredHtPhyInfo;
 		pHtPhy 		= &pAd->StaCfg.HTPhyMode;
@@ -3660,10 +5153,13 @@ VOID MlmeUpdateHtTxRates(
 		
 		auto_rate_cur_p = &pAd->StaCfg.bAutoTxRateSwitch;
 	}		
+	}		
 #endif // CONFIG_STA_SUPPORT //
 
 #ifdef CONFIG_STA_SUPPORT	
-	if ((ADHOC_ON(pAd) || INFRA_ON(pAd)) && (pAd->OpMode == OPMODE_STA))
+	if ((pAd->OpMode == OPMODE_STA)
+		&& (apidx == BSS0)
+		&& (ADHOC_ON(pAd) || INFRA_ON(pAd)))
 	{
 		if (pAd->StaActive.SupportedPhyInfo.bHtEnable == FALSE)
 			return;
@@ -3735,7 +5231,9 @@ VOID MlmeUpdateHtTxRates(
 	pMinHtPhy->field.ShortGI = 0;
 	//If STA assigns fixed rate. update to fixed here.
 #ifdef CONFIG_STA_SUPPORT
-	if ( (pAd->OpMode == OPMODE_STA) && (pDesireHtPhy->MCSSet[0] != 0xff))
+	if ( (pAd->OpMode == OPMODE_STA)
+		&& (apidx == BSS0)
+		&& (pDesireHtPhy->MCSSet[0] != 0xff))
 	{
 		if (pDesireHtPhy->MCSSet[4] != 0)
 		{
@@ -3800,6 +5298,18 @@ VOID BATableInit(
 	{
 		Tab->BAOriEntry[i].ORI_BA_Status = Originator_NONE;
 	}
+}
+
+VOID BATableExit(
+	IN RTMP_ADAPTER *pAd)
+{
+	int i;
+	
+	for(i=0; i<MAX_LEN_OF_BA_REC_TABLE; i++)
+	{
+		NdisFreeSpinLock(&pAd->BATable.BARecEntry[i].RxReRingLock);
+	}
+	NdisFreeSpinLock(&pAd->BATabLock);
 }
 #endif // DOT11_N_SUPPORT //
 
@@ -4180,10 +5690,9 @@ VOID BssEntrySet(
 			switch(pEid->Eid)
 			{
 				case IE_WPA:
-
-#ifdef CONFIG_STA_SUPPORT
 					if (NdisEqualMemory(pEid->Octet, WPS_OUI, 4))
 					{
+#ifdef CONFIG_STA_SUPPORT
 						if ((pEid->Len + 2) > MAX_CUSTOM_LEN)
 						{
 							pBss->WpsIE.IELen = 0;
@@ -4191,11 +5700,9 @@ VOID BssEntrySet(
 						}
 						pBss->WpsIE.IELen = pEid->Len + 2;
 						NdisMoveMemory(pBss->WpsIE.IE, pEid, pBss->WpsIE.IELen);
+#endif // CONFIG_STA_SUPPORT //
 						break;
 					}
-#endif // CONFIG_STA_SUPPORT //
-
-
 #ifdef CONFIG_STA_SUPPORT
 					if (NdisEqualMemory(pEid->Octet, WPA_OUI, 4))
 					{
@@ -4207,8 +5714,8 @@ VOID BssEntrySet(
 						pBss->WpaIE.IELen = pEid->Len + 2;
 						NdisMoveMemory(pBss->WpaIE.IE, pEid, pBss->WpaIE.IELen);
 					}
-					break;
 #endif // CONFIG_STA_SUPPORT //
+					break;
 
 #ifdef CONFIG_STA_SUPPORT
 				case IE_RSN:
@@ -5732,6 +7239,7 @@ VOID StateMachinePerformAction(
 	IN MLME_QUEUE_ELEM *Elem,
 	IN ULONG CurrState)
 {
+
 	if (S->TransFunc[(CurrState) * S->NrMsg + Elem->MsgType - S->Base])
 		(*(S->TransFunc[(CurrState) * S->NrMsg + Elem->MsgType - S->Base]))(pAd, Elem);
 }
@@ -5782,6 +7290,30 @@ UCHAR RandomByte(
 	}
 
 	return R;
+}
+
+
+UCHAR RandomByte2(
+        IN PRTMP_ADAPTER pAd)
+{
+	UINT32 a,b;
+	UCHAR value, value1 = 0, value2 = 0, value3 = 0, value4 = 0, value5 = 0;
+
+	//MAC statistic related
+	RTMP_IO_READ32(pAd, RX_STA_CNT1, &a);
+	a &= 0x0000ffff;
+	RTMP_IO_READ32(pAd, RX_STA_CNT0, &b); 
+	b &= 0x0000ffff;
+	value = (a<<16)|b;
+
+	//R50~R54: RSSI or SNR related
+	RTMP_BBP_IO_READ8_BY_REG_ID(pAd, BBP_R50, &value1);
+	RTMP_BBP_IO_READ8_BY_REG_ID(pAd, BBP_R51, &value2);
+	RTMP_BBP_IO_READ8_BY_REG_ID(pAd, BBP_R52, &value3);
+	RTMP_BBP_IO_READ8_BY_REG_ID(pAd, BBP_R53, &value4);
+	RTMP_BBP_IO_READ8_BY_REG_ID(pAd, BBP_R54, &value5);
+
+	return value^value1^value2^value3^value4^value5^RandomByte(pAd);
 }
 
 
@@ -6155,6 +7687,26 @@ CHAR RTMPMaxRssi(
 }
 
 
+CHAR RTMPMinSnr(
+	IN PRTMP_ADAPTER	pAd,
+	IN CHAR				Snr0,
+	IN CHAR				Snr1)
+{
+	CHAR	smaller = 0;
+	
+	if (pAd->Antenna.field.RxPath == 1) 
+	{
+		smaller = Snr0;
+	}
+
+	if (pAd->Antenna.field.RxPath >= 2)
+	{
+		smaller = min(Snr0, Snr1);
+	}
+ 
+	return smaller;
+}
+
 /*
     ========================================================================
     Routine Description:
@@ -6189,12 +7741,36 @@ VOID AsicEvaluateRxAnt(
 #ifdef RT3090
 							|| (pAd->bPCIclkOff == TRUE)
 #endif // RT3090 //
-#ifdef RT3593
-							|| IS_RT3593(pAd)
-#endif // RT3593 //
+#ifdef ANT_DIVERSITY_SUPPORT
+							|| (pAd->EepromAccess)
+#endif // ANT_DIVERSITY_SUPPORT //
 							)
 		return;
 	
+#ifdef ANT_DIVERSITY_SUPPORT
+	if ((pAd->NicConfig2.field.AntDiversity) && (pAd->CommonCfg.bRxAntDiversity == ANT_DIVERSITY_ENABLE))
+	{
+		// two antenna selection mechanism- one is antenna diversity, the other is failed antenna remove
+		// one is antenna diversity:there is only one antenna can rx and tx
+		// the other is failed antenna remove:two physical antenna can rx and tx
+			DBGPRINT(RT_DEBUG_TRACE,("AntDiv - before evaluate Pair1-Ant (%d,%d)\n",
+				pAd->RxAnt.Pair1PrimaryRxAnt, pAd->RxAnt.Pair1SecondaryRxAnt));
+
+			AsicSetRxAnt(pAd, pAd->RxAnt.Pair1SecondaryRxAnt);
+				
+			pAd->RxAnt.EvaluatePeriod = 1; // 1:Means switch to SecondaryRxAnt, 0:Means switch to Pair1PrimaryRxAnt
+			pAd->RxAnt.FirstPktArrivedWhenEvaluate = FALSE;
+			pAd->RxAnt.RcvPktNumWhenEvaluate = 0;
+
+			// a one-shot timer to end the evalution
+			// dynamic adjust antenna evaluation period according to the traffic
+			if (OPSTATUS_TEST_FLAG(pAd, fOP_STATUS_MEDIA_STATE_CONNECTED))
+				RTMPSetTimer(&pAd->Mlme.RxAntEvalTimer, 100);
+			else
+				RTMPSetTimer(&pAd->Mlme.RxAntEvalTimer, 300);
+		}
+		else
+#endif // ANT_DIVERSITY_SUPPORT //
 	{
 #ifdef CONFIG_STA_SUPPORT
 		IF_DEV_CONFIG_OPMODE_ON_STA(pAd)
@@ -6271,6 +7847,9 @@ VOID AsicRxAntEvalTimeout(
 	CHAR			larger = -127, rssi0, rssi1, rssi2;
 #endif // CONFIG_STA_SUPPORT //
 
+#ifdef ANT_DIVERSITY_SUPPORT
+	BOOLEAN			bSwapAnt = FALSE;
+#endif // ANT_DIVERSITY_SUPPORT //
 
 
 #ifdef RALINK_ATE
@@ -6286,9 +7865,54 @@ VOID AsicRxAntEvalTimeout(
 #ifdef RT3090
 							|| (pAd->bPCIclkOff == TRUE) 
 #endif // RT3090 //
+#ifdef ANT_DIVERSITY_SUPPORT
+							|| (pAd->EepromAccess)
+#endif // ANT_DIVERSITY_SUPPORT //
 							)
 		return;
 
+#ifdef ANT_DIVERSITY_SUPPORT
+	if ((pAd->NicConfig2.field.AntDiversity) && (pAd->CommonCfg.bRxAntDiversity == ANT_DIVERSITY_ENABLE))
+	{
+#ifdef CONFIG_STA_SUPPORT
+	IF_DEV_CONFIG_OPMODE_ON_STA(pAd)
+			if ((pAd->RxAnt.RcvPktNumWhenEvaluate != 0) && (pAd->RxAnt.Pair1AvgRssi[pAd->RxAnt.Pair1SecondaryRxAnt] >= pAd->RxAnt.Pair1AvgRssi[pAd->RxAnt.Pair1PrimaryRxAnt]))
+				bSwapAnt = TRUE;
+#endif // CONFIG_STA_SUPPORT //
+		if (bSwapAnt == TRUE)	
+			{
+				UCHAR			temp;
+
+				//
+				// select PrimaryRxAntPair
+				//    Role change, Used Pair1SecondaryRxAnt as PrimaryRxAntPair.
+				//    Since Pair1SecondaryRxAnt Quality good than Pair1PrimaryRxAnt
+				//
+				temp = pAd->RxAnt.Pair1PrimaryRxAnt;
+				pAd->RxAnt.Pair1PrimaryRxAnt = pAd->RxAnt.Pair1SecondaryRxAnt;
+				pAd->RxAnt.Pair1SecondaryRxAnt = temp;
+
+#ifdef CONFIG_STA_SUPPORT
+				pAd->RxAnt.Pair1LastAvgRssi = (pAd->RxAnt.Pair1AvgRssi[pAd->RxAnt.Pair1SecondaryRxAnt] >> 3);
+#endif // CONFIG_STA_SUPPORT //
+//				pAd->RxAnt.EvaluateStableCnt = 0;
+			}
+			else
+			{
+				// if the evaluated antenna is not better than original, switch back to original antenna
+				AsicSetRxAnt(pAd, pAd->RxAnt.Pair1PrimaryRxAnt);
+				pAd->RxAnt.EvaluateStableCnt ++;
+			}
+
+			pAd->RxAnt.EvaluatePeriod = 0; // 1:Means switch to SecondaryRxAnt, 0:Means switch to Pair1PrimaryRxAnt
+
+#ifdef CONFIG_STA_SUPPORT
+			DBGPRINT(RT_DEBUG_TRACE,("AsicRxAntEvalAction::After Eval(fix in #%d), <%d, %d>, RcvPktNumWhenEvaluate=%ld\n",
+					pAd->RxAnt.Pair1PrimaryRxAnt, (pAd->RxAnt.Pair1AvgRssi[0] >> 3), (pAd->RxAnt.Pair1AvgRssi[1] >> 3), pAd->RxAnt.RcvPktNumWhenEvaluate));
+#endif // CONFIG_STA_SUPPORT //
+		}
+		else
+#endif // ANT_DIVERSITY_SUPPORT //
 	{
 #ifdef CONFIG_STA_SUPPORT
 		IF_DEV_CONFIG_OPMODE_ON_STA(pAd)
@@ -6602,8 +8226,8 @@ VOID AsicStaBbpTuning(
 			// RT3070 is a no LNA solution, it should have different control regarding to AGC gain control
 			// Otherwise, it will have some throughput side effect when low RSSI
 			
-			if (IS_RT3070(pAd)||IS_RT3090(pAd) || IS_RT3572(pAd) ||
-				IS_RT3390(pAd) || IS_RT3593(pAd))
+			if (IS_RT30xx(pAd) ||
+				 IS_RT3572(pAd)|| IS_RT3593(pAd))
 			{
 				if (Rssi > RSSI_FOR_MID_LOW_SENSIBILITY)
 				{
@@ -6650,6 +8274,7 @@ VOID AsicStaBbpTuning(
 				if (Rssi > RSSI_FOR_MID_LOW_SENSIBILITY)
 				{
 					R66 = 0x32 + (GET_LNA_GAIN(pAd)*5)/3 + 0x10;
+
 					if (OrigR66Value != R66)
 					{
 							RTMP_BBP_IO_WRITE8_BY_REG_ID(pAd, BBP_R66, R66);
@@ -6658,6 +8283,8 @@ VOID AsicStaBbpTuning(
 				else
 				{
 					R66 = 0x32 + (GET_LNA_GAIN(pAd)*5)/3;
+
+
 					if (OrigR66Value != R66)
 					{
 							RTMP_BBP_IO_WRITE8_BY_REG_ID(pAd, BBP_R66, R66);
@@ -6669,6 +8296,7 @@ VOID AsicStaBbpTuning(
 				if (Rssi > RSSI_FOR_MID_LOW_SENSIBILITY)
 				{
 					R66 = 0x3A + (GET_LNA_GAIN(pAd)*5)/3 + 0x10;
+
 					if (OrigR66Value != R66)
 					{
 							RTMP_BBP_IO_WRITE8_BY_REG_ID(pAd, BBP_R66, R66);
@@ -6677,6 +8305,7 @@ VOID AsicStaBbpTuning(
 				else
 				{
 					R66 = 0x3A + (GET_LNA_GAIN(pAd)*5)/3;
+
 					if (OrigR66Value != R66)
 					{
 							RTMP_BBP_IO_WRITE8_BY_REG_ID(pAd, BBP_R66, R66);
@@ -6740,12 +8369,14 @@ VOID RTMPSetAGCInitValue(
 			if (BandWidth == BW_20)
 			{
 				R66 = (UCHAR)(0x32 + (GET_LNA_GAIN(pAd)*5)/3);
+
 				RTMP_BBP_IO_WRITE8_BY_REG_ID(pAd, BBP_R66, R66);
 			}
 #ifdef DOT11_N_SUPPORT
 			else
 			{
 				R66 = (UCHAR)(0x3A + (GET_LNA_GAIN(pAd)*5)/3);
+
 				RTMP_BBP_IO_WRITE8_BY_REG_ID(pAd, BBP_R66, R66);
 			}
 #endif // DOT11_N_SUPPORT //

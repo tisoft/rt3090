@@ -5,36 +5,25 @@
  * Hsinchu County 302,
  * Taiwan, R.O.C.
  *
- * (c) Copyright 2002-2007, Ralink Technology, Inc.
+ * (c) Copyright 2002-2010, Ralink Technology, Inc.
  *
- * This program is free software; you can redistribute it and/or modify  * 
- * it under the terms of the GNU General Public License as published by  * 
- * the Free Software Foundation; either version 2 of the License, or     * 
- * (at your option) any later version.                                   * 
- *                                                                       * 
- * This program is distributed in the hope that it will be useful,       * 
- * but WITHOUT ANY WARRANTY; without even the implied warranty of        * 
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         * 
- * GNU General Public License for more details.                          * 
- *                                                                       * 
- * You should have received a copy of the GNU General Public License     * 
- * along with this program; if not, write to the                         * 
- * Free Software Foundation, Inc.,                                       * 
- * 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             * 
- *                                                                       * 
- *************************************************************************
+ * This program is free software; you can redistribute it and/or modify  *
+ * it under the terms of the GNU General Public License as published by  *
+ * the Free Software Foundation; either version 2 of the License, or     *
+ * (at your option) any later version.                                   *
+ *                                                                       *
+ * This program is distributed in the hope that it will be useful,       *
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of        *
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
+ * GNU General Public License for more details.                          *
+ *                                                                       *
+ * You should have received a copy of the GNU General Public License     *
+ * along with this program; if not, write to the                         *
+ * Free Software Foundation, Inc.,                                       *
+ * 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
+ *                                                                       *
+ *************************************************************************/
 
-    Module Name:
-	action.c
- 
-    Abstract:
-    Handle association related requests either from WSTA or from local MLME
- 
-    Revision History:
-    Who         When          What
-    --------    ----------    ----------------------------------------------
-	Jan Lee		2006	  	created for rt2860
- */
 
 #include "rt_config.h"
 #include "action.h"
@@ -506,7 +495,7 @@ VOID Send2040CoexistAction(
 	NDIS_STATUS 	NStatus;
 	FRAME_ACTION_HDR	Frame;
 	ULONG			FrameLen;
-	ULONG			IntolerantChaRepLen;
+	UINT32			IntolerantChaRepLen;
 	UCHAR			HtLen = 1;
 
 	IntolerantChaRepLen = 0;
@@ -534,7 +523,7 @@ VOID Send2040CoexistAction(
 
 	//2009 PF#3: IOT issue with Motorola AP. It will not check the field of BSSCoexist2040.
 	//11.14.12 Switching between 40 MHz and 20 MHz
-	DBGPRINT(RT_DEBUG_TRACE, ("IntolerantChaRepLen=%ld, BSSCoexist2040=0x%x!\n", 
+	DBGPRINT(RT_DEBUG_TRACE, ("IntolerantChaRepLen=%d, BSSCoexist2040=0x%x!\n", 
 								IntolerantChaRepLen, pAd->CommonCfg.BSSCoexist2040.word));
 	if (!((IntolerantChaRepLen == 0) && (pAd->CommonCfg.BSSCoexist2040.word == 0)))
 		MiniportMMRequest(pAd, QID_AC_BE, pOutBuffer, FrameLen + IntolerantChaRepLen);
@@ -693,6 +682,7 @@ VOID ChannelSwitchAction(
 			RTMP_IO_WRITE32(pAd, TX_BAND_CFG, MACValue);
 			RTMP_BBP_IO_READ8_BY_REG_ID(pAd, BBP_R4, &BBPValue);
 			BBPValue&= (~0x18);
+
 			BBPValue|= (0x10);
 			RTMP_BBP_IO_WRITE8_BY_REG_ID(pAd, BBP_R4, BBPValue);
 			RTMP_BBP_IO_READ8_BY_REG_ID(pAd, BBP_R3, &BBPValue);
@@ -702,6 +692,7 @@ VOID ChannelSwitchAction(
 		}
 		else
 		{
+
 			// Secondary below.
 			pAd->CommonCfg.CentralChannel = pAd->CommonCfg.Channel - 2;
 			RTMP_IO_READ32(pAd, TX_BAND_CFG, &MACValue);

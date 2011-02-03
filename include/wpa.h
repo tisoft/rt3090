@@ -5,35 +5,25 @@
  * Hsinchu County 302,
  * Taiwan, R.O.C.
  *
- * (c) Copyright 2002-2007, Ralink Technology, Inc.
+ * (c) Copyright 2002-2010, Ralink Technology, Inc.
  *
- * This program is free software; you can redistribute it and/or modify  * 
- * it under the terms of the GNU General Public License as published by  * 
- * the Free Software Foundation; either version 2 of the License, or     * 
- * (at your option) any later version.                                   * 
- *                                                                       * 
- * This program is distributed in the hope that it will be useful,       * 
- * but WITHOUT ANY WARRANTY; without even the implied warranty of        * 
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         * 
- * GNU General Public License for more details.                          * 
- *                                                                       * 
- * You should have received a copy of the GNU General Public License     * 
- * along with this program; if not, write to the                         * 
- * Free Software Foundation, Inc.,                                       * 
- * 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             * 
- *                                                                       * 
- *************************************************************************
+ * This program is free software; you can redistribute it and/or modify  *
+ * it under the terms of the GNU General Public License as published by  *
+ * the Free Software Foundation; either version 2 of the License, or     *
+ * (at your option) any later version.                                   *
+ *                                                                       *
+ * This program is distributed in the hope that it will be useful,       *
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of        *
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
+ * GNU General Public License for more details.                          *
+ *                                                                       *
+ * You should have received a copy of the GNU General Public License     *
+ * along with this program; if not, write to the                         *
+ * Free Software Foundation, Inc.,                                       *
+ * 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
+ *                                                                       *
+ *************************************************************************/
 
-	Module Name:
-	wpa.h
-
-	Abstract:
-
-	Revision History:
-	Who			When			What
-	--------	----------		----------------------------------------------
-	Name		Date			Modification logs
-*/
 
 #ifndef	__WPA_H__
 #define	__WPA_H__
@@ -93,8 +83,7 @@
  */
 #define IS_INVALID_HT_SECURITY(_mode)		\
 	(((_mode) == Ndis802_11Encryption1Enabled) || \
-	 ((_mode) == Ndis802_11Encryption2Enabled) || \
-	 ((_mode) == Ndis802_11Encryption4Enabled))
+	 ((_mode) == Ndis802_11Encryption2Enabled))
 
 #define MIX_CIPHER_WPA_TKIP_ON(x)       (((x) & 0x08) != 0)
 #define MIX_CIPHER_WPA_AES_ON(x)        (((x) & 0x04) != 0)
@@ -405,68 +394,6 @@ VOID	CalculateMIC(
 PSTRING GetEapolMsgType(CHAR msg);
 
 #ifdef CONFIG_STA_SUPPORT
-/* 
- =====================================	
- 	function prototype in cmm_wpa_adhoc.c
- =====================================	
-*/
-VOID WpaProfileInit(
-	IN PRTMP_ADAPTER    pAd, 
-    IN MAC_TABLE_ENTRY  *pEntry);
-
-VOID WpaProfileRelease(
-	IN PRTMP_ADAPTER    pAd, 
-    IN MAC_TABLE_ENTRY  *pEntry);
-
-VOID WpaProfileReset(
-	IN PRTMP_ADAPTER    pAd, 
-    IN MAC_TABLE_ENTRY  *pEntry,
-    IN PFOUR_WAY_HANDSHAKE_PROFILE p4WayProfile);
-
-VOID WpaProfileDataHook(
-	IN PRTMP_ADAPTER    pAd, 
-    IN MAC_TABLE_ENTRY  *pEntry,
-    IN PFOUR_WAY_HANDSHAKE_PROFILE p4WayProfile);
-    
-VOID Adhoc_WpaEAPOLStartAction(
-    IN PRTMP_ADAPTER    pAd, 
-    IN MLME_QUEUE_ELEM  *Elem);
-
-VOID Adhoc_WpaEAPOLKeyAction(
-    IN PRTMP_ADAPTER    pAd, 
-    IN MLME_QUEUE_ELEM  *Elem);
-    
-VOID Adhoc_WpaRetryExec(
-    IN PVOID SystemSpecific1, 
-    IN PVOID FunctionContext, 
-    IN PVOID SystemSpecific2, 
-    IN PVOID SystemSpecific3);
-    
-VOID Adhoc_ConstructEapolMsg(
-	IN 	PMAC_TABLE_ENTRY	pEntry,
-    IN 	UCHAR				GroupKeyWepStatus,
-    IN 	UCHAR				MsgType,  
-    IN	UCHAR				DefaultKeyIdx,
-	IN 	UCHAR				*KeyNonce,
-	IN	UCHAR				*TxRSC,
-	IN	UCHAR				*GTK,
-	IN	UCHAR				*RSNIE,
-	IN	UCHAR				RSNIE_Len,
-	IN  PFOUR_WAY_HANDSHAKE_PROFILE p4WayProfile,	
-    OUT PEAPOL_PACKET       pMsg);
-
-VOID Adhoc_ConstructEapolKeyData(
-	IN	PMAC_TABLE_ENTRY	pEntry,
-	IN	UCHAR			GroupKeyWepStatus,
-	IN	UCHAR			keyDescVer,
-	IN 	UCHAR			MsgType,
-	IN	UCHAR			DefaultKeyIdx,
-	IN	UCHAR			*GTK,
-	IN	UCHAR			*RSNIE,
-	IN	UCHAR			RSNIE_LEN,
-	IN  PFOUR_WAY_HANDSHAKE_PROFILE p4WayProfile,	
-	OUT PEAPOL_PACKET   pMsg);
-
 #endif // CONFIG_STA_SUPPORT // 
 
 /* 

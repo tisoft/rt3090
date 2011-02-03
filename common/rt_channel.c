@@ -5,25 +5,26 @@
  * Hsinchu County 302,
  * Taiwan, R.O.C.
  *
- * (c) Copyright 2002-2007, Ralink Technology, Inc.
+ * (c) Copyright 2002-2010, Ralink Technology, Inc.
  *
- * This program is free software; you can redistribute it and/or modify  * 
- * it under the terms of the GNU General Public License as published by  * 
- * the Free Software Foundation; either version 2 of the License, or     * 
- * (at your option) any later version.                                   * 
- *                                                                       * 
- * This program is distributed in the hope that it will be useful,       * 
- * but WITHOUT ANY WARRANTY; without even the implied warranty of        * 
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         * 
- * GNU General Public License for more details.                          * 
- *                                                                       * 
- * You should have received a copy of the GNU General Public License     * 
- * along with this program; if not, write to the                         * 
- * Free Software Foundation, Inc.,                                       * 
- * 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             * 
- *                                                                       * 
- *************************************************************************
-*/
+ * This program is free software; you can redistribute it and/or modify  *
+ * it under the terms of the GNU General Public License as published by  *
+ * the Free Software Foundation; either version 2 of the License, or     *
+ * (at your option) any later version.                                   *
+ *                                                                       *
+ * This program is distributed in the hope that it will be useful,       *
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of        *
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
+ * GNU General Public License for more details.                          *
+ *                                                                       *
+ * You should have received a copy of the GNU General Public License     *
+ * along with this program; if not, write to the                         *
+ * Free Software Foundation, Inc.,                                       *
+ * 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
+ *                                                                       *
+ *************************************************************************/
+
+
 #include "rt_config.h"
 
 
@@ -1024,6 +1025,7 @@ static UCHAR FillChList(
 	for (i = 0; i < pChDesp->NumOfCh; i++)
 	{
 		channel = pChDesp->FirstChannel + i * increment;
+//New FCC spec restrict the used channel under DFS 
 		for (l=0; l<MAX_NUM_OF_CHANNELS; l++)
 		{
 			if (channel == pAd->TxPower[l].Channel)
@@ -1255,6 +1257,7 @@ VOID N_SetCenCh(
 	{
 		if (pAd->CommonCfg.RegTransmitSetting.field.EXTCHA == EXTCHA_ABOVE)
 		{
+
 			pAd->CommonCfg.CentralChannel = pAd->CommonCfg.Channel + 2;
 		}
 		else
@@ -1299,7 +1302,8 @@ UINT8 GetCuntryMaxTxPwr(
 		{
 			/* FCC should maintain 20/40 Bandwidth, and without antenna gain */
 #ifdef DOT11_N_SUPPORT
-			if ((pAd->CommonCfg.PhyMode >= PHY_11ABGN_MIXED) &&
+			if (((channel == 1) || (channel == 11)) &&
+				(pAd->CommonCfg.PhyMode >= PHY_11ABGN_MIXED) &&
 				(pAd->CommonCfg.RegTransmitSetting.field.BW == BW_40))
 				return (pAd->ChannelList[i].MaxTxPwr - pAd->CommonCfg.BandedgeDelta - deltaTxStreamPwr);
 			else
@@ -1353,3 +1357,4 @@ VOID RTMP_MapKHZ2ChannelID(
 	if (chIdx == CH_HZ_ID_MAP_NUM)
 		(*pCh) = 1;
 }
+

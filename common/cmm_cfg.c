@@ -5,36 +5,24 @@
  * Hsinchu County 302,
  * Taiwan, R.O.C.
  *
- * (c) Copyright 2002-2007, Ralink Technology, Inc.
+ * (c) Copyright 2002-2010, Ralink Technology, Inc.
  *
- * This program is free software; you can redistribute it and/or modify  * 
- * it under the terms of the GNU General Public License as published by  * 
- * the Free Software Foundation; either version 2 of the License, or     * 
- * (at your option) any later version.                                   * 
- *                                                                       * 
- * This program is distributed in the hope that it will be useful,       * 
- * but WITHOUT ANY WARRANTY; without even the implied warranty of        * 
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         * 
- * GNU General Public License for more details.                          * 
- *                                                                       * 
- * You should have received a copy of the GNU General Public License     * 
- * along with this program; if not, write to the                         * 
- * Free Software Foundation, Inc.,                                       * 
- * 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             * 
- *                                                                       * 
- *************************************************************************
-
-    Module Name:
-	cmm_cfg.c
-
-    Abstract:
-    Ralink WiFi Driver configuration related subroutines
-
-    Revision History:
-    Who          When          What
-    ---------    ----------    ----------------------------------------------
-*/
-
+ * This program is free software; you can redistribute it and/or modify  *
+ * it under the terms of the GNU General Public License as published by  *
+ * the Free Software Foundation; either version 2 of the License, or     *
+ * (at your option) any later version.                                   *
+ *                                                                       *
+ * This program is distributed in the hope that it will be useful,       *
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of        *
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
+ * GNU General Public License for more details.                          *
+ *                                                                       *
+ * You should have received a copy of the GNU General Public License     *
+ * along with this program; if not, write to the                         *
+ * Free Software Foundation, Inc.,                                       *
+ * 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
+ *                                                                       *
+ *************************************************************************/
 
 
 #include "rt_config.h"
@@ -62,6 +50,7 @@ INT ComputeChecksum(
 
 UINT GenerateWpsPinCode(
 	IN	PRTMP_ADAPTER	pAd,
+    IN  BOOLEAN         bFromApcli,	
 	IN	UCHAR			apidx)
 {
 	UCHAR	macAddr[MAC_ADDR_LEN];
@@ -195,8 +184,21 @@ INT RT_CfgSetWirelessMode(
 	if (!RTMP_TEST_MORE_FLAG(pAd, fRTMP_ADAPTER_DISABLE_DOT_11N))
 		MaxPhyMode = PHY_11N_5G;
 #endif // DOT11_N_SUPPORT //
-		
+
 	WirelessMode = simple_strtol(arg, 0, 10);
+
+	/* check if chip support 5G band when WirelessMode is 5G band */
+	if (PHY_MODE_IS_5G_BAND(WirelessMode))
+	{
+		if (!RFIC_IS_5G_BAND(pAd))
+		{
+			DBGPRINT(RT_DEBUG_ERROR,
+					("phy mode> Error! The chip does not support 5G band %d!\n",
+					pAd->RfIcType));
+			return FALSE;
+		}
+	}
+
 	if (WirelessMode <= MaxPhyMode)
 	{
 		pAd->CommonCfg.PhyMode = WirelessMode;
@@ -207,6 +209,9 @@ INT RT_CfgSetWirelessMode(
 	return FALSE;
 	
 }
+
+
+/* maybe can be moved to GPL code, ap_mbss.c, but the code will be open */
 
 
 INT RT_CfgSetShortSlot(

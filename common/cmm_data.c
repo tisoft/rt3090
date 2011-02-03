@@ -5,36 +5,26 @@
  * Hsinchu County 302,
  * Taiwan, R.O.C.
  *
- * (c) Copyright 2002-2007, Ralink Technology, Inc.
+ * (c) Copyright 2002-2010, Ralink Technology, Inc.
  *
- * This program is free software; you can redistribute it and/or modify  * 
- * it under the terms of the GNU General Public License as published by  * 
- * the Free Software Foundation; either version 2 of the License, or     * 
- * (at your option) any later version.                                   * 
- *                                                                       * 
- * This program is distributed in the hope that it will be useful,       * 
- * but WITHOUT ANY WARRANTY; without even the implied warranty of        * 
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         * 
- * GNU General Public License for more details.                          * 
- *                                                                       * 
- * You should have received a copy of the GNU General Public License     * 
- * along with this program; if not, write to the                         * 
- * Free Software Foundation, Inc.,                                       * 
- * 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             * 
- *                                                                       * 
- *************************************************************************
+ * This program is free software; you can redistribute it and/or modify  *
+ * it under the terms of the GNU General Public License as published by  *
+ * the Free Software Foundation; either version 2 of the License, or     *
+ * (at your option) any later version.                                   *
+ *                                                                       *
+ * This program is distributed in the hope that it will be useful,       *
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of        *
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
+ * GNU General Public License for more details.                          *
+ *                                                                       *
+ * You should have received a copy of the GNU General Public License     *
+ * along with this program; if not, write to the                         *
+ * Free Software Foundation, Inc.,                                       *
+ * 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
+ *                                                                       *
+ *************************************************************************/
 
-    Module Name:
-	cmm_data.c
- 
-    Abstract:
- 
-    Revision History:
-    Who          When          What
-    ---------    ----------    ----------------------------------------------
- */
 
- 
 #include "rt_config.h"
 
 
@@ -726,6 +716,7 @@ BOOLEAN RTMP_FillTxBlkInfo(
                 ((pAd->OpMode == OPMODE_AP) && (pMacEntry->MaxHTPhyMode.field.MODE == MODE_CCK) && (pMacEntry->MaxHTPhyMode.field.MCS == RATE_1)))
 			{	// Specific packet, i.e., bDHCPFrame, bEAPOLFrame, bWAIFrame, need force low rate.
 				pTxBlk->pTransmit = &pAd->MacTab.Content[MCAST_WCID].HTPhyMode;
+
 #ifdef DOT11_N_SUPPORT
 				// Modify the WMM bit for ICV issue. If we have a packet with EOSP field need to set as 1, how to handle it???
 				if (IS_HT_STA(pTxBlk->pMacEntry) &&
@@ -968,7 +959,8 @@ VOID RTMPDeQueuePacket(
 			pTxBlk->TotalFrameLen += GET_OS_PKT_LEN(pPacket);
 			pTxBlk->pPacket = pPacket;
 			InsertTailQueue(&pTxBlk->TxPacketList, PACKET_TO_QUEUE_ENTRY(pPacket));
-			
+
+
 			if (pTxBlk->TxFrameType == TX_RALINK_FRAME || pTxBlk->TxFrameType == TX_AMSDU_FRAME)
 			{
 				// Enhance SW Aggregation Mechanism
@@ -994,6 +986,8 @@ VOID RTMPDeQueuePacket(
 					pEntry = RemoveHeadQueue(pQueue);
 					ASSERT(pEntry);
 					pPacket = QUEUE_ENTRY_TO_PACKET(pEntry);
+
+
 					pTxBlk->TotalFrameNum++;
 					pTxBlk->TotalFragNum += RTMP_GET_PACKET_FRAGMENTS(pPacket);	// The real fragment number maybe vary
 					pTxBlk->TotalFrameLen += GET_OS_PKT_LEN(pPacket);
@@ -1007,7 +1001,6 @@ VOID RTMPDeQueuePacket(
 					
 			Count += pTxBlk->TxPacketList.Number;
 
-
 				// Do HardTransmit now.
 #ifdef CONFIG_STA_SUPPORT
 			IF_DEV_CONFIG_OPMODE_ON_STA(pAd)
@@ -1018,7 +1011,15 @@ VOID RTMPDeQueuePacket(
 			DEQUEUE_UNLOCK(&pAd->irq_lock, bIntContext, IrqFlags);
 			// static rate also need NICUpdateFifoStaCounters() function.
 			//if (OPSTATUS_TEST_FLAG(pAd, fOP_STATUS_TX_RATE_SWITCH_ENABLED))
+#ifdef VENDOR_FEATURE1_SUPPORT
+			if (++pAd->FifoUpdateDone >= 4)
+			{
 				NICUpdateFifoStaCounters(pAd);
+				pAd->FifoUpdateDone = 0;
+			}
+#else
+			NICUpdateFifoStaCounters(pAd);
+#endif // VENDOR_FEATURE1_SUPPORT //
 #endif // RTMP_MAC_PCI //
 
 		}
@@ -1180,10 +1181,12 @@ VOID RTMPWriteTxWI(
 		if( BASize >7 )
 			BASize =7;
 	}
+
 	pTxWI->BAWinSize = BASize;
 	TxBaSizeDown(pAd, pTxWI);
 	pTxWI->ShortGI = pTransmit->field.ShortGI;
 	pTxWI->STBC = pTransmit->field.STBC;
+
 #endif // DOT11_N_SUPPORT //
 		
 	pTxWI->WirelessCliID = WCID;
@@ -1230,8 +1233,8 @@ VOID RTMPWriteTxWI(
 		}
 		else
 		{
-			pTxWI->MpduDensity = pMac->MpduDensity;
-		}
+		pTxWI->MpduDensity = pMac->MpduDensity;
+	}
 		TxBaDensityDown(pAd, pTxWI);
 	}
 #endif // DOT11_N_SUPPORT //
@@ -1294,8 +1297,8 @@ VOID RTMPWriteTxWI_Data(
 #endif // DOT11N_DRAFT3 //
 	pTxWI->AMPDU	= ((pTxBlk->TxFrameType == TX_AMPDU_FRAME) ? TRUE : FALSE);
 
-	// John tune the performace with Intel Client in 20 MHz performance
 	BASize = pAd->CommonCfg.TxBASize;
+
 	if((pTxBlk->TxFrameType == TX_AMPDU_FRAME) && (pMacEntry))
 	{
 		UCHAR		RABAOriIdx = 0;	//The RA's BA Originator table index.
@@ -1305,49 +1308,16 @@ VOID RTMPWriteTxWI_Data(
 	}
 
 
-#ifdef RT2883_TEMP_PATCH
-	if (pTxBlk->TxSndgPkt == SNDG_TYPE_SOUNGING)
-	{
-		pTxWI->Sounding = 1;
-		DBGPRINT(RT_DEBUG_TRACE, ("ETxBF in RTMPWriteTxWI_Data(): sending normal sounding, eTxBF=%d\n", pTxWI->eTxBF));
-	}
-	else if (pTxBlk->TxSndgPkt == SNDG_TYPE_NDP)
-	{
-		pTxWI->NDPSndBW = pTxBlk->TxNDPSndgBW;
-		if (pTxBlk->TxNDPSndgMcs>=16)
-			pTxWI->NDPSndRate = 2;
-		else if (pTxBlk->TxNDPSndgMcs>=8)
-			pTxWI->NDPSndRate = 1;
-		else
-			pTxWI->NDPSndRate = 0;
-		DBGPRINT(RT_DEBUG_TRACE, ("ETxBF in RTMPWriteTxWI_Data(): sending ndp sounding, NDPSndBW=%d, NDPSndRate=%d, eTxBF=%d\n", pTxWI->NDPSndBW, pTxWI->NDPSndRate, pTxWI->eTxBF));
-	}
-	else
-	{
-	
-//		if (pMacEntry->)
-//		#if defined(ETXBF_EN_COND) && ((ETXBF_EN_COND == 1) || (ETXBF_EN_COND == 2))
-//			pTxWI->eTxBF = 1;
-//		#else
-			if (pMacEntry && (pMacEntry->mrqCnt >0) && (pMacEntry->toTxMrq == TRUE)){
-				pTxWI->eTxBF = ~(pTransmit->field.TxBF);
-//				DBGPRINT_RAW(RT_DEBUG_TRACE,("ETxBF in AP_AMPDU_Frame_Tx(): pTxBlk->pTransmit->field.TxBF = %d, pMacEntry->HTPhyMode=%d\n", pTxBlk->pTransmit->field.TxBF, pMacEntry->HTPhyMode.Txbf));    	
-			} else			
-				pTxWI->eTxBF = pTransmit->field.TxBF;
-//		#endif
-//		DBGPRINT(RT_DEBUG_TRACE, ("ETxBF in RTMPWriteTxWI_Data(): pTransmit->field.TxBF=%d, pTxWI->eTxBF =%d\n", pTransmit->field.TxBF, pTxWI->eTxBF));
-	}
-#endif // RT2883_TEMP_PATCH //
-
-
 	pTxWI->BAWinSize = BASize;
 	TxBaSizeDown(pAd, pTxWI);
 	pTxWI->ShortGI = pTransmit->field.ShortGI;
 	pTxWI->STBC = pTransmit->field.STBC;
+
 #endif // DOT11_N_SUPPORT //
 	
 	pTxWI->MCS = pTransmit->field.MCS;
 	pTxWI->PHYMODE = pTransmit->field.MODE;
+
 
 
 #ifdef DOT11_N_SUPPORT
@@ -1374,11 +1344,12 @@ VOID RTMPWriteTxWI_Data(
 		}
 		else
 		{
-			pTxWI->MpduDensity = pMacEntry->MpduDensity;
-		}
+		pTxWI->MpduDensity = pMacEntry->MpduDensity;
+	}
 		TxBaDensityDown(pAd, pTxWI);
 	}
 #endif // DOT11_N_SUPPORT //
+	
 	
 #ifdef DBG_DIAGNOSE
 		if (pTxBlk->QueIdx== 0)
@@ -1432,6 +1403,7 @@ VOID RTMPWriteTxWI_Cache(
 		pTxWI->BW = (pTransmit->field.MODE <= MODE_OFDM) ? (BW_20) : (pTransmit->field.BW);
 		pTxWI->ShortGI = pTransmit->field.ShortGI;
 		pTxWI->STBC = pTransmit->field.STBC;
+
 
 		pTxWI->MCS = pTransmit->field.MCS;
 		pTxWI->PHYMODE = pTransmit->field.MODE;
@@ -1504,46 +1476,6 @@ VOID RTMPWriteTxWI_Cache(
 	}
 #endif // DBG_DIAGNOSE //
 
-#ifdef RT2883_TEMP_PATCH
-	if (pTxBlk->TxSndgPkt == SNDG_TYPE_SOUNGING)
-	{
-		pTxWI->Sounding = 1;
-		pTxWI->eTxBF = 0;
-		pTxWI->iTxBF = 0;
-		DBGPRINT(RT_DEBUG_TRACE, ("ETxBF in RTMPWriteTxWI_Cache(): sending normal sounding, eTxBF=%d\n", pTxWI->eTxBF));
-	}
-	else if (pTxBlk->TxSndgPkt == SNDG_TYPE_NDP)
-	{
-		pTxWI->NDPSndBW = pTxBlk->TxNDPSndgBW;
-		if (pTxBlk->TxNDPSndgMcs>=16)
-			pTxWI->NDPSndRate = 2;
-		else if (pTxBlk->TxNDPSndgMcs>=8)
-			pTxWI->NDPSndRate = 1;
-		else
-			pTxWI->NDPSndRate = 0;
-		pTxWI->Sounding = 0;
-		pTxWI->eTxBF = 0;
-		pTxWI->iTxBF = 0;
-		DBGPRINT(RT_DEBUG_TRACE, ("ETxBF in RTMPWriteTxWI_Cache(): sending ndp sounding, NDPSndBW=%d, NDPSndRate=%d, eTxBF=%d\n", pTxWI->NDPSndBW, pTxWI->NDPSndRate, pTxWI->eTxBF));
-	}
-	else
-	{
-		pTxWI->Sounding = 0;		
-//		#if defined(ETXBF_EN_COND) && ((ETXBF_EN_COND == 1) || (ETXBF_EN_COND == 2))
-//			pTxWI->eTxBF = 1;
-//		#else
-//			DBGPRINT(RT_DEBUG_TRACE, ("ETxBF in RTMPWriteTxWI_Cache(): pMacEntry->mrqCnt=%d, pMacEntry->toTxMrq=%d\n", pMacEntry->mrqCnt, pMacEntry->toTxMrq));
-			if (pMacEntry && pMacEntry->mrqCnt >0 && pMacEntry->toTxMrq == 1){
-				pTxWI->eTxBF = ~(pTransmit->field.TxBF);
-				DBGPRINT_RAW(RT_DEBUG_TRACE,("ETxBF in AP_AMPDU_Frame_Tx(): invert eTxBF\n"));    	
-			} else		
-				pTxWI->eTxBF = pTransmit->field.TxBF;
-//		#endif
-
-//		DBGPRINT(RT_DEBUG_TRACE, ("ETxBF in RTMPWriteTxWI_Cache(): pMacEntry->mrqCnt=%d, pMacEntry->toTxMrq=%d, pTransmit->field.TxBF=%d, pTxWI->eTxBF=%d\n", pMacEntry->mrqCnt, pMacEntry->toTxMrq, pTransmit->field.TxBF,pTxWI->eTxBF));
-		pTxWI->iTxBF = 0;
-	}
-#endif // RT2883_TEMP_PATCH //
 
 	pTxWI->MPDUtotalByteCount = pTxBlk->MpduHeaderLen + pTxBlk->SrcBufLen;
 
@@ -1867,7 +1799,9 @@ MAC_TABLE_ENTRY *MacTableInsertEntry(
 
 			pEntry->bIAmBadAtheros = FALSE;
 			RTMPInitTimer(pAd, &pEntry->EnqueueStartForPSKTimer, GET_TIMER_FUNCTION(EnqueueStartForPSKExec), pEntry, FALSE);
-            
+#ifdef CONFIG_STA_SUPPORT
+#endif // CONFIG_STA_SUPPORT //
+
 			pEntry->pAd = pAd;
 			pEntry->CMTimerRunning = FALSE;
 			pEntry->EnqueueEapolStartTimerRunning = EAPOL_START_DISABLE;
@@ -1933,7 +1867,9 @@ MAC_TABLE_ENTRY *MacTableInsertEntry(
 			InitializeQueueHeader(&pEntry->PsQueue);
 
 
+
 			pAd->MacTab.Size ++;
+
 
 			/* Set the security mode of this entry as OPEN-NONE in ASIC */
 			RTMP_REMOVE_PAIRWISE_KEY_ENTRY(pAd, (UCHAR)i);
@@ -1943,9 +1879,7 @@ MAC_TABLE_ENTRY *MacTableInsertEntry(
 
 
 
-#ifdef RT2883_TEMP_PATCH
-			NdisAllocateSpinLock(&pEntry->TxSndgLock);
-#endif // RT2883_TEMP_PATCH //
+
 
 			DBGPRINT(RT_DEBUG_TRACE, ("MacTableInsertEntry - allocate entry #%d, Total= %d\n",i, pAd->MacTab.Size));
 			break;
@@ -2012,6 +1946,10 @@ BOOLEAN MacTableDeleteEntry(
 			BASessionTearDownALL(pAd, pEntry->Aid);
 #endif // DOT11_N_SUPPORT //
 
+#ifdef CONFIG_STA_SUPPORT
+#endif // CONFIG_STA_SUPPORT //
+
+
            
 			pPrevEntry = NULL;
 			pProbeEntry = pAd->MacTab.Hash[HashIdx];
@@ -2048,17 +1986,11 @@ BOOLEAN MacTableDeleteEntry(
             RTMPCancelTimer(&pEntry->EnqueueStartForPSKTimer, &Cancelled);
 			pEntry->EnqueueEapolStartTimerRunning = EAPOL_START_DISABLE;
         }
-#ifdef CONFIG_STA_SUPPORT
-        WpaProfileRelease(pAd, pEntry);
-#endif // CONFIG_STA_SUPPORT //
 
 
 
    			NdisZeroMemory(pEntry, sizeof(MAC_TABLE_ENTRY));
 			pAd->MacTab.Size --;
-#ifdef RT2883_TEMP_PATCH
-			NdisFreeSpinLock(&pEntry->TxSndgLock);
-#endif // RT2883_TEMP_PATCH //
 			DBGPRINT(RT_DEBUG_TRACE, ("MacTableDeleteEntry1 - Total= %d\n", pAd->MacTab.Size));
 		}
 		else
@@ -2094,6 +2026,7 @@ VOID MacTableReset(
 	IN  PRTMP_ADAPTER  pAd)
 {
 	int         i;
+	BOOLEAN     Cancelled;    
 
 	DBGPRINT(RT_DEBUG_TRACE, ("MacTableReset\n"));
 	//NdisAcquireSpinLock(&pAd->MacTabLock);
@@ -2104,8 +2037,16 @@ VOID MacTableReset(
 		if (IS_ENTRY_CLIENT(&pAd->MacTab.Content[i]))
 	   {
 	   		/* Delete a entry via WCID */
-			MacTableDeleteEntry(pAd, i, pAd->MacTab.Content[i].Addr);
 
+			//MacTableDeleteEntry(pAd, i, pAd->MacTab.Content[i].Addr);
+			RTMPCancelTimer(&pAd->MacTab.Content[i].EnqueueStartForPSKTimer, &Cancelled);
+#ifdef CONFIG_STA_SUPPORT
+#endif // CONFIG_STA_SUPPORT //
+            pAd->MacTab.Content[i].EnqueueEapolStartTimerRunning = EAPOL_START_DISABLE;
+
+
+			/* Delete a entry via WCID */
+			MacTableDeleteEntry(pAd, i, pAd->MacTab.Content[i].Addr);
 		}
 	}
 
@@ -2229,7 +2170,7 @@ BOOLEAN RTMPCheckEtherType(
 		/* only use VLAN tag */
 		if (bWmmReq)
 		{
-			*pUserPriority = (*(pSrcBuf + 1) & 0xe0) >> 5;
+			*pUserPriority = (*pSrcBuf & 0xe0) >> 5;
 			*pQueIdx = MapUserPriorityToAccessCategory[*pUserPriority];
 		}
 
@@ -2320,6 +2261,9 @@ VOID Update_Rssi_Sample(
 	CHAR rssi0 = pRxWI->RSSI0;
 	CHAR rssi1 = pRxWI->RSSI1;
 	CHAR rssi2 = pRxWI->RSSI2;
+	UCHAR snr0 = pRxWI->SNR0;
+	UCHAR snr1 = pRxWI->SNR1;
+	CHAR Phymode = pRxWI->PHYMODE;
 	BOOLEAN bInitial = FALSE;
  
 	if (!(pRssi->AvgRssi0 | pRssi->AvgRssi0X8 | pRssi->LastRssi0))
@@ -2344,6 +2288,24 @@ VOID Update_Rssi_Sample(
  
 		pRssi->AvgRssi0 = pRssi->AvgRssi0X8 >> 3;
 	}
+
+	if (snr0 != 0 && Phymode != MODE_CCK)
+	{			
+		pRssi->LastSnr0 = ConvertToSnr(pAd, (UCHAR)snr0); 			
+					
+		if (bInitial)
+		{
+			pRssi->AvgSnr0X8 = pRssi->LastSnr0 << 3;
+			pRssi->AvgSnr0  = pRssi->LastSnr0;
+		}
+		else
+		{
+			pRssi->AvgSnr0X8 = (pRssi->AvgSnr0X8 - pRssi->AvgSnr0) + pRssi->LastSnr0;
+		}			
+
+		pRssi->AvgSnr0 = pRssi->AvgSnr0X8 >> 3;
+		//pRssi->LastNoiseLevel0 = pRssi->AvgRssi0 - pRssi->AvgSnr0;
+	}
  
 	if (rssi1 != 0)
 	{   
@@ -2361,7 +2323,25 @@ VOID Update_Rssi_Sample(
 
 		pRssi->AvgRssi1 = pRssi->AvgRssi1X8 >> 3;
 	}
- 
+
+	if (snr1 != 0 && Phymode != MODE_CCK)
+	{			
+		pRssi->LastSnr1 = ConvertToSnr(pAd, (UCHAR)snr1);
+					
+		if (bInitial)
+		{
+			pRssi->AvgSnr1X8 = pRssi->LastSnr1 << 3;
+			pRssi->AvgSnr1  = pRssi->LastSnr1;
+		}
+		else
+		{
+			pRssi->AvgSnr1X8 = (pRssi->AvgSnr1X8 - pRssi->AvgSnr1) + pRssi->LastSnr1;
+		}			
+
+		pRssi->AvgSnr1 = pRssi->AvgSnr1X8 >> 3;
+		//pRssi->LastNoiseLevel1 = pRssi->AvgRssi1 - pRssi->AvgSnr1;
+	}
+
 	if (rssi2 != 0)
 	{
 		pRssi->LastRssi2 = ConvertToRssi(pAd, (CHAR)rssi2, RSSI_2);
@@ -2764,3 +2744,4 @@ VOID RTMPUpdateSwCacheCipherInfo(
 }
 
 #endif // SOFT_ENCRYPT //
+

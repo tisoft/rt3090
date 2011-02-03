@@ -5,35 +5,25 @@
  * Hsinchu County 302,
  * Taiwan, R.O.C.
  *
- * (c) Copyright 2002-2007, Ralink Technology, Inc.
+ * (c) Copyright 2002-2010, Ralink Technology, Inc.
  *
- * This program is free software; you can redistribute it and/or modify  * 
- * it under the terms of the GNU General Public License as published by  * 
- * the Free Software Foundation; either version 2 of the License, or     * 
- * (at your option) any later version.                                   * 
- *                                                                       * 
- * This program is distributed in the hope that it will be useful,       * 
- * but WITHOUT ANY WARRANTY; without even the implied warranty of        * 
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         * 
- * GNU General Public License for more details.                          * 
- *                                                                       * 
- * You should have received a copy of the GNU General Public License     * 
- * along with this program; if not, write to the                         * 
- * Free Software Foundation, Inc.,                                       * 
- * 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             * 
- *                                                                       * 
- *************************************************************************
+ * This program is free software; you can redistribute it and/or modify  *
+ * it under the terms of the GNU General Public License as published by  *
+ * the Free Software Foundation; either version 2 of the License, or     *
+ * (at your option) any later version.                                   *
+ *                                                                       *
+ * This program is distributed in the hope that it will be useful,       *
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of        *
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
+ * GNU General Public License for more details.                          *
+ *                                                                       *
+ * You should have received a copy of the GNU General Public License     *
+ * along with this program; if not, write to the                         *
+ * Free Software Foundation, Inc.,                                       *
+ * 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
+ *                                                                       *
+ *************************************************************************/
 
-	Module Name:
-	rtmp_phy.h
-
-	Abstract:
-	Ralink Wireless Chip PHY(BBP/RF) related definition & structures
-
-	Revision History:
-	Who			When		  What
-	--------	----------	  ----------------------------------------------
-*/
 
 #ifndef __RTMP_PHY_H__
 #define __RTMP_PHY_H__
@@ -118,9 +108,21 @@
 #define RFIC_3021                   7       // 2.4G 1T2R
 #define RFIC_3022                   8       // 2.4G 2T2R
 #define RFIC_3052                   9       // 2.4G/5G 2T2R
-#define RFIC_3320					11	   // 2.4G 1T1R
-#define RFIC_3053					13      // 2.4G/5G 3T3R
+#define RFIC_2853					10		// 2.4G.5G 3T3R
+#define RFIC_3320                   11      // 2.4G 1T1R with PA (RT3350/RT3370/RT3390)
+#define RFIC_3322                   12      // 2.4G 2T2R with PA (RT3352/RT3371/RT3372/RT3391/RT3392)
+#define RFIC_3053                   13      // 2.4G/5G 3T3R (RT3883/RT3563/RT3573/RT3593/RT3662)
+#define RFIC_3853                   13      // 2.4G/5G 3T3R (RT3883/RT3563/RT3573/RT3593/RT3662)
+#define RFIC_UNKNOWN				0xff
 
+#define RFIC_IS_5G_BAND(__pAd)			\
+	((__pAd->RfIcType == RFIC_2850) ||	\
+	(__pAd->RfIcType == RFIC_2750) ||	\
+	(__pAd->RfIcType == RFIC_3052) ||	\
+	(__pAd->RfIcType == RFIC_2853) ||	\
+	(__pAd->RfIcType == RFIC_3053) ||	\
+	(__pAd->RfIcType == RFIC_3853) ||	\
+	(__pAd->RfIcType == RFIC_UNKNOWN))
 
 /*
 	BBP sections
@@ -143,10 +145,13 @@
 #define BBP_R26			26
 #define BBP_R27			27
 #define BBP_R31			31
+#define BBP_R47			47
 #define BBP_R49			49 //TSSI
 #define BBP_R50			50
 #define BBP_R51			51
 #define BBP_R52			52
+#define BBP_R53			53
+#define BBP_R54			54
 #define BBP_R55			55
 #define BBP_R62			62 // Rx SQ0 Threshold HIGH
 #define BBP_R63			63
@@ -168,10 +173,12 @@
 #define BBP_R83			83
 #define BBP_R84			84
 #define BBP_R86			86
+#define BBP_R88			88
 #define BBP_R91			91
 #define BBP_R92			92
 #define BBP_R94			94 // Tx Gain Control
 #define BBP_R103		103
+#define BBP_R104		104
 #define BBP_R105		105
 #define BBP_R106		106
 #define BBP_R109		109
@@ -187,11 +194,40 @@
 #define BBP_R121		121
 #define BBP_R122		122
 #define BBP_R123		123
-#ifdef RT30xx
+#define BBP_R126		126
+#define BBP_R127		127
+#define BBP_R137		137
 #define BBP_R138		138 // add by johnli, RF power sequence setup, ADC dynamic on/off control
-#endif // RT30xx //
+#define BBP_R140		140
+#define BBP_R141		141
 #define BBP_R142		142
 #define BBP_R143		143
+#define BBP_R148		148
+
+#define BBP_R160		160 // RT3883 Tx BF control
+#define BBP_R161		161
+#define BBP_R162		162
+#define BBP_R163		163
+#define BBP_R164		164
+
+#define BBP_R173		173
+#define BBP_R174		174
+#define BBP_R175		175
+#define BBP_R176		176
+#define BBP_R177		177
+#define BBP_R179		179
+#define BBP_R180		180
+#define BBP_R181		181
+#define BBP_R182		182
+#define BBP_R184		184
+#define BBP_R185		185
+#define BBP_R186		186
+#define BBP_R187		187
+#define BBP_R188		188
+#define BBP_R189		189
+#define BBP_R190		190
+#define BBP_R191		191
+#define BBP_MAX_IDX		192
 
 
 #define BBPR94_DEFAULT	0x06 // Add 1 value will gain 1db
@@ -335,20 +371,15 @@ typedef union _BBP_R110_STRUC {
 #endif
 
 
-#ifdef MERGE_ARCH_TEAM
-	#define MAX_BBP_ID	200
-	#define MAX_BBP_MSG_SIZE	4096
-#else
 #ifdef RT30xx
 	// edit by johnli, RF power sequence setup, add BBP R138 for ADC dynamic on/off control
-	#define MAX_BBP_ID	138
+	#define MAX_BBP_ID	185
 #elif defined(RT2883)
 	#define MAX_BBP_ID	180
 #else
 	#define MAX_BBP_ID	136
 #endif // RT30xx //
 	#define MAX_BBP_MSG_SIZE	2048
-#endif // MERGE_ARCH_TEAM //
 
 
 //
@@ -390,6 +421,10 @@ typedef union _BBP_R110_STRUC {
 			RTMP_IO_WRITE32((_A), RF_CSR_CFG0, (_V));          \
     		}                                               \
     	}								\
+    if ((_A)->ShowRf)					\
+    {									\
+    	printk("RF:%x\n", _V);			\
+	}									\
 }
 #endif // RTMP_MAC_PCI //
 
@@ -429,7 +464,7 @@ typedef union _BBP_R110_STRUC {
 	((_pAd)->StaCfg.PSControl.field.rt30xxPowerMode == 3)&& \
 	((_pAd)->StaCfg.PSControl.field.EnableNewPS == TRUE)) 
 	
-#define RTMP_PCIE_PS_L3_BBP_IO_READ8(_pAd, _bbpID, _pV, _bViaMCU,_irqlock)			\
+#define RTMP_PCIE_PS_L3_BBP_IO_READ8(_pAd, _bbpID, _pV, _bViaMCU)			\
 	do{															\
 	BBP_CSR_CFG_STRUC	BbpCsr;									\
 	int					_busyCnt, _secCnt, _regID;					\
@@ -453,7 +488,7 @@ typedef union _BBP_R110_STRUC {
 			RTMP_IO_WRITE32(_pAd, _regID, BbpCsr.word);			\
 			if ((_bViaMCU) == TRUE)								\
 			{													\
-				brc =AsicSendCommandToMcu_IRQLOCK(_pAd, 0x80, 0xff, 0x0, 0x0,_irqlock); \
+				brc =AsicSendCommandToMcu(_pAd, FALSE, 0x80, 0xff, 0x0, 0x0); \
 				RTMPusecDelay(1000);							\
 			}							\
 	               if (brc == TRUE) 										\
@@ -478,35 +513,18 @@ typedef union _BBP_R110_STRUC {
 			}																\
 		}																	\
 	}	\
-	else 										\
-	{																	\
-			DBGPRINT_ERR(("RTMP_PCIE_PS_L3_BBP_IO_READ8(viaMCU=%d) read R%d fail\n", (_bViaMCU), _bbpID));      \
-			*(_pV) = (_pAd)->BbpWriteLatch[_bbpID];               \
-	              if ((_bViaMCU) == TRUE)				\
-			{									\
-				RTMP_IO_READ32(_pAd, _regID, &BbpCsr.word);				\
-				BbpCsr.field.Busy = 0;                         						 \
-				RTMP_IO_WRITE32(_pAd, _regID, BbpCsr.word);				\
-			}															\
-	}																	\
 	if ((BbpCsr.field.Busy == BUSY) || ((_pAd)->bPCIclkOff == TRUE))				\
 	{																	\
 	                DBGPRINT_ERR(("RTMP_PCIE_PS_L3_BBP_IO_READ8(viaMCU=%d) read R%d fail(reason:clk=%d,busy=%x)\n", (_bViaMCU), _bbpID,(_pAd)->bPCIclkOff ,BbpCsr.field.Busy));      \
 			*(_pV) = (_pAd)->BbpWriteLatch[_bbpID];               \
-			if ((_bViaMCU) == TRUE)				\
-			{									\
-				RTMP_IO_READ32(_pAd, _regID, &BbpCsr.word);				\
-				BbpCsr.field.Busy = 0;                          \
-				RTMP_IO_WRITE32(_pAd, _regID, BbpCsr.word);				\
-			}				\
 	}																	\
 }while(0)
 #else
 #define IS_SUPPORT_PCIE_PS_L3(_pAd) FALSE
-#define RTMP_PCIE_PS_L3_BBP_IO_READ8(_pAd, _bbpID, _pV, _bViaMCU,_irqlock)
+#define RTMP_PCIE_PS_L3_BBP_IO_READ8(_pAd, _bbpID, _pV, _bViaMCU)
 #endif // CONFIG_STA_SUPPORT //
 
-#define _RTMP_BBP_IO_READ8(_pAd, _bbpID, _pV, _bViaMCU,_irqlock)			\
+#define _RTMP_BBP_IO_READ8(_pAd, _bbpID, _pV, _bViaMCU)			\
 	do{															\
 		BBP_CSR_CFG_STRUC  BbpCsr;								\
 		int   _busyCnt, _secCnt, _regID;                               			\
@@ -525,7 +543,7 @@ typedef union _BBP_R110_STRUC {
 			RTMP_IO_WRITE32(_pAd, _regID, BbpCsr.word);     \
 			if ((_bViaMCU) == TRUE)							\
 			{													\
-				AsicSendCommandToMcu_IRQLOCK(_pAd, 0x80, 0xff, 0x0, 0x0,_irqlock); \
+				AsicSendCommandToMcu(_pAd, FALSE, 0x80, 0xff, 0x0, 0x0); \
 				RTMPusecDelay(1000);	\
 			}							\
 			for (_secCnt=0; _secCnt<MAX_BUSY_COUNT; _secCnt++)       \
@@ -558,38 +576,24 @@ typedef union _BBP_R110_STRUC {
 	This marco used for the BBP read operation which didn't need via MCU.
 */
 #define BBP_IO_READ8_BY_REG_ID(_A, _I, _pV)			\
-	RTMP_BBP_IO_READ8((_A), (_I), (_pV), FALSE,FALSE)
+	RTMP_BBP_IO_READ8((_A), (_I), (_pV), FALSE)
 
 /*
 	This marco used for the BBP read operation which need via MCU.
 	But for some chipset which didn't have mcu (e.g., RBUS based chipset), we
 	will use this function too and didn't access the bbp register via the MCU.
 */
-#define _RTMP_BBP_IO_READ8_BY_REG_ID_IRQLOCK(_A, _I, _pV)			\
-	do{														\
-		if ((_A)->bPCIclkOff == FALSE)                     				\
-		{													\
-			if ((_A)->infType == RTMP_DEV_INF_RBUS)			\
-				RTMP_BBP_IO_READ8((_A), (_I), (_pV), FALSE,TRUE);	\
-			else												\
-				if(IS_SUPPORT_PCIE_PS_L3((_A)))				\
-					RTMP_PCIE_PS_L3_BBP_IO_READ8((_A), (_I), (_pV), TRUE,TRUE);	\
-				else												\
-					RTMP_BBP_IO_READ8((_A), (_I), (_pV), TRUE,TRUE);	\
-		}													\
-	}while(0)
-	
 #define _RTMP_BBP_IO_READ8_BY_REG_ID(_A, _I, _pV)			\
 	do{														\
 		if ((_A)->bPCIclkOff == FALSE)                     				\
 		{													\
 			if ((_A)->infType == RTMP_DEV_INF_RBUS)			\
-				RTMP_BBP_IO_READ8((_A), (_I), (_pV), FALSE,FALSE);	\
+				RTMP_BBP_IO_READ8((_A), (_I), (_pV), FALSE);	\
 			else												\
 				if(IS_SUPPORT_PCIE_PS_L3((_A)))				\
-					RTMP_PCIE_PS_L3_BBP_IO_READ8((_A), (_I), (_pV), TRUE,FALSE);	\
+					RTMP_PCIE_PS_L3_BBP_IO_READ8((_A), (_I), (_pV), TRUE);	\
 				else												\
-					RTMP_BBP_IO_READ8((_A), (_I), (_pV), TRUE,FALSE);	\
+					RTMP_BBP_IO_READ8((_A), (_I), (_pV), TRUE);	\
 		}													\
 	}while(0)
 
@@ -601,14 +605,13 @@ typedef union _BBP_R110_STRUC {
 	_bViaMCU: if we need access the bbp via the MCU.
 */
 #ifdef CONFIG_STA_SUPPORT
-#define RTMP_PCIE_PS_L3_BBP_IO_WRITE8(_pAd, _bbpID, _pV, _bViaMCU,_irqlock)				\
-	do																			\
-	{																			\
-		BBP_CSR_CFG_STRUC  BbpCsr;												\
-		int             k, _busyCnt=0, _regID;									\
-		BOOLEAN					brc;											\
+#define RTMP_PCIE_PS_L3_BBP_IO_WRITE8(_pAd, _bbpID, _pV, _bViaMCU)				\
+	do{											\
+		BBP_CSR_CFG_STRUC  BbpCsr;							\
+		int             k, _busyCnt=0, _regID;						\
+		BOOLEAN					brc;					\
 		_regID = ((_bViaMCU) == TRUE ? H2M_BBP_AGENT : BBP_CSR_CFG);			\
-			if (((_pAd)->bPCIclkOff == FALSE)									\
+			if (((_pAd)->bPCIclkOff == FALSE)					\
 			&& ((_pAd)->brt30xxBanMcuCmd == FALSE))								\
 			{																	\
 				if (_pAd->AccessBBPFailCount > 20)								\
@@ -634,7 +637,7 @@ typedef union _BBP_R110_STRUC {
 					RTMP_IO_WRITE32((_pAd), _regID, BbpCsr.word);     \
 					if ((_bViaMCU) == TRUE)									\
 					{														\
-						brc =AsicSendCommandToMcu_IRQLOCK(_pAd, 0x80, 0xff, 0x0, 0x0,_irqlock);		\
+						brc =AsicSendCommandToMcu(_pAd, FALSE, 0x80, 0xff, 0x0, 0x0);		\
 						if ((_pAd)->OpMode == OPMODE_AP)						\
 							RTMPusecDelay(1000);							\
 					}														\
@@ -673,20 +676,28 @@ typedef union _BBP_R110_STRUC {
 			}																	\
 	}while(0)
 #else
-#define RTMP_PCIE_PS_L3_BBP_IO_WRITE8(_pAd, _bbpID, _pV, _bViaMCU,_irqlock)
+#define RTMP_PCIE_PS_L3_BBP_IO_WRITE8(_pAd, _bbpID, _pV, _bViaMCU)
 #endif // CONFIG_STA_SUPPORT //
 
-#define _RTMP_BBP_IO_WRITE8(_pAd, _bbpID, _pV, _bViaMCU,_irqlock)			\
+#define _RTMP_BBP_IO_WRITE8(_pAd, _bbpID, _pV, _bViaMCU)			\
 	do{															\
 		BBP_CSR_CFG_STRUC  BbpCsr;                             \
 		int             _busyCnt=0, _regID;                               			\
+		BOOLEAN					brc;			\
 																\
 		_regID = ((_bViaMCU) == TRUE ? H2M_BBP_AGENT : BBP_CSR_CFG);	\
 		for (_busyCnt=0; _busyCnt<MAX_BUSY_COUNT; _busyCnt++)  \
 		{                                                   \
 			RTMP_IO_READ32((_pAd), _regID, &BbpCsr.word);     \
 			if (BbpCsr.field.Busy == BUSY)                  \
+			{\
+					if ( ((_bViaMCU) == TRUE) && ((_busyCnt % 20) == 0)) \
+					{\
+						BbpCsr.field.Busy = IDLE;\
+						RTMP_IO_WRITE32(_pAd, H2M_BBP_AGENT, BbpCsr.word);\
+					}\
 				continue;                                   \
+			}\
 			BbpCsr.word = 0;                                \
 			BbpCsr.field.fRead = 0;                         \
 			BbpCsr.field.BBP_RW_MODE = 1;                         \
@@ -696,9 +707,14 @@ typedef union _BBP_R110_STRUC {
 			RTMP_IO_WRITE32((_pAd), _regID, BbpCsr.word);     \
 			if ((_bViaMCU) == TRUE)									\
 			{														\
-				AsicSendCommandToMcu_IRQLOCK(_pAd, 0x80, 0xff, 0x0, 0x0,_irqlock);		\
+				brc = AsicSendCommandToMcu(_pAd, FALSE, 0x80, 0xff, 0x0, 0x0);		\
 				if ((_pAd)->OpMode == OPMODE_AP)						\
 					RTMPusecDelay(1000);							\
+				if (brc == FALSE) \
+				{ \
+					BbpCsr.field.Busy = IDLE;											\
+					RTMP_IO_WRITE32((_pAd), H2M_BBP_AGENT, BbpCsr.word);				\
+				} \
 			}														\
 			(_pAd)->BbpWriteLatch[_bbpID] = _pV;                   			\
 			break;													\
@@ -720,7 +736,7 @@ typedef union _BBP_R110_STRUC {
 	This marco used for the BBP write operation which didn't need via MCU.
 */
 #define BBP_IO_WRITE8_BY_REG_ID(_A, _I, _pV)			\
-	RTMP_BBP_IO_WRITE8((_A), (_I), (_pV), FALSE, FALSE)
+	RTMP_BBP_IO_WRITE8((_A), (_I), (_pV), FALSE)
 
 /*
 	This marco used for the BBP write operation which need via MCU.
@@ -732,41 +748,61 @@ typedef union _BBP_R110_STRUC {
 		if ((_A)->bPCIclkOff == FALSE)                     				\
 		{													\
 			if ((_A)->infType == RTMP_DEV_INF_RBUS)			\
-				RTMP_BBP_IO_WRITE8((_A), (_I), (_pV), FALSE,FALSE);	\
+				RTMP_BBP_IO_WRITE8((_A), (_I), (_pV), FALSE);	\
 			else												\
 				if(IS_SUPPORT_PCIE_PS_L3((_A)))				\
-					RTMP_PCIE_PS_L3_BBP_IO_WRITE8((_A), (_I), (_pV), TRUE,FALSE);	\
+					RTMP_PCIE_PS_L3_BBP_IO_WRITE8((_A), (_I), (_pV), TRUE);	\
 				else												\
-				RTMP_BBP_IO_WRITE8((_A), (_I), (_pV), TRUE,FALSE);	\
+				RTMP_BBP_IO_WRITE8((_A), (_I), (_pV), TRUE);	\
 		}													\
 	}while(0)
-#define _RTMP_BBP_IO_WRITE8_BY_REG_ID_IRQLOCK(_A, _I, _pV)			\
-	do{														\
-		if ((_A)->bPCIclkOff == FALSE)                     				\
-		{													\
-			if ((_A)->infType == RTMP_DEV_INF_RBUS)			\
-				RTMP_BBP_IO_WRITE8((_A), (_I), (_pV), FALSE,TRUE);	\
-			else												\
-				if(IS_SUPPORT_PCIE_PS_L3((_A)))				\
-					RTMP_PCIE_PS_L3_BBP_IO_WRITE8((_A), (_I), (_pV), TRUE,TRUE);	\
-				else												\
-				RTMP_BBP_IO_WRITE8((_A), (_I), (_pV), TRUE,TRUE);	\
-		}													\
-	}while(0)
+
 #ifndef VENDOR_FEATURE3_SUPPORT
 #define RTMP_BBP_IO_READ8				_RTMP_BBP_IO_READ8
 #define RTMP_BBP_IO_READ8_BY_REG_ID		_RTMP_BBP_IO_READ8_BY_REG_ID
-#define RTMP_BBP_IO_READ8_BY_REG_ID_IRQLOCK	_RTMP_BBP_IO_READ8_BY_REG_ID_IRQLOCK
 #define RTMP_BBP_IO_WRITE8				_RTMP_BBP_IO_WRITE8
 #define RTMP_BBP_IO_WRITE8_BY_REG_ID	_RTMP_BBP_IO_WRITE8_BY_REG_ID
-#define RTMP_BBP_IO_WRITE8_BY_REG_ID_IRQLOCK	_RTMP_BBP_IO_WRITE8_BY_REG_ID_IRQLOCK
 #endif // VENDOR_FEATURE3_SUPPORT //
+	
 	
 #endif // RTMP_MAC_PCI //
 
 
 
 #ifdef RT30xx
+#ifdef ANT_DIVERSITY_SUPPORT
+//Need to collect each ant's rssi concurrently
+//rssi1 is report to pair2 Ant and rss2 is reprot to pair1 Ant when 4 Ant
+#define COLLECT_RX_ANTENNA_AVERAGE_RSSI(_pAd, _rssi1, _rssi2)					\
+{																				\
+	SHORT	AvgRssi;															\
+	UCHAR	UsedAnt;															\
+	if (_pAd->RxAnt.EvaluatePeriod == 0)									\
+	{																		\
+		UsedAnt = _pAd->RxAnt.Pair1PrimaryRxAnt;							\
+		AvgRssi = _pAd->RxAnt.Pair1AvgRssi[UsedAnt];						\
+		if (AvgRssi < 0)													\
+			AvgRssi = AvgRssi - (AvgRssi >> 3) + _rssi1;					\
+		else																\
+			AvgRssi = _rssi1 << 3;											\
+		_pAd->RxAnt.Pair1AvgRssi[UsedAnt] = AvgRssi;						\
+	}																		\
+	else																	\
+	{																		\
+		UsedAnt = _pAd->RxAnt.Pair1SecondaryRxAnt;							\
+		AvgRssi = _pAd->RxAnt.Pair1AvgRssi[UsedAnt];						\
+		if ((AvgRssi < 0) && (_pAd->RxAnt.FirstPktArrivedWhenEvaluate))		\
+			AvgRssi = AvgRssi - (AvgRssi >> 3) + _rssi1;					\
+		else																\
+		{																	\
+			_pAd->RxAnt.FirstPktArrivedWhenEvaluate = TRUE;					\
+			AvgRssi = _rssi1 << 3;											\
+		}																	\
+		_pAd->RxAnt.Pair1AvgRssi[UsedAnt] = AvgRssi;						\
+		_pAd->RxAnt.RcvPktNumWhenEvaluate++;								\
+	}																		\
+}
+#endif // ANT_DIVERSITY_SUPPORT //
 
 #define RTMP_ASIC_MMPS_DISABLE(_pAd)							\
 	do{															\

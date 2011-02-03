@@ -5,50 +5,25 @@
  * Hsinchu County 302,
  * Taiwan, R.O.C.
  *
- * (c) Copyright 2002-2007, Ralink Technology, Inc.
+ * (c) Copyright 2002-2010, Ralink Technology, Inc.
  *
- * This program is free software; you can redistribute it and/or modify  * 
- * it under the terms of the GNU General Public License as published by  * 
- * the Free Software Foundation; either version 2 of the License, or     * 
- * (at your option) any later version.                                   * 
- *                                                                       * 
- * This program is distributed in the hope that it will be useful,       * 
- * but WITHOUT ANY WARRANTY; without even the implied warranty of        * 
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         * 
- * GNU General Public License for more details.                          * 
- *                                                                       * 
- * You should have received a copy of the GNU General Public License     * 
- * along with this program; if not, write to the                         * 
- * Free Software Foundation, Inc.,                                       * 
- * 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             * 
- *                                                                       * 
+ * This program is free software; you can redistribute it and/or modify  *
+ * it under the terms of the GNU General Public License as published by  *
+ * the Free Software Foundation; either version 2 of the License, or     *
+ * (at your option) any later version.                                   *
+ *                                                                       *
+ * This program is distributed in the hope that it will be useful,       *
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of        *
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
+ * GNU General Public License for more details.                          *
+ *                                                                       *
+ * You should have received a copy of the GNU General Public License     *
+ * along with this program; if not, write to the                         *
+ * Free Software Foundation, Inc.,                                       *
+ * 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
+ *                                                                       *
  *************************************************************************/
 
-/****************************************************************************
-
-	Abstract:
-
-	All related CRDA (Central Regulatory Domain Agent) function body.
-
-	History:
-		1. 2009/09/17	Sample Lin
-			(1) Init version.
-		2. 2009/10/27	Sample Lin
-			(1) Do not use ieee80211_register_hw() to create virtual interface.
-				Use wiphy_register() to register nl80211 command handlers.
-			(2) Support iw utility.
-		3. 2009/11/03	Sample Lin
-			(1) Change name MAC80211 to CFG80211.
-			(2) Modify CFG80211_OpsSetChannel().
-			(3) Move CFG80211_Register()/CFG80211_UnRegister() to open/close.
-		4. 2009/12/16	Sample Lin
-			(1) Patch for Linux 2.6.32.
-			(2) Add more supported functions in CFG80211_Ops.
-
-	Note:
-		The feature is supported only in "LINUX" 2.6.28 ~ 2.6.32.
-
-***************************************************************************/
 
 #include "rt_config.h"
 
@@ -360,7 +335,7 @@ static int CFG80211_OpsSetChannel(
 
 			Re-connect to the AP due to BW 20/40 or HT/non-HT change.
 		*/
-		Set_SSID_Proc(pAd, pAd->CommonCfg.Ssid);
+		Set_SSID_Proc(pAd, (PSTRING)pAd->CommonCfg.Ssid);
 	} /* End of if */
 #endif // DOT11_N_SUPPORT //
 
@@ -371,7 +346,7 @@ static int CFG80211_OpsSetChannel(
 		MakeIbssBeacon(pAd);
 		AsicEnableIbssSync(pAd);
 
-		Set_SSID_Proc(pAd, pAd->CommonCfg.Ssid);
+		Set_SSID_Proc(pAd, (PSTRING)pAd->CommonCfg.Ssid);
 	} /* End of if */
 
 	if (CFG80211CB->pCfg80211_Wdev->iftype == NL80211_IFTYPE_MONITOR)
@@ -509,7 +484,7 @@ static int CFG80211_OpsChgVirtualInf(
 	pAd->StaCfg.bAutoReconnect = TRUE;
 
 	CFG80211DBG(RT_DEBUG_ERROR, ("80211> SSID = %s\n", pAd->CommonCfg.Ssid));
-	Set_SSID_Proc(pAd, pAd->CommonCfg.Ssid);
+	Set_SSID_Proc(pAd, (PSTRING)pAd->CommonCfg.Ssid);
 #endif // CONFIG_STA_SUPPORT //
 
 	return 0;
@@ -635,7 +610,7 @@ static int CFG80211_OpsJoinIbss(
 	pAd->StaCfg.bAutoReconnect = TRUE;
 
 	pAd->CommonCfg.BeaconPeriod = pParams->beacon_interval;
-	Set_SSID_Proc(pAd, pParams->ssid);
+	Set_SSID_Proc(pAd, (PSTRING)pParams->ssid);
 
 	return 0;
 } /* End of CFG80211_OpsJoinIbss */
@@ -668,7 +643,7 @@ static int CFG80211_OpsLeaveIbss(
 	MAC80211_PAD_GET(pAd, pWiphy);
 
 	pAd->StaCfg.bAutoReconnect = FALSE;
-	LinkDown(pAd,FALSE);
+	LinkDown(pAd, FALSE);
 
 	return 0;
 } /* End of CFG80211_OpsLeaveIbss */
@@ -962,9 +937,11 @@ static int CFG80211_KeyAdd(
 	if (pParams->key_len >= sizeof(KeyBuf))
 		return -EINVAL;
 	/* End of if */
+
 	memcpy(KeyBuf, pParams->key, pParams->key_len);
 	KeyBuf[pParams->key_len] = 0x00;
 
+#ifdef CONFIG_STA_SUPPORT
 	switch(pParams->cipher)
 	{
 		case WLAN_CIPHER_SUITE_WEP40:
@@ -973,26 +950,26 @@ static int CFG80211_KeyAdd(
 			{
 				case 1:
 				default:
-					Set_Key1_Proc(pAd, KeyBuf);
+					Set_Key1_Proc(pAd, (PSTRING)KeyBuf);
 					break;
 	
 				case 2:
-					Set_Key2_Proc(pAd, KeyBuf);
+					Set_Key2_Proc(pAd, (PSTRING)KeyBuf);
 					break;
 	
 				case 3:
-					Set_Key3_Proc(pAd, KeyBuf);
+					Set_Key3_Proc(pAd, (PSTRING)KeyBuf);
 					break;
 	
 				case 4:
-					Set_Key4_Proc(pAd, KeyBuf);
+					Set_Key4_Proc(pAd, (PSTRING)KeyBuf);
 					break;
 			} /* End of switch */
 			break;
 
 		case WLAN_CIPHER_SUITE_TKIP:
 		case WLAN_CIPHER_SUITE_CCMP:
-			Set_WPAPSK_Proc(pAd, KeyBuf);
+			Set_WPAPSK_Proc(pAd, (PSTRING)KeyBuf);
 			break;
 
 		default:
@@ -1000,6 +977,8 @@ static int CFG80211_KeyAdd(
 	} /* End of switch */
 
 	return 0;
+#endif // CONFIG_STA_SUPPORT //
+
 } /* End of CFG80211_KeyAdd */
 
 
@@ -1103,7 +1082,10 @@ static int CFG80211_KeyDefaultSet(
 	MAC80211_PAD_GET(pAd, pWiphy);
 
 	CFG80211DBG(RT_DEBUG_ERROR, ("80211> KeyIdx = %d\n", KeyIdx));
+
+#ifdef CONFIG_STA_SUPPORT
 	pAd->StaCfg.DefaultKeyId = KeyIdx; /* base 0 */
+#endif // CONFIG_STA_SUPPORT //
 	return 0;
 } /* End of CFG80211_KeyDefaultSet */
 
@@ -1256,19 +1238,19 @@ static int CFG80211_Connect(
 		{
 			case 1:
 			default:
-				Set_Key1_Proc(pAd, KeyBuf);
+				Set_Key1_Proc(pAd, (PSTRING)KeyBuf);
 				break;
 
 			case 2:
-				Set_Key2_Proc(pAd, KeyBuf);
+				Set_Key2_Proc(pAd, (PSTRING)KeyBuf);
 				break;
 
 			case 3:
-				Set_Key3_Proc(pAd, KeyBuf);
+				Set_Key3_Proc(pAd, (PSTRING)KeyBuf);
 				break;
 
 			case 4:
-				Set_Key4_Proc(pAd, KeyBuf);
+				Set_Key4_Proc(pAd, (PSTRING)KeyBuf);
 				break;
 		} /* End of switch */
 	} /* End of if */
@@ -1286,7 +1268,7 @@ static int CFG80211_Connect(
 
 	memset(&SSID, 0, sizeof(SSID));
 	memcpy(SSID, pSme->ssid, SSIDLen);
-	Set_SSID_Proc(pAd, SSID);
+	Set_SSID_Proc(pAd, (PSTRING)SSID);
 
 	CFG80211DBG(RT_DEBUG_ERROR, ("80211> SSID = %s\n", SSID));
 	return 0;
@@ -1332,7 +1314,7 @@ static int CFG80211_Disconnect(
 #endif // CONFIG_STA_SUPPORT //
 #endif // LINUX_VERSION_CODE //
 
-#ifdef RFKILL_SUPPORT
+#ifdef RFKILL_HW_SUPPORT
 static int CFG80211_RFKill(
 	IN struct wiphy						*pWiphy)
 {
@@ -1345,11 +1327,29 @@ static int CFG80211_RFKill(
 	// Read GPIO pin2 as Hardware controlled radio state
 	RTMP_IO_READ32(pAd, GPIO_CTRL_CFG, &data);
 	active = !!(data & 0x04);
+	if (!active)
+  		 RTMPSetLED(pAd, LED_RADIO_OFF);
+
 	wiphy_rfkill_set_hw_state(pWiphy, !active);
 	
 	return active;
 }
-#endif // RFKILL_SUPPORT //
+
+
+VOID RFKillStatusUpdate(
+        IN PRTMP_ADAPTER pAd,
+        IN BOOLEAN active)
+{
+        struct wiphy * pWiphy;
+        pWiphy = CFG80211CB->pCfg80211_Wdev->wiphy;
+	if (!active)
+  		 RTMPSetLED(pAd, LED_RADIO_OFF);
+
+        wiphy_rfkill_set_hw_state(pWiphy, !active);
+        return;
+}
+
+#endif // RFKILL_HW_SUPPORT //
 
 static struct cfg80211_ops CFG80211_Ops = {
 	.set_channel			= CFG80211_OpsSetChannel,
@@ -1384,9 +1384,9 @@ static struct cfg80211_ops CFG80211_Ops = {
 	.disconnect				= CFG80211_Disconnect,
 #endif // CONFIG_STA_SUPPORT //
 #endif // LINUX_VERSION_CODE //
-#ifdef RFKILL_SUPPORT
+#ifdef RFKILL_HW_SUPPORT
 	.rfkill_poll			= CFG80211_RFKill,
-#endif // RFKILL_SUPPORT //
+#endif // RFKILL_HW_SUPPORT //
 };
 
 
@@ -1405,8 +1405,6 @@ Return Value:
 Note:
 ========================================================================
 */
-static const void * const orinoco_wiphy_privid = &orinoco_wiphy_privid;
-
 static struct wireless_dev *CFG80211_WdevAlloc(
 	IN PRTMP_ADAPTER 				pAd,
 	struct device					*pDev)
@@ -1443,7 +1441,6 @@ static struct wireless_dev *CFG80211_WdevAlloc(
 	pPriv = (ULONG *)(wiphy_priv(pWdev->wiphy));
 	*pPriv = (ULONG)pAd;
 
-	pWdev->wiphy->privid = orinoco_wiphy_privid;
 	set_wiphy_dev(pWdev->wiphy, pDev);
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,30))
@@ -1499,7 +1496,7 @@ Routine Description:
 	Register MAC80211 Module.
 
 Arguments:
-	pAd				- WLAN control block pointer
+	pAdCB			- WLAN control block pointer
 	pDev			- Generic device interface
 	pNetDev			- Network device
 
@@ -1514,10 +1511,13 @@ Note:
 ========================================================================
 */
 VOID CFG80211_Register(
-	IN PRTMP_ADAPTER 		pAd,
+	IN VOID 				*pAdCB,
 	IN struct device		*pDev,
 	IN struct net_device	*pNetDev)
 {
+	PRTMP_ADAPTER pAd = (PRTMP_ADAPTER)pAdCB;
+
+
 	/* allocate MAC80211 structure */
 	if (pAd->pCfg80211_CB != NULL)
 		return;
@@ -1553,9 +1553,11 @@ VOID CFG80211_Register(
 	/* init API function pointers */
 	RT_CFG80211_API_INIT(pAd);
 
-#ifdef RFKILL_SUPPORT
+#ifdef RFKILL_HW_SUPPORT
 	wiphy_rfkill_start_polling(CFG80211CB->pCfg80211_Wdev->wiphy);
-#endif // RFKILL_SUPPORT //
+#endif // RFKILL_HW_SUPPORT //
+
+	CFG80211DBG(RT_DEBUG_ERROR, ("80211> CFG80211_Register\n"));
 } /* End of CFG80211_Register */
 
 
@@ -1607,9 +1609,9 @@ VOID CFG80211_UnRegister(
 			regulatory domain by using iw.
 		*/
 		
-#ifdef RFKILL_SUPPORT
+#ifdef RFKILL_HW_SUPPORT
 		wiphy_rfkill_stop_polling(CFG80211CB->pCfg80211_Wdev->wiphy);
-#endif // RFKILL_SUPPORT //
+#endif // RFKILL_HW_SUPPORT //
 		wiphy_unregister(CFG80211CB->pCfg80211_Wdev->wiphy);
 		wiphy_free(CFG80211CB->pCfg80211_Wdev->wiphy);
 		os_free_mem(NULL, CFG80211CB->pCfg80211_Wdev);
@@ -1643,7 +1645,7 @@ Routine Description:
 	Parse and handle country region in beacon from associated AP.
 
 Arguments:
-	pAd				- WLAN control block pointer
+	pAdCB			- WLAN control block pointer
 	pVIE			- Beacon elements
 	LenVIE			- Total length of Beacon elements
 
@@ -1654,10 +1656,11 @@ Note:
 ========================================================================
 */
 VOID CFG80211_BeaconCountryRegionParse(
-	IN PRTMP_ADAPTER			pAd,
+	IN VOID						*pAdCB,
 	IN NDIS_802_11_VARIABLE_IEs	*pVIE,
 	IN UINT16					LenVIE)
 {
+	PRTMP_ADAPTER pAd = (PRTMP_ADAPTER)pAdCB;
 	UCHAR *pElement = (UCHAR *)pVIE;
 	UINT32 LenEmt;
 
@@ -1704,10 +1707,13 @@ Note:
 ========================================================================
 */
 VOID CFG80211_RegHint(
-	IN PRTMP_ADAPTER	pAd,
-	IN UCHAR			*pCountryIe,
-	IN ULONG			CountryIeLen)
+	IN VOID						*pAdCB,
+	IN UCHAR					*pCountryIe,
+	IN ULONG					CountryIeLen)
 {
+	PRTMP_ADAPTER pAd = (PRTMP_ADAPTER)pAdCB;
+
+
 	CFG80211DBG(RT_DEBUG_ERROR,
 			("crda> regulatory domain hint: %c%c\n",
 			pCountryIe[0], pCountryIe[1]));
@@ -1720,7 +1726,7 @@ VOID CFG80211_RegHint(
 
 	/* hints a country IE as a regulatory domain "without" channel/power info. */
 //	regulatory_hint(CFG80211CB->pMac80211_Hw->wiphy, pCountryIe);
-	regulatory_hint(CFG80211CB->pCfg80211_Wdev->wiphy, pCountryIe);
+	regulatory_hint(CFG80211CB->pCfg80211_Wdev->wiphy, (const char *)pCountryIe);
 } /* End of CFG80211_RegHint */
 
 
@@ -1730,7 +1736,7 @@ Routine Description:
 	Hint to the wireless core a regulatory domain from country element.
 
 Arguments:
-	pAd				- WLAN control block pointer
+	pAdCB			- WLAN control block pointer
 	pCountryIe		- pointer to the country IE
 	CountryIeLen	- length of the country IE
 
@@ -1742,12 +1748,15 @@ Note:
 ========================================================================
 */
 VOID CFG80211_RegHint11D(
-	IN PRTMP_ADAPTER	pAd,
-	IN UCHAR			*pCountryIe,
-	IN ULONG			CountryIeLen)
+	IN VOID						*pAdCB,
+	IN UCHAR					*pCountryIe,
+	IN ULONG					CountryIeLen)
 {
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,32))
 	/* no regulatory_hint_11d() in 2.6.32 */
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,32))
+	PRTMP_ADAPTER pAd = (PRTMP_ADAPTER)pAdCB;
+
+
 	if ((CFG80211CB->pCfg80211_Wdev == NULL) || (pCountryIe == NULL))
 	{
 		CFG80211DBG(RT_DEBUG_ERROR, ("crda> regulatory domain hint not support!\n"));
@@ -1774,7 +1783,7 @@ Routine Description:
 	Apply new regulatory rule.
 
 Arguments:
-	pAd				- WLAN control block pointer
+	pAdCB			- WLAN control block pointer
 	pWiphy			- Wireless hardware description
 	pAlpha2			- Regulation domain (2B)
 
@@ -1789,15 +1798,16 @@ Note:
 ========================================================================
 */
 VOID CFG80211_RegRuleApply(
-	IN PRTMP_ADAPTER				pAd,
+	IN VOID							*pAdCB,
 	IN struct wiphy					*pWiphy,
 	IN UCHAR						*pAlpha2)
 {
+	PRTMP_ADAPTER pAd = (PRTMP_ADAPTER)pAdCB;
 	enum ieee80211_band IdBand;
 	struct ieee80211_supported_band *pSband;
 	struct ieee80211_channel *pChan;
 	RADAR_DETECT_STRUCT	*pRadarDetect;
-	UINT32 IdChan, IdPwr, IdReg;
+	UINT32 IdChan, IdPwr;
 	UINT32 ChanId, RecId, DfsType;
 	ULONG IrqFlags;
 
@@ -1828,8 +1838,12 @@ VOID CFG80211_RegRuleApply(
 	/* find the DfsType */
 	DfsType = CE;
 
+#ifdef AUTO_CH_SELECT_ENHANCE
+#ifdef EXT_BUILD_CHANNEL_LIST
 	if ((pAlpha2[0] != '0') && (pAlpha2[1] != '0'))
 	{
+		UINT32 IdReg;
+
 		if (pWiphy->bands[IEEE80211_BAND_5GHZ] != NULL)
 		{
 			for(IdReg=0; ; IdReg++)
@@ -1851,6 +1865,8 @@ VOID CFG80211_RegRuleApply(
 			} /* End of for */
 		} /* End of if */
 	} /* End of if */
+#endif // EXT_BUILD_CHANNEL_LIST //
+#endif // AUTO_CH_SELECT_ENHANCE //
 
 	for(IdBand=0; IdBand<IEEE80211_NUM_BANDS; IdBand++)
 	{
@@ -1978,7 +1994,7 @@ Routine Description:
 	Inform us that a scan is got.
 
 Arguments:
-	pAd				- WLAN control block pointer
+	pAdCB				- WLAN control block pointer
 
 Return Value:
 	NONE
@@ -1988,7 +2004,7 @@ Note:
 ========================================================================
 */
 VOID CFG80211_Scaning(
-	IN PRTMP_ADAPTER				pAd,
+	IN VOID							*pAdCB,
 	IN UINT32						BssIdx,
 	IN UINT32						ChanId,
 	IN UCHAR						*pFrame,
@@ -1998,6 +2014,7 @@ VOID CFG80211_Scaning(
 {
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,30))
 #ifdef CONFIG_STA_SUPPORT
+	PRTMP_ADAPTER pAd = (PRTMP_ADAPTER)pAdCB;
 	struct ieee80211_channel *pChan;
 
 
@@ -2085,7 +2102,7 @@ Routine Description:
 	Inform us that scan ends.
 
 Arguments:
-	pAd				- WLAN control block pointer
+	pAdCB			- WLAN control block pointer
 	FlgIsAborted	- 1: scan is aborted
 
 Return Value:
@@ -2095,11 +2112,14 @@ Note:
 ========================================================================
 */
 VOID CFG80211_ScanEnd(
-	IN PRTMP_ADAPTER				pAd,
+	IN VOID							*pAdCB,
 	IN BOOLEAN						FlgIsAborted)
 {
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,30))
 #ifdef CONFIG_STA_SUPPORT
+	PRTMP_ADAPTER pAd = (PRTMP_ADAPTER)pAdCB;
+
+
 	if (!RTMP_TEST_FLAG(pAd, fRTMP_ADAPTER_INTERRUPT_IN_USE))
 	{
 		DBGPRINT(RT_DEBUG_TRACE, ("80211> Network is down!\n"));
@@ -2130,7 +2150,7 @@ Routine Description:
 	Re-Initialize wireless channel/PHY in 2.4GHZ and 5GHZ.
 
 Arguments:
-	pAd				- WLAN control block pointer
+	pAdCB			- WLAN control block pointer
 
 Return Value:
 	TRUE			- re-init successfully
@@ -2143,8 +2163,9 @@ Note:
 ========================================================================
 */
 BOOLEAN CFG80211_SupBandReInit(
-	IN PRTMP_ADAPTER 				pAd)
+	IN VOID							*pAdCB)
 {
+	PRTMP_ADAPTER pAd = (PRTMP_ADAPTER)pAdCB;
 	struct wiphy *pWiphy;
 
 
@@ -2191,7 +2212,7 @@ Routine Description:
 	Inform CFG80211 about association status.
 
 Arguments:
-	pAd				- WLAN control block pointer
+	pAdCB			- WLAN control block pointer
 	pBSSID			- the BSSID of the AP
 	pReqIe			- the element list in the association request frame
 	ReqIeLen		- the request element length
@@ -2206,7 +2227,7 @@ Note:
 ========================================================================
 */
 void CFG80211_ConnectResultInform(
-	IN PRTMP_ADAPTER 				pAd,
+	IN VOID							*pAdCB,
 	IN UCHAR						*pBSSID,
 	IN UCHAR						*pReqIe,
 	IN UINT32						ReqIeLen,
@@ -2214,9 +2235,12 @@ void CFG80211_ConnectResultInform(
 	IN UINT32						RspIeLen,
 	IN UCHAR						FlgIsSuccess)
 {
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,32))
+	PRTMP_ADAPTER pAd = (PRTMP_ADAPTER)pAdCB;
+
+
 	CFG80211DBG(RT_DEBUG_ERROR, ("80211> CFG80211_ConnectResultInform ==>\n"));
 
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,32))
 	if ((CFG80211CB->pCfg80211_Wdev->netdev == NULL) || (pBSSID == NULL))
 		return;
 	/* End of if */
@@ -2369,7 +2393,7 @@ static INT32 CFG80211_RegNotifier(
 		if (RTMP_TEST_FLAG(pAd, fRTMP_ADAPTER_START_UP))
 		{
 			/* interface is up */
-			CFG80211_RegRuleApply(pAd, pWiphy, pRequest->alpha2);
+			CFG80211_RegRuleApply(pAd, pWiphy, (UCHAR *)pRequest->alpha2);
 		}
 		else
 		{
@@ -2559,12 +2583,12 @@ static BOOLEAN CFG80211_SupBandInit(
 
 	if (pChannels == NULL)
 	{
-	pChannels = kzalloc(sizeof(*pChannels) * NumOfChan, GFP_KERNEL);
-	if (!pChannels)
-	{
-		DBGPRINT(RT_DEBUG_ERROR, ("80211> ieee80211_channel allocation fail!\n"));
-		return FALSE;
-	} /* End of if */
+		pChannels = kzalloc(sizeof(*pChannels) * NumOfChan, GFP_KERNEL);
+		if (!pChannels)
+		{
+			DBGPRINT(RT_DEBUG_ERROR, ("80211> ieee80211_channel allocation fail!\n"));
+			return FALSE;
+		} /* End of if */
 	} /* End of if */
 
 	CFG80211DBG(RT_DEBUG_ERROR, ("80211> Number of channel = %d\n",
@@ -2572,13 +2596,13 @@ static BOOLEAN CFG80211_SupBandInit(
 
 	if (pRates == NULL)
 	{
-	pRates = kzalloc(sizeof(*pRates) * NumOfRate, GFP_KERNEL);
-	if (!pRates)
-	{
+		pRates = kzalloc(sizeof(*pRates) * NumOfRate, GFP_KERNEL);
+		if (!pRates)
+		{
 			os_free_mem(NULL, pChannels);
-		DBGPRINT(RT_DEBUG_ERROR, ("80211> ieee80211_rate allocation fail!\n"));
-		return FALSE;
-	} /* End of if */
+			DBGPRINT(RT_DEBUG_ERROR, ("80211> ieee80211_rate allocation fail!\n"));
+			return FALSE;
+		} /* End of if */
 	} /* End of if */
 
 	CFG80211DBG(RT_DEBUG_ERROR, ("80211> Number of rate = %d\n", NumOfRate));
