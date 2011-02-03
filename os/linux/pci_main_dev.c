@@ -5,35 +5,25 @@
  * Hsinchu County 302,
  * Taiwan, R.O.C.
  *
- * (c) Copyright 2002-2007, Ralink Technology, Inc.
+ * (c) Copyright 2002-2010, Ralink Technology, Inc.
  *
- * This program is free software; you can redistribute it and/or modify  * 
- * it under the terms of the GNU General Public License as published by  * 
- * the Free Software Foundation; either version 2 of the License, or     * 
- * (at your option) any later version.                                   * 
- *                                                                       * 
- * This program is distributed in the hope that it will be useful,       * 
- * but WITHOUT ANY WARRANTY; without even the implied warranty of        * 
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         * 
- * GNU General Public License for more details.                          * 
- *                                                                       * 
- * You should have received a copy of the GNU General Public License     * 
- * along with this program; if not, write to the                         * 
- * Free Software Foundation, Inc.,                                       * 
- * 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             * 
- *                                                                       * 
- *************************************************************************
+ * This program is free software; you can redistribute it and/or modify  *
+ * it under the terms of the GNU General Public License as published by  *
+ * the Free Software Foundation; either version 2 of the License, or     *
+ * (at your option) any later version.                                   *
+ *                                                                       *
+ * This program is distributed in the hope that it will be useful,       *
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of        *
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
+ * GNU General Public License for more details.                          *
+ *                                                                       *
+ * You should have received a copy of the GNU General Public License     *
+ * along with this program; if not, write to the                         *
+ * Free Software Foundation, Inc.,                                       *
+ * 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
+ *                                                                       *
+ *************************************************************************/
 
-    Module Name:
-    pci_main_dev.c
-
-    Abstract:
-    Create and register network interface for PCI based chipsets in Linux platform.
-
-    Revision History:
-    Who         When            What
-    --------    ----------      ----------------------------------------------
-*/
 
 #include "rt_config.h"
 #include <linux/pci.h>
@@ -74,15 +64,14 @@ static struct pci_device_id rt2860_pci_tbl[] __devinitdata =
 	{PCI_DEVICE(NIC_PCI_VENDOR_ID, NIC3091_PCIe_DEVICE_ID)},
 	{PCI_DEVICE(NIC_PCI_VENDOR_ID, NIC3092_PCIe_DEVICE_ID)},
 #endif // RT3090 //
-#ifdef RT3593
-	{PCI_DEVICE(NIC_PCI_VENDOR_ID, NIC3593_PCI_OR_PCIe_DEVICE_ID)},
-#endif // RT3593 //
+#ifdef RT3390
+	{PCI_DEVICE(NIC_PCI_VENDOR_ID, NIC3390_PCIe_DEVICE_ID)},
+#endif // RT3390 //
     {0,}		// terminate list
 };
 
 MODULE_DEVICE_TABLE(pci, rt2860_pci_tbl);
 #ifdef CONFIG_STA_SUPPORT
-MODULE_LICENSE("GPL");
 #ifdef MODULE_VERSION
 MODULE_VERSION(STA_DRIVER_VERSION);
 #endif
@@ -302,6 +291,9 @@ static INT __devinit   rt2860_probe(
 	ULONG				csr_addr;
 	INT rv = 0;
 	RTMP_OS_NETDEV_OP_HOOK	netDevHook;
+#ifdef PRE_ASSIGN_MAC_ADDR	
+	USHORT  Addr01,Addr23,Addr45 ;
+#endif // PRE_ASSIGN_MAC_ADDR //
 
 	DBGPRINT(RT_DEBUG_TRACE, ("===> rt2860_probe\n"));
 
@@ -352,6 +344,8 @@ static INT __devinit   rt2860_probe(
 		goto err_out_iounmap;
 	}
 
+	memset(handle, 0, sizeof(struct os_cookie));
+
 	((POS_COOKIE)handle)->pci_dev = pci_dev;
 	
 	rv = RTMPAllocAdapterBlock(handle, &pAd);	//shiang: we may need the pci_dev for allocate structure of "RTMP_ADAPTER"
@@ -387,6 +381,7 @@ static INT __devinit   rt2860_probe(
 	// Register this device
 #ifdef RT_CFG80211_SUPPORT
 	pAd->pCfgDev = &(pci_dev->dev);
+	pAd->CFG80211_Register = CFG80211_Register;
 #endif // RT_CFG80211_SUPPORT //
 
 	rv = RtmpOSNetDevAttach(net_dev, &netDevHook);
@@ -400,6 +395,27 @@ static INT __devinit   rt2860_probe(
 #ifdef KTHREAD_SUPPORT
 	init_waitqueue_head(&pAd->cmdQTask.kthread_q);
 #endif // KTHREAD_SUPPORT //
+	//NICReadEEPROMParameters(pAd, "");
+
+#ifdef CREDENTIAL_STORE
+	NdisAllocateSpinLock(&pAd->StaCtIf.Lock);
+#endif /* CREDENTIAL_STORE */
+	
+#ifdef PRE_ASSIGN_MAC_ADDR
+	RT28xx_EEPROM_READ16(pAd, 0x04, Addr01);
+	RT28xx_EEPROM_READ16(pAd, 0x06, Addr23);
+	RT28xx_EEPROM_READ16(pAd, 0x08, Addr45);
+
+	pAd->PermanentAddress[0] = (UCHAR)(Addr01 & 0xff);
+	pAd->PermanentAddress[1] = (UCHAR)(Addr01 >> 8);
+	pAd->PermanentAddress[2] = (UCHAR)(Addr23 & 0xff);
+	pAd->PermanentAddress[3] = (UCHAR)(Addr23 >> 8);
+	pAd->PermanentAddress[4] = (UCHAR)(Addr45 & 0xff);
+	pAd->PermanentAddress[5] = (UCHAR)(Addr45 >> 8);
+
+		// Set up the Mac address
+	RtmpOSNetDevAddrSet(pAd->net_dev, &pAd->PermanentAddress[0]);
+#endif // PRE_ASSIGN_MAC_ADDR //
 
 	DBGPRINT(RT_DEBUG_TRACE, ("<=== rt2860_probe\n"));
 
@@ -456,6 +472,10 @@ static VOID __devexit rt2860_remove_one(
 		CFG80211_UnRegister(pAd, net_dev);
 #endif // RT_CFG80211_SUPPORT //
 
+#ifdef CREDENTIAL_STORE
+	NdisFreeSpinLock(&pAd->StaCtIf.Lock);
+#endif /* CREDENTIAL_STORE */
+
 		// Free RTMP_ADAPTER related structures.
 		RtmpRaDevCtrlExit(pAd);
 		
@@ -474,7 +494,14 @@ static VOID __devexit rt2860_remove_one(
 
 	// Free the root net_device
 	RtmpOSNetDevFree(net_dev);
-	
+
+#ifdef VENDOR_FEATURE4_SUPPORT
+{
+	extern ULONG OS_NumOfMemAlloc, OS_NumOfMemFree;
+	DBGPRINT(RT_DEBUG_TRACE, ("OS_NumOfMemAlloc = %ld, OS_NumOfMemFree = %ld\n",
+			OS_NumOfMemAlloc, OS_NumOfMemFree));
+}
+#endif // VENDOR_FEATURE4_SUPPORT //
 }
  
 
@@ -512,9 +539,9 @@ static VOID __devexit rt2860_remove_one(
 		(device_id == NIC3091_PCIe_DEVICE_ID) ||
 		(device_id == NIC3092_PCIe_DEVICE_ID) ||
 #endif // RT3090 //
-#ifdef RT3593
-	(device_id ==  NIC3593_PCI_OR_PCIe_DEVICE_ID)||
-#endif // RT3593 //
+#ifdef RT3390
+	(device_id ==  NIC3390_PCIe_DEVICE_ID)||
+#endif // RT3390 //
 
 		 0)
 	{
@@ -596,7 +623,7 @@ VOID RTMPInitPCIeLinkCtrlValue(
 			}
 
 			DBGPRINT(RT_DEBUG_TRACE, ("====> Write 0x83 = 0x%x.\n", PCIePowerSaveLevel));
-			AsicSendCommandToMcu(pAd, 0x83, 0xff, (UCHAR)PCIePowerSaveLevel, 0x00);
+			AsicSendCommandToMcu(pAd, TRUE, 0x83, 0xff, (UCHAR)PCIePowerSaveLevel, 0x00);
 			RT28xx_EEPROM_READ16(pAd, 0x22, PCIePowerSaveLevel);
 			PCIePowerSaveLevel &= 0xff;
 			PCIePowerSaveLevel = PCIePowerSaveLevel >> 6;
@@ -629,7 +656,7 @@ VOID RTMPInitPCIeLinkCtrlValue(
 						DBGPRINT(RT_DEBUG_TRACE, ("====> rt28xx Write 0x83 Command = 0x%x.\n", PCIePowerSaveLevel));
 							       printk("\n\n\n%s:%d\n",__FUNCTION__,__LINE__);
 
-						AsicSendCommandToMcu(pAd, 0x83, 0xff, (UCHAR)PCIePowerSaveLevel, 0x00);
+						AsicSendCommandToMcu(pAd, TRUE, 0x83, 0xff, (UCHAR)PCIePowerSaveLevel, 0x00);
 					}
 			DBGPRINT(RT_DEBUG_TRACE, ("====> LnkCtrlBitMask = 0x%x.\n", pAd->LnkCtrlBitMask));
 		}   
@@ -699,7 +726,7 @@ VOID RTMPInitPCIeLinkCtrlValue(
 				pAd->PCIePowerSaveLevel = (USHORT)PCIePowerSaveLevel;
 				DBGPRINT(RT_DEBUG_TRACE, ("====> rt30xx E Write 0x83 Command = 0x%x.\n", PCIePowerSaveLevel));
 
-				AsicSendCommandToMcu(pAd, 0x83, 0xff, (UCHAR)PCIePowerSaveLevel, 0x00);
+				AsicSendCommandToMcu(pAd, TRUE, 0x83, 0xff, (UCHAR)PCIePowerSaveLevel, 0x00);
 			}
 			else
 			{
@@ -715,7 +742,7 @@ VOID RTMPInitPCIeLinkCtrlValue(
 					LinkCtrlSetting = 1;
 				}
 				DBGPRINT(RT_DEBUG_TRACE, ("====> rt30xxF LinkCtrlSetting = 0x%x.\n", LinkCtrlSetting));
-				AsicSendCommandToMcu(pAd, 0x83, 0xff, (UCHAR)PCIePowerSaveLevel, LinkCtrlSetting);
+				AsicSendCommandToMcu(pAd, TRUE, 0x83, 0xff, (UCHAR)PCIePowerSaveLevel, LinkCtrlSetting);
 			}
 	  
 		}
@@ -784,12 +811,12 @@ VOID RTMPInitPCIeLinkCtrlValue(
 						bChange = TRUE;
 					break;
 #endif // RT3090 //
-#ifdef RT3593
-				case NIC3593_PCI_OR_PCIe_DEVICE_ID:
+#ifdef RT3390
+				case NIC3390_PCIe_DEVICE_ID:
 					if (bFindIntel == FALSE)
 						bChange = TRUE;
 					break;
-#endif // RT3593 //
+#endif // RT3390 //
 				default:
 					break;
 			}
@@ -828,9 +855,9 @@ VOID RTMPInitPCIeLinkCtrlValue(
 					|| (pObj->DeviceID == NIC3091_PCIe_DEVICE_ID)
 					|| (pObj->DeviceID == NIC3092_PCIe_DEVICE_ID))
 #endif // RT3090 //
-#ifdef RT3593
-				&& (pObj->DeviceID == NIC3593_PCI_OR_PCIe_DEVICE_ID)
-#endif // RT3593 //
+#ifdef RT3390
+			&& ((pObj->DeviceID == NIC3390_PCIe_DEVICE_ID)) 
+#endif // RT3090 //
 		)
 		{
 			pci_read_config_word(pObj->pci_dev, pAd->RLnkCtrlOffset, &reg16);

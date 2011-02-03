@@ -5,35 +5,24 @@
  * Hsinchu County 302,
  * Taiwan, R.O.C.
  *
- * (c) Copyright 2002-2007, Ralink Technology, Inc.
+ * (c) Copyright 2002-2010, Ralink Technology, Inc.
  *
- * This program is free software; you can redistribute it and/or modify  * 
- * it under the terms of the GNU General Public License as published by  * 
- * the Free Software Foundation; either version 2 of the License, or     * 
- * (at your option) any later version.                                   * 
- *                                                                       * 
- * This program is distributed in the hope that it will be useful,       * 
- * but WITHOUT ANY WARRANTY; without even the implied warranty of        * 
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         * 
- * GNU General Public License for more details.                          * 
- *                                                                       * 
- * You should have received a copy of the GNU General Public License     * 
- * along with this program; if not, write to the                         * 
- * Free Software Foundation, Inc.,                                       * 
- * 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             * 
- *                                                                       * 
- *************************************************************************
-
-	Module Name:
-	ee_prom.c
-
-	Abstract:
-	Miniport generic portion header file
-
-	Revision History:
-	Who         When          What
-	--------    ----------    ----------------------------------------------
-*/
+ * This program is free software; you can redistribute it and/or modify  *
+ * it under the terms of the GNU General Public License as published by  *
+ * the Free Software Foundation; either version 2 of the License, or     *
+ * (at your option) any later version.                                   *
+ *                                                                       *
+ * This program is distributed in the hope that it will be useful,       *
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of        *
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
+ * GNU General Public License for more details.                          *
+ *                                                                       *
+ * You should have received a copy of the GNU General Public License     *
+ * along with this program; if not, write to the                         *
+ * Free Software Foundation, Inc.,                                       *
+ * 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
+ *                                                                       *
+ *************************************************************************/
 
 
 #include	"rt_config.h"
@@ -191,6 +180,12 @@ int rtmp_ee_prom_read16(
 	USHORT		data;
 
 #ifdef RT30xx
+#ifdef ANT_DIVERSITY_SUPPORT
+	if (pAd->NicConfig2.field.AntDiversity)
+	{
+		pAd->EepromAccess = TRUE;
+	}
+#endif // ANT_DIVERSITY_SUPPORT //
 #endif // RT30xx //
 
 	Offset /= 2;
@@ -218,6 +213,16 @@ int rtmp_ee_prom_read16(
 	EEpromCleanup(pAd);
 
 #ifdef RT30xx
+#ifdef ANT_DIVERSITY_SUPPORT
+	// Antenna and EEPROM access are both using EESK pin,
+	// Therefor we should avoid accessing EESK at the same time
+	// Then restore antenna after EEPROM access
+	if ((pAd->NicConfig2.field.AntDiversity)/* || (pAd->RfIcType == RFIC_3020)*/)
+	{
+		pAd->EepromAccess = FALSE;
+		AsicSetRxAnt(pAd, pAd->RxAnt.Pair1PrimaryRxAnt);
+	}
+#endif // ANT_DIVERSITY_SUPPORT //
 #endif // RT30xx //
 
 	*pValue = data;
@@ -234,6 +239,12 @@ int rtmp_ee_prom_write16(
 	UINT32 x;
 
 #ifdef RT30xx
+#ifdef ANT_DIVERSITY_SUPPORT
+	if (pAd->NicConfig2.field.AntDiversity)
+	{
+		pAd->EepromAccess = TRUE;
+	}
+#endif // ANT_DIVERSITY_SUPPORT //
 #endif // RT30xx //
 
 	Offset /= 2;
@@ -271,6 +282,16 @@ int rtmp_ee_prom_write16(
 	EEpromCleanup(pAd);
 
 #ifdef RT30xx
+#ifdef ANT_DIVERSITY_SUPPORT
+	// Antenna and EEPROM access are both using EESK pin,
+	// Therefor we should avoid accessing EESK at the same time
+	// Then restore antenna after EEPROM access
+	if ((pAd->NicConfig2.field.AntDiversity) /*|| (pAd->RfIcType == RFIC_3020)*/)
+	{
+		pAd->EepromAccess = FALSE;
+		AsicSetRxAnt(pAd, pAd->RxAnt.Pair1PrimaryRxAnt);
+	}
+#endif // ANT_DIVERSITY_SUPPORT //
 #endif // RT30xx //
 
 	return NDIS_STATUS_SUCCESS;

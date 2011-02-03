@@ -5,35 +5,25 @@
  * Hsinchu County 302,
  * Taiwan, R.O.C.
  *
- * (c) Copyright 2002-2007, Ralink Technology, Inc.
+ * (c) Copyright 2002-2010, Ralink Technology, Inc.
  *
- * This program is free software; you can redistribute it and/or modify  * 
- * it under the terms of the GNU General Public License as published by  * 
- * the Free Software Foundation; either version 2 of the License, or     * 
- * (at your option) any later version.                                   * 
- *                                                                       * 
- * This program is distributed in the hope that it will be useful,       * 
- * but WITHOUT ANY WARRANTY; without even the implied warranty of        * 
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         * 
- * GNU General Public License for more details.                          * 
- *                                                                       * 
- * You should have received a copy of the GNU General Public License     * 
- * along with this program; if not, write to the                         * 
- * Free Software Foundation, Inc.,                                       * 
- * 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             * 
- *                                                                       * 
- *************************************************************************
+ * This program is free software; you can redistribute it and/or modify  *
+ * it under the terms of the GNU General Public License as published by  *
+ * the Free Software Foundation; either version 2 of the License, or     *
+ * (at your option) any later version.                                   *
+ *                                                                       *
+ * This program is distributed in the hope that it will be useful,       *
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of        *
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
+ * GNU General Public License for more details.                          *
+ *                                                                       *
+ * You should have received a copy of the GNU General Public License     *
+ * along with this program; if not, write to the                         *
+ * Free Software Foundation, Inc.,                                       *
+ * 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
+ *                                                                       *
+ *************************************************************************/
 
-    Module Name:
-    rt_main_dev.c
-
-    Abstract:
-    Create and register network interface.
-
-    Revision History:
-    Who         When            What
-    --------    ----------      ----------------------------------------------
-*/
 
 #include "rt_config.h"
 
@@ -54,6 +44,8 @@ MODULE_PARM (mac, "s");
 module_param (mac, charp, 0);
 #endif
 MODULE_PARM_DESC (mac, "rt28xx: wireless mac addr");
+
+MODULE_LICENSE("GPL");
 
 #ifdef OS_ABL_SUPPORT
 
@@ -79,6 +71,13 @@ VOID InitHWCoexistence(
 
 static struct net_device_stats *RT28xx_get_ether_stats(
     IN  struct net_device *net_dev);
+
+#ifdef CONFIG_STA_SUPPORT
+#ifdef PROFILE_STORE
+NDIS_STATUS WriteDatThread(
+	IN  RTMP_ADAPTER *pAd);
+#endif // PROFILE_STORE //
+#endif /* CONFIG_STA_SUPPORT */
 
 /*
 ========================================================================
@@ -120,6 +119,12 @@ int MainVirtualIF_close(IN struct net_device *net_dev)
 	IF_DEV_CONFIG_OPMODE_ON_STA(pAd)
 	{
 		BOOLEAN 		Cancelled;
+
+#ifdef PROFILE_STORE
+		WriteDatThread(pAd);
+		RTMPusecDelay(1000);
+#endif // PROFILE_STORE //
+
 #ifdef QOS_DLS_SUPPORT
 		// send DLS-TEAR_DOWN message, 
 		if (pAd->CommonCfg.bDLSCapable)
@@ -159,28 +164,25 @@ int MainVirtualIF_close(IN struct net_device *net_dev)
     
 			if (MsgElem)
 			{
-			COPY_MAC_ADDR(DisReq.Addr, pAd->CommonCfg.Bssid);
-			DisReq.Reason =  REASON_DEAUTH_STA_LEAVING;
-
-			MsgElem->Machine = ASSOC_STATE_MACHINE;
-			MsgElem->MsgType = MT2_MLME_DISASSOC_REQ;
-			MsgElem->MsgLen = sizeof(MLME_DISASSOC_REQ_STRUCT);
-			NdisMoveMemory(MsgElem->Msg, &DisReq, sizeof(MLME_DISASSOC_REQ_STRUCT));
-
-			// Prevent to connect AP again in STAMlmePeriodicExec
-			pAd->MlmeAux.AutoReconnectSsidLen= 32;
-			NdisZeroMemory(pAd->MlmeAux.AutoReconnectSsid, pAd->MlmeAux.AutoReconnectSsidLen);
-
-			pAd->Mlme.CntlMachine.CurrState = CNTL_WAIT_OID_DISASSOC;
-			MlmeDisassocReqAction(pAd, MsgElem);
-			kfree(MsgElem);
+				COPY_MAC_ADDR(DisReq.Addr, pAd->CommonCfg.Bssid);
+				DisReq.Reason =  REASON_DEAUTH_STA_LEAVING;
+	
+				MsgElem->Machine = ASSOC_STATE_MACHINE;
+				MsgElem->MsgType = MT2_MLME_DISASSOC_REQ;
+				MsgElem->MsgLen = sizeof(MLME_DISASSOC_REQ_STRUCT);
+				NdisMoveMemory(MsgElem->Msg, &DisReq, sizeof(MLME_DISASSOC_REQ_STRUCT));
+	
+				// Prevent to connect AP again in STAMlmePeriodicExec
+				pAd->MlmeAux.AutoReconnectSsidLen= 32;
+				NdisZeroMemory(pAd->MlmeAux.AutoReconnectSsid, pAd->MlmeAux.AutoReconnectSsidLen);
+	
+				pAd->Mlme.CntlMachine.CurrState = CNTL_WAIT_OID_DISASSOC;
+				MlmeDisassocReqAction(pAd, MsgElem);				
+				kfree(MsgElem);
 			}
 			
 			RTMPusecDelay(1000);
 		}
-
-		RTMPCancelTimer(&pAd->StaCfg.StaQuickResponeForRateUpTimer, &Cancelled);
-		RTMPCancelTimer(&pAd->StaCfg.WpaDisassocAndBlockAssocTimer, &Cancelled);
 
 #ifdef WPA_SUPPLICANT_SUPPORT
 #ifndef NATIVE_WPA_SUPPLICANT_SUPPORT
@@ -289,21 +291,29 @@ int rt28xx_close(IN PNET_DEV dev)
 	DBGPRINT(RT_DEBUG_TRACE, ("===> rt28xx_close\n"));
 
 
-
 	Cancelled = FALSE;
 	// Sanity check for pAd
 	if (pAd == NULL)
 		return 0; // close ok
 
 
-
-#ifdef WDS_SUPPORT
-	WdsDown(pAd);
-#endif // WDS_SUPPORT //
-
 #ifdef CONFIG_STA_SUPPORT
 	IF_DEV_CONFIG_OPMODE_ON_STA(pAd)
 	{
+
+#ifdef CREDENTIAL_STORE
+		if (pAd->IndicateMediaState == NdisMediaStateConnected)
+		{	
+			StoreConnectInfo(pAd);
+		}
+		else
+		{
+			RTMP_SEM_LOCK(&pAd->StaCtIf.Lock);
+			pAd->StaCtIf.Changeable = FALSE;
+			RTMP_SEM_UNLOCK(&pAd->StaCtIf.Lock);
+		}
+#endif /* CREDENTIAL_STORE */
+
 #ifdef PCIE_PS_SUPPORT
 		RTMPPCIeLinkCtrlValueRestore(pAd, RESTORE_CLOSE);
 #endif // PCIE_PS_SUPPORT //
@@ -324,6 +334,12 @@ int rt28xx_close(IN PNET_DEV dev)
 #endif // CONFIG_STA_SUPPORT //
 
 	RTMP_SET_FLAG(pAd, fRTMP_ADAPTER_HALT_IN_PROGRESS);
+
+
+
+#ifdef WDS_SUPPORT
+	WdsDown(pAd);
+#endif // WDS_SUPPORT //
 
 	for (i = 0 ; i < NUM_OF_TX_RING; i++)
 	{
@@ -347,6 +363,9 @@ int rt28xx_close(IN PNET_DEV dev)
 	IF_DEV_CONFIG_OPMODE_ON_STA(pAd)
 	{
 		MacTableReset(pAd);
+#ifdef LED_CONTROL_SUPPORT
+		RTMPSetLED(pAd, LED_LINK_DOWN);
+#endif // LED_CONTROL_SUPPORT //
 	}
 #endif // CONFIG_STA_SUPPORT //
 
@@ -409,8 +428,12 @@ int rt28xx_close(IN PNET_DEV dev)
 		RTMP_CLEAR_FLAG(pAd, fRTMP_ADAPTER_INTERRUPT_IN_USE);
 	}
 
+#ifdef RESOURCE_PRE_ALLOC
+	RTMPResetTxRxRingMemory(pAd);
+#else
 	// Free Ring or USB buffers
 	RTMPFreeTxRxRingMemory(pAd);
+#endif // RESOURCE_PRE_ALLOC //
 
 	RTMP_CLEAR_FLAG(pAd, fRTMP_ADAPTER_HALT_IN_PROGRESS);
 
@@ -500,6 +523,10 @@ int rt28xx_open(IN PNET_DEV dev)
 
 	// Request interrupt service routine for PCI device
 	// register the interrupt routine with the os
+	/*
+		AP Channel auto-selection will be run in rt28xx_init(),
+		so we must reqister IRQ hander here.
+	*/
 	RtmpOSIRQRequest(net_dev);
 
 	// Init IRQ parameters stored in pAd
@@ -509,10 +536,12 @@ int rt28xx_open(IN PNET_DEV dev)
 	if (rt28xx_init(pAd, mac, hostname) == FALSE)
 		goto err;
 
+#ifdef LINUX
 #ifdef RT_CFG80211_SUPPORT
 	RT_CFG80211_REINIT(pAd);
 	RT_CFG80211_CRDA_REG_RULE_APPLY(pAd);
 #endif // RT_CFG80211_SUPPORT //
+#endif // LINUX //
 
 #ifdef CONFIG_STA_SUPPORT
 #endif // CONFIG_STA_SUPPORT //
@@ -553,7 +582,17 @@ int rt28xx_open(IN PNET_DEV dev)
 
 #endif // CONFIG_STA_SUPPORT //
 
+
 	InitHWCoexistence(pAd);
+
+#ifdef CONFIG_STA_SUPPORT
+	/*
+		To reduce connection time, 
+		do auto reconnect here instead of waiting STAMlmePeriodicExec to do auto reconnect.
+	*/
+	if (pAd->OpMode == OPMODE_STA)
+		MlmeAutoReconnectLastSSID(pAd);
+#endif // CONFIG_STA_SUPPORT //
 
 #ifdef VENDOR_FEATURE2_SUPPORT
 	printk("Number of Packet Allocated in open = %d\n", pAd->NumOfPktAlloc);
@@ -790,15 +829,20 @@ struct iw_statistics *rt28xx_get_wireless_stats(
 	if (pAd->OpMode == OPMODE_STA)
 	{
 		pAd->iw_stats.qual.level =
-			RTMPMaxRssi(pAd, pAd->StaCfg.RssiSample.LastRssi0,
-							pAd->StaCfg.RssiSample.LastRssi1,
-							pAd->StaCfg.RssiSample.LastRssi2);
+			RTMPMaxRssi(pAd, pAd->StaCfg.RssiSample.AvgRssi0,
+							pAd->StaCfg.RssiSample.AvgRssi1,
+							pAd->StaCfg.RssiSample.AvgRssi2);
 	}
 #endif // CONFIG_STA_SUPPORT //
 
-	pAd->iw_stats.qual.noise = pAd->BbpWriteLatch[66]; // noise level (dBm)
-	
-	pAd->iw_stats.qual.noise += 256 - 143;
+#ifdef CONFIG_STA_SUPPORT
+	pAd->iw_stats.qual.noise = RTMPMaxRssi(pAd, pAd->StaCfg.RssiSample.AvgRssi0,
+							pAd->StaCfg.RssiSample.AvgRssi1,
+							pAd->StaCfg.RssiSample.AvgRssi2) - 
+							RTMPMinSnr(pAd, pAd->StaCfg.RssiSample.AvgSnr0, 
+							pAd->StaCfg.RssiSample.AvgSnr1);
+#endif // CONFIG_STA_SUPPORT //
+
 	pAd->iw_stats.qual.updated = 1;     // Flags to know if updated
 #ifdef IW_QUAL_DBM
 	pAd->iw_stats.qual.updated |= IW_QUAL_DBM;	// Level + Noise are dBm
@@ -813,7 +857,11 @@ struct iw_statistics *rt28xx_get_wireless_stats(
 #endif // WIRELESS_EXT //
 
 
+#ifdef WORKQUEUE_BH
+void tbtt_workq(struct work_struct *work)
+#else
 void tbtt_tasklet(unsigned long data)
+#endif // WORKQUEUE_BH //
 {
 //#define MAX_TX_IN_TBTT		(16)
 
@@ -922,15 +970,15 @@ BOOLEAN RtmpPhyNetDevExit(
 
 
 
-#ifdef INF_AMAZON_PPA
+#ifdef INF_PPA_SUPPORT
 	if (ppa_hook_directpath_register_dev_fn && pAd->PPAEnable==TRUE) 
 	{
 		UINT status;
-		status=ppa_hook_directpath_register_dev_fn(&pAd->g_if_id, pAd->net_dev, NULL, PPA_F_DIRECTPATH_DEREGISTER);
-		printk("unregister PPA:g_if_id=%d status=%d\n",pAd->g_if_id,status);
+		status=ppa_hook_directpath_register_dev_fn(&pAd->g_if_id, pAd->net_dev, NULL, PPA_F_DIRECTPATH_REGISTER);
+		DBGPRINT(RT_DEBUG_TRACE, ("unregister PPA:g_if_id=%d status=%d\n",pAd->g_if_id,status));
 	}
 	kfree(pAd->pDirectpathCb); 
-#endif // INF_AMAZON_PPA //
+#endif // INF_PPA_SUPPORT //
 
 	// Unregister network device
 	if (net_dev != NULL)
@@ -951,7 +999,10 @@ BOOLEAN RtmpPhyNetDevExit(
  *******************************************************************************/
 int RtmpOSIRQRequest(IN PNET_DEV pNetDev)
 {
+#if defined(RTMP_PCI_SUPPORT) || defined(RTMP_RBUS_SUPPORT)
 	struct net_device *net_dev = pNetDev;
+#endif
+
 	PRTMP_ADAPTER pAd = NULL;
 	int retval = 0;
 	
@@ -1051,4 +1102,310 @@ VOID InitHWCoexistence(
 		DBGPRINT(RT_DEBUG_TRACE,("Hardware Coexistence Initialized\n"));			
 	}
 }
+
+#ifdef PROFILE_STORE
+#ifdef CONFIG_STA_SUPPORT
+static void	WriteConfToDatFile(
+    IN  PRTMP_ADAPTER pAd)
+{
+	char	*cfgData = 0;
+	PSTRING			fileName = NULL;
+	RTMP_OS_FD		file_r, file_w;
+	RTMP_OS_FS_INFO		osFSInfo;
+	LONG			rv, fileLen = 0;
+	char			*offset = 0;
+	PSTRING			pTempStr = 0;
+//	INT				tempStrLen = 0;
+
+	DBGPRINT(RT_DEBUG_TRACE, ("-----> WriteConfToDatFile\n"));
+
+#ifdef RTMP_RBUS_SUPPORT
+	if (pAd->infType == RTMP_DEV_INF_RBUS)
+		fileName = STA_PROFILE_PATH_RBUS;
+	else
+#endif /* RTMP_RBUS_SUPPORT */
+		fileName = STA_PROFILE_PATH;
+
+	RtmpOSFSInfoChange(&osFSInfo, TRUE);
+
+	file_r = RtmpOSFileOpen(fileName, O_RDONLY, 0);
+	if (IS_FILE_OPEN_ERR(file_r)) 
+	{
+		DBGPRINT(RT_DEBUG_TRACE, ("-->1) %s: Error opening file %s\n", __FUNCTION__, fileName));
+		return;
+	}
+	else 
+	{
+		char tempStr[64] = {0};
+		while((rv = RtmpOSFileRead(file_r, tempStr, 64)) > 0)
+		{
+			fileLen += rv;
+		}
+		os_alloc_mem(NULL, (UCHAR **)&cfgData, fileLen);
+		if (cfgData == NULL)
+		{
+			RtmpOSFileClose(file_r);
+			DBGPRINT(RT_DEBUG_TRACE, ("CfgData kmalloc fail. (fileLen = %ld)\n", fileLen));
+			goto out;
+		}
+		NdisZeroMemory(cfgData, fileLen);
+		RtmpOSFileSeek(file_r, 0);
+		rv = RtmpOSFileRead(file_r, (PSTRING)cfgData, fileLen);
+		RtmpOSFileClose(file_r);
+		if (rv != fileLen)
+		{
+			DBGPRINT(RT_DEBUG_TRACE, ("CfgData kmalloc fail, fileLen = %ld\n", fileLen));
+			goto ReadErr;
+		}
+	}
+
+	file_w = RtmpOSFileOpen(fileName, O_WRONLY|O_TRUNC, 0);
+	if (IS_FILE_OPEN_ERR(file_w)) 
+	{
+		goto WriteFileOpenErr;
+	}
+	else 
+	{
+		offset = (PCHAR) rtstrstr((PSTRING) cfgData, "Default\n");
+		offset += strlen("Default\n");
+		RtmpOSFileWrite(file_w, (PSTRING)cfgData, (int)(offset-cfgData));
+		os_alloc_mem(NULL, (UCHAR **)&pTempStr, 512);
+		if (!pTempStr)
+		{
+			DBGPRINT(RT_DEBUG_TRACE, ("pTempStr kmalloc fail. (512)\n"));
+			RtmpOSFileClose(file_w);
+			goto WriteErr;
+		}
+			
+		for (;;)
+		{
+			int i = 0;
+			PSTRING ptr;
+
+			NdisZeroMemory(pTempStr, 512);
+			ptr = (PSTRING) offset;
+			while(*ptr && *ptr != '\n')
+			{
+				pTempStr[i++] = *ptr++;
+			}
+			pTempStr[i] = 0x00;
+			if ((size_t)(offset - cfgData) < fileLen)
+			{
+				offset += strlen(pTempStr) + 1;
+				if (strncmp(pTempStr, "SSID=", strlen("SSID=")) == 0)
+				{
+					NdisZeroMemory(pTempStr, 512);
+					NdisMoveMemory(pTempStr, "SSID=", strlen("SSID="));
+					NdisMoveMemory(pTempStr + 5, pAd->CommonCfg.Ssid, pAd->CommonCfg.SsidLen);
+				}
+				else if (strncmp(pTempStr, "AuthMode=", strlen("AuthMode=")) == 0)
+				{
+					NdisZeroMemory(pTempStr, 512);
+					if (pAd->StaCfg.AuthMode == Ndis802_11AuthModeOpen)
+						sprintf(pTempStr, "AuthMode=OPEN");
+					else if (pAd->StaCfg.AuthMode == Ndis802_11AuthModeShared)
+						sprintf(pTempStr, "AuthMode=SHARED");
+					else if (pAd->StaCfg.AuthMode == Ndis802_11AuthModeAutoSwitch)
+						sprintf(pTempStr, "AuthMode=WEPAUTO");
+					else if (pAd->StaCfg.AuthMode == Ndis802_11AuthModeWPAPSK)
+						sprintf(pTempStr, "AuthMode=WPAPSK");
+					else if (pAd->StaCfg.AuthMode == Ndis802_11AuthModeWPA2PSK)
+						sprintf(pTempStr, "AuthMode=WPA2PSK");
+					else if (pAd->StaCfg.AuthMode == Ndis802_11AuthModeWPA)
+						sprintf(pTempStr, "AuthMode=WPA");
+					else if (pAd->StaCfg.AuthMode == Ndis802_11AuthModeWPA2)
+						sprintf(pTempStr, "AuthMode=WPA2");
+					else if (pAd->StaCfg.AuthMode == Ndis802_11AuthModeWPANone)
+						sprintf(pTempStr, "AuthMode=WPANONE");
+				}
+				else if (strncmp(pTempStr, "EncrypType=", strlen("EncrypType=")) == 0)
+				{
+					NdisZeroMemory(pTempStr, 512);
+					if (pAd->StaCfg.WepStatus == Ndis802_11WEPDisabled)
+						sprintf(pTempStr, "EncrypType=NONE");
+					else if (pAd->StaCfg.WepStatus == Ndis802_11WEPEnabled)
+						sprintf(pTempStr, "EncrypType=WEP");
+					else if (pAd->StaCfg.WepStatus == Ndis802_11Encryption2Enabled)
+						sprintf(pTempStr, "EncrypType=TKIP");
+					else if (pAd->StaCfg.WepStatus == Ndis802_11Encryption3Enabled)
+						sprintf(pTempStr, "EncrypType=AES");
+				}
+				RtmpOSFileWrite(file_w, pTempStr, strlen(pTempStr));
+				RtmpOSFileWrite(file_w, "\n", 1);
+			}
+			else
+			{
+				break;
+			}
+		}
+		RtmpOSFileClose(file_w);
+	}
+
+WriteErr:   
+	if (pTempStr)
+/*		kfree(pTempStr); */
+		os_free_mem(NULL, pTempStr);
+ReadErr:
+WriteFileOpenErr:    
+	if (cfgData)
+/*		kfree(cfgData); */
+		os_free_mem(NULL, cfgData);
+out:
+	RtmpOSFSInfoChange(&osFSInfo, FALSE);
+
+
+	DBGPRINT(RT_DEBUG_TRACE, ("<----- WriteConfToDatFile\n"));
+	return;
+}
+
+
+INT write_dat_file_thread (
+    IN ULONG Context)
+{
+	RTMP_OS_TASK *pTask;
+	RTMP_ADAPTER *pAd;
+	//int 	Status = 0;
+
+	pTask = (RTMP_OS_TASK *)Context;
+	pAd = (PRTMP_ADAPTER)pTask->priv;
+
+	if (pAd == NULL)
+	{
+		DBGPRINT(RT_DEBUG_TRACE, ("%s: pAd is NULL\n", __FUNCTION__));
+		return 0;
+	}
+
+	RtmpOSTaskCustomize(pTask);
+
+	/* Update ssid, auth mode and encr type to DAT file */
+	WriteConfToDatFile(pAd);
+	
+	if (pTask)
+		RtmpOSTaskNotifyToExit(pTask);
+	
+	return 0;
+}
+
+NDIS_STATUS WriteDatThread(
+	IN  RTMP_ADAPTER *pAd)
+{
+	NDIS_STATUS status = NDIS_STATUS_FAILURE;
+	RTMP_OS_TASK *pTask;
+
+	if (pAd->bWriteDat == FALSE)
+		return;
+
+	DBGPRINT(RT_DEBUG_TRACE, ("-->WriteDatThreadInit()\n"));
+
+	pTask = &pAd->WriteDatTask;
+
+	RtmpOSTaskInit(pTask, "RtmpWriteDatTask", pAd);
+	status = RtmpOSTaskAttach(pTask, write_dat_file_thread, (ULONG)&pAd->WriteDatTask);
+	DBGPRINT(RT_DEBUG_TRACE, ("<--WriteDatThreadInit(), status=%d!\n", status));
+
+	return status;
+}
+#endif /* CONFIG_STA_SUPPORT */
+#endif /* PROFILE_STORE */
+
+#ifdef  CONFIG_STA_SUPPORT
+#ifdef  CREDENTIAL_STORE
+
+/*RECOVER THE OLD CONNECT INFO */
+NDIS_STATUS RecoverConnectInfo(
+	IN  RTMP_ADAPTER *pAd)
+{
+	INT idx;
+	RTMP_SEM_LOCK(&pAd->StaCtIf.Lock);
+	if (pAd->StaCtIf.Changeable== FALSE)
+	{
+		DBGPRINT(RT_DEBUG_TRACE, (" DRIVER INIT  not need to RecoverConnectInfo() \n"));
+		RTMP_SEM_UNLOCK(&pAd->StaCtIf.Lock);
+		return 0;
+	}
+	DBGPRINT(RT_DEBUG_TRACE, ("-->RecoverConnectInfo()\n"));
+
+	pAd->CommonCfg.SsidLen = pAd->StaCtIf.SsidLen;
+	pAd->MlmeAux.SsidLen = pAd->StaCtIf.SsidLen;
+	NdisMoveMemory(pAd->CommonCfg.Ssid, pAd->StaCtIf.Ssid, pAd->StaCtIf.SsidLen);
+	pAd->CommonCfg.LastSsidLen= pAd->CommonCfg.SsidLen;
+	NdisMoveMemory(pAd->CommonCfg.LastSsid, pAd->StaCtIf.Ssid, pAd->StaCtIf.SsidLen);
+	pAd->MlmeAux.AutoReconnectSsidLen = pAd->CommonCfg.SsidLen;
+	NdisMoveMemory(pAd->MlmeAux.AutoReconnectSsid, pAd->StaCtIf.Ssid, pAd->StaCtIf.SsidLen);
+	pAd->MlmeAux.SsidLen = pAd->CommonCfg.SsidLen;
+	NdisMoveMemory(pAd->MlmeAux.Ssid, pAd->StaCtIf.Ssid, pAd->MlmeAux.SsidLen);
+	pAd->StaCfg.AuthMode = pAd->StaCtIf.AuthMode;
+	pAd->StaCfg.WepStatus = pAd->StaCtIf.WepStatus;
+#ifdef WPA_SUPPLICANT_SUPPORT
+	pAd->StaCfg.IEEE8021X = pAd->StaCtIf.IEEE8021X;
+	pAd->StaCfg.DesireSharedKeyId = pAd->StaCtIf.DefaultKeyId; 
+#endif // WPA_SUPPLICANT_SUPPORT //
+	pAd->StaCfg.DefaultKeyId = pAd->StaCtIf.DefaultKeyId; 
+	NdisMoveMemory( pAd->StaCfg.PMK, pAd->StaCtIf.PMK, 32);
+	RTMPMoveMemory(pAd->StaCfg.WpaPassPhrase, pAd->StaCtIf.WpaPassPhrase, pAd->StaCfg.WpaPassPhraseLen);
+	pAd->StaCfg.WpaPassPhraseLen = pAd->StaCtIf.WpaPassPhraseLen;
+	for (idx = 0; idx < 4; idx++)
+	{
+		NdisMoveMemory(&pAd->SharedKey[BSS0][idx], &pAd->StaCtIf.SharedKey[BSS0][idx], sizeof(CIPHER_KEY));
+#ifdef WPA_SUPPLICANT_SUPPORT
+		NdisMoveMemory(&pAd->StaCfg.DesireSharedKey[idx], &pAd->StaCtIf.SharedKey[BSS0][idx], sizeof(CIPHER_KEY));
+#endif // WPA_SUPPLICANT_SUPPORT //
+
+	}
+
+	 if ((pAd->StaCfg.AuthMode == Ndis802_11AuthModeWPAPSK) ||
+			(pAd->StaCfg.AuthMode == Ndis802_11AuthModeWPA2PSK))
+	{
+			// Start STA supplicant state machine
+			pAd->StaCfg.WpaState = SS_START;
+	}
+	else if (pAd->StaCfg.AuthMode == Ndis802_11AuthModeWPANone)
+	{
+			pAd->StaCfg.WpaState = SS_NOTUSE;
+	}
+	RTMP_SEM_UNLOCK(&pAd->StaCtIf.Lock);
+
+	DBGPRINT(RT_DEBUG_TRACE, ("<--RecoverConnectInfo()\n"));
+
+	return 0;
+}
+
+
+/*STORE THE CONNECT INFO*/
+NDIS_STATUS StoreConnectInfo(
+	IN  RTMP_ADAPTER *pAd)
+{
+	INT idx;
+	DBGPRINT(RT_DEBUG_TRACE, ("-->StoreConnectInfo()\n"));
+
+	RTMP_SEM_LOCK(&pAd->StaCtIf.Lock);
+	pAd->StaCtIf.Changeable = TRUE;
+ 	pAd->StaCtIf.SsidLen = pAd->CommonCfg.SsidLen;
+	NdisMoveMemory(pAd->StaCtIf.Ssid, pAd->CommonCfg.Ssid, pAd->CommonCfg.SsidLen);
+	pAd->StaCtIf.AuthMode = pAd->StaCfg.AuthMode;
+	pAd->StaCtIf.WepStatus = pAd->StaCfg.WepStatus;
+
+	pAd->StaCtIf.DefaultKeyId = pAd->StaCfg.DefaultKeyId; 
+#ifdef WPA_SUPPLICANT_SUPPORT
+	pAd->StaCtIf.DefaultKeyId = pAd->StaCfg.DesireSharedKeyId; 
+	pAd->StaCtIf.IEEE8021X = pAd->StaCfg.IEEE8021X;
+#endif // WPA_SUPPLICANT_SUPPORT //
+	NdisMoveMemory(pAd->StaCtIf.PMK, pAd->StaCfg.PMK, 32);
+	RTMPMoveMemory(pAd->StaCtIf.WpaPassPhrase, pAd->StaCfg.WpaPassPhrase, pAd->StaCfg.WpaPassPhraseLen);
+	pAd->StaCtIf.WpaPassPhraseLen = pAd->StaCfg.WpaPassPhraseLen;
+
+	for (idx = 0; idx < 4; idx++)
+	{
+		NdisMoveMemory(&pAd->StaCtIf.SharedKey[BSS0][idx], &pAd->SharedKey[BSS0][idx], sizeof(CIPHER_KEY));
+	}
+
+	RTMP_SEM_UNLOCK(&pAd->StaCtIf.Lock);
+
+	DBGPRINT(RT_DEBUG_TRACE, ("<--StoreConnectInfo()\n"));
+
+	return 0;
+}
+
+#endif /* CREDENTIAL_STORE */
+#endif /* CONFIG_STA_SUPPORT */
 

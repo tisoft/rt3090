@@ -5,31 +5,551 @@
  * Hsinchu County 302,
  * Taiwan, R.O.C.
  *
- * (c) Copyright 2002-2007, Ralink Technology, Inc.
+ * (c) Copyright 2002-2010, Ralink Technology, Inc.
  *
- * This program is free software; you can redistribute it and/or modify  * 
- * it under the terms of the GNU General Public License as published by  * 
- * the Free Software Foundation; either version 2 of the License, or     * 
- * (at your option) any later version.                                   * 
- *                                                                       * 
- * This program is distributed in the hope that it will be useful,       * 
- * but WITHOUT ANY WARRANTY; without even the implied warranty of        * 
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         * 
- * GNU General Public License for more details.                          * 
- *                                                                       * 
- * You should have received a copy of the GNU General Public License     * 
- * along with this program; if not, write to the                         * 
- * Free Software Foundation, Inc.,                                       * 
- * 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             * 
- *                                                                       * 
- ***************************************************************************/
-
+ * This program is free software; you can redistribute it and/or modify  *
+ * it under the terms of the GNU General Public License as published by  *
+ * the Free Software Foundation; either version 2 of the License, or     *
+ * (at your option) any later version.                                   *
+ *                                                                       *
+ * This program is distributed in the hope that it will be useful,       *
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of        *
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
+ * GNU General Public License for more details.                          *
+ *                                                                       *
+ * You should have received a copy of the GNU General Public License     *
+ * along with this program; if not, write to the                         *
+ * Free Software Foundation, Inc.,                                       *
+ * 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
+ *                                                                       *
+ *************************************************************************/
 
 
 #ifdef RTMP_MAC_PCI
 #include	"rt_config.h"
 
 
+#ifdef RESOURCE_PRE_ALLOC
+VOID RTMPResetTxRxRingMemory(
+	IN RTMP_ADAPTER * pAd)
+{
+	int index, num , j;
+	PRTMP_TX_RING pTxRing;
+	PTXD_STRUC	  pTxD;
+	PNDIS_PACKET  pPacket;
+	unsigned int  IrqFlags;
+
+
+	// Free TxSwQueue Packet
+	for (index=0; index <NUM_OF_TX_RING; index++)
+	{
+		PQUEUE_ENTRY pEntry;
+		PNDIS_PACKET pPacket;
+		PQUEUE_HEADER   pQueue;
+
+		RTMP_IRQ_LOCK(&pAd->irq_lock, IrqFlags);
+		pQueue = &pAd->TxSwQueue[index];
+		while (pQueue->Head)
+		{
+			pEntry = RemoveHeadQueue(pQueue);
+			pPacket = QUEUE_ENTRY_TO_PACKET(pEntry);
+			RELEASE_NDIS_PACKET(pAd, pPacket, NDIS_STATUS_FAILURE);
+		}
+		RTMP_IRQ_UNLOCK(&pAd->irq_lock, IrqFlags);
+	}
+
+
+	// Free Tx Ring Packet
+	for (index=0;index< NUM_OF_TX_RING;index++)
+	{
+		pTxRing = &pAd->TxRing[index];
+		
+		for (j=0; j< TX_RING_SIZE; j++)
+		{	
+			pTxD = (PTXD_STRUC) (pTxRing->Cell[j].AllocVa);
+			pPacket = pTxRing->Cell[j].pNdisPacket;
+
+			if (pPacket)
+			{
+				PCI_UNMAP_SINGLE(pAd, pTxD->SDPtr0, pTxD->SDLen0, PCI_DMA_TODEVICE);
+				RELEASE_NDIS_PACKET(pAd, pPacket, NDIS_STATUS_SUCCESS);
+			}		
+			//Always assign pNdisPacket as NULL after clear
+			pTxRing->Cell[j].pNdisPacket = NULL;
+					
+			pPacket = pTxRing->Cell[j].pNextNdisPacket;
+			
+			if (pPacket)
+			{
+				PCI_UNMAP_SINGLE(pAd, pTxD->SDPtr1, pTxD->SDLen1, PCI_DMA_TODEVICE);
+				RELEASE_NDIS_PACKET(pAd, pPacket, NDIS_STATUS_SUCCESS);
+			}
+			//Always assign pNextNdisPacket as NULL after clear
+			pTxRing->Cell[pTxRing->TxSwFreeIdx].pNextNdisPacket = NULL;
+
+		}
+	}	
+
+	
+	for (index = RX_RING_SIZE - 1 ; index >= 0; index--)
+	{
+		if ((pAd->RxRing.Cell[index].DmaBuf.AllocVa) && (pAd->RxRing.Cell[index].pNdisPacket))
+		{
+			PCI_UNMAP_SINGLE(pAd, pAd->RxRing.Cell[index].DmaBuf.AllocPa, pAd->RxRing.Cell[index].DmaBuf.AllocSize, PCI_DMA_FROMDEVICE);
+			RELEASE_NDIS_PACKET(pAd, pAd->RxRing.Cell[index].pNdisPacket, NDIS_STATUS_SUCCESS);
+		}
+	}
+	NdisZeroMemory(pAd->RxRing.Cell, RX_RING_SIZE * sizeof(RTMP_DMACB));
+
+	if (pAd->FragFrame.pFragPacket)
+	{
+		RELEASE_NDIS_PACKET(pAd, pAd->FragFrame.pFragPacket, NDIS_STATUS_SUCCESS);
+		pAd->FragFrame.pFragPacket = NULL;
+	}
+}
+
+
+VOID RTMPFreeTxRxRingMemory(
+    IN  PRTMP_ADAPTER   pAd)
+{
+	int index, num , j;
+	PRTMP_TX_RING pTxRing;
+	PTXD_STRUC	  pTxD;
+	PNDIS_PACKET  pPacket;
+	unsigned int  IrqFlags;
+
+	
+	DBGPRINT(RT_DEBUG_TRACE, ("--> RTMPFreeTxRxRingMemory\n"));
+
+
+	// Free RxDesc buffer
+	if (pAd->RxDescRing.AllocVa)
+	{
+		RTMP_FreeDescMemory(pAd, 
+								pAd->RxDescRing.AllocSize, 
+								pAd->RxDescRing.AllocVa, 
+								pAd->RxDescRing.AllocPa);
+	}
+	NdisZeroMemory(&pAd->RxDescRing, sizeof(RTMP_DMABUF));
+
+	// Free MgmtDesc buffer
+	if (pAd->MgmtDescRing.AllocVa)
+	{
+		RTMP_FreeDescMemory(pAd, 
+								pAd->MgmtDescRing.AllocSize, 
+								pAd->MgmtDescRing.AllocVa, 
+								pAd->MgmtDescRing.AllocPa);
+	}
+	NdisZeroMemory(&pAd->MgmtDescRing, sizeof(RTMP_DMABUF));
+
+	// Free 1st TxBufSpace and TxDesc buffer
+	for (num = 0; num < NUM_OF_TX_RING; num++)
+	{
+		if (pAd->TxBufSpace[num].AllocVa)
+		{
+			RTMP_FreeFirstTxBuffer(pAd, 
+									pAd->TxBufSpace[num].AllocSize, 
+									FALSE, pAd->TxBufSpace[num].AllocVa, 
+									pAd->TxBufSpace[num].AllocPa);
+		}
+		NdisZeroMemory(&pAd->TxBufSpace[num], sizeof(RTMP_DMABUF));
+
+		if (pAd->TxDescRing[num].AllocVa)
+		{
+			RTMP_FreeDescMemory(pAd, 
+									pAd->TxDescRing[num].AllocSize, 
+									pAd->TxDescRing[num].AllocVa, 
+									pAd->TxDescRing[num].AllocPa);
+		}
+		NdisZeroMemory(&pAd->TxDescRing[num], sizeof(RTMP_DMABUF));
+	}
+
+	DBGPRINT(RT_DEBUG_TRACE, ("<-- RTMPFreeTxRxRingMemory\n"));
+}
+
+
+NDIS_STATUS RTMPInitTxRxRingMemory
+	(IN RTMP_ADAPTER *pAd)
+{
+	INT				num, index;
+	ULONG			RingBasePaHigh;
+	ULONG			RingBasePaLow;
+	PVOID			RingBaseVa;
+	PRTMP_TX_RING	pTxRing;
+	PRTMP_DMABUF	pDmaBuf;
+	PNDIS_PACKET	pPacket;
+	PTXD_STRUC		pTxD;
+	PRXD_STRUC		pRxD;
+	ULONG			ErrorValue = 0;
+	NDIS_STATUS		Status = NDIS_STATUS_SUCCESS;
+
+
+	// Init the CmdQ and CmdQLock
+	NdisAllocateSpinLock(&pAd->CmdQLock);	
+	NdisAcquireSpinLock(&pAd->CmdQLock);
+	RTInitializeCmdQ(&pAd->CmdQ);
+	NdisReleaseSpinLock(&pAd->CmdQLock);
+
+
+	//
+	// Initialize All Tx Ring Descriptors and associated buffer memory
+	// (5 TX rings = 4 ACs + 1 HCCA)
+	for (num=0; num<NUM_OF_TX_RING; num++)
+	{
+		ULONG  BufBasePaHigh;
+		ULONG  BufBasePaLow;
+		PVOID  BufBaseVa;
+		
+		// memory zero the  Tx ring descriptor's memory 
+		NdisZeroMemory(pAd->TxDescRing[num].AllocVa, pAd->TxDescRing[num].AllocSize);
+		// Save PA & VA for further operation
+		RingBasePaHigh = RTMP_GetPhysicalAddressHigh(pAd->TxDescRing[num].AllocPa);
+		RingBasePaLow  = RTMP_GetPhysicalAddressLow (pAd->TxDescRing[num].AllocPa);
+		RingBaseVa     = pAd->TxDescRing[num].AllocVa;
+
+		// Zero init all 1st TXBuf's memory for this TxRing
+		NdisZeroMemory(pAd->TxBufSpace[num].AllocVa, pAd->TxBufSpace[num].AllocSize);
+		// Save PA & VA for further operation
+		BufBasePaHigh = RTMP_GetPhysicalAddressHigh(pAd->TxBufSpace[num].AllocPa);
+		BufBasePaLow  = RTMP_GetPhysicalAddressLow (pAd->TxBufSpace[num].AllocPa);
+		BufBaseVa     = pAd->TxBufSpace[num].AllocVa;
+
+		// linking Tx Ring Descriptor and associated buffer memory
+		pTxRing = &pAd->TxRing[num];
+		for (index = 0; index < TX_RING_SIZE; index++)
+		{
+			pTxRing->Cell[index].pNdisPacket = NULL;
+			pTxRing->Cell[index].pNextNdisPacket = NULL;
+			// Init Tx Ring Size, Va, Pa variables
+			pTxRing->Cell[index].AllocSize = TXD_SIZE;
+			pTxRing->Cell[index].AllocVa = RingBaseVa;
+			RTMP_SetPhysicalAddressHigh(pTxRing->Cell[index].AllocPa, RingBasePaHigh);
+			RTMP_SetPhysicalAddressLow (pTxRing->Cell[index].AllocPa, RingBasePaLow);
+
+			// Setup Tx Buffer size & address. only 802.11 header will store in this space
+			pDmaBuf = &pTxRing->Cell[index].DmaBuf;
+			pDmaBuf->AllocSize = TX_DMA_1ST_BUFFER_SIZE;
+			pDmaBuf->AllocVa = BufBaseVa;
+			RTMP_SetPhysicalAddressHigh(pDmaBuf->AllocPa, BufBasePaHigh);
+			RTMP_SetPhysicalAddressLow(pDmaBuf->AllocPa, BufBasePaLow);
+
+			// link the pre-allocated TxBuf to TXD
+			pTxD = (PTXD_STRUC) pTxRing->Cell[index].AllocVa;
+			pTxD->SDPtr0 = BufBasePaLow;
+			// advance to next ring descriptor address
+			pTxD->DMADONE = 1;
+#ifdef RT_BIG_ENDIAN
+			RTMPDescriptorEndianChange((PUCHAR)pTxD, TYPE_TXD);
+#endif
+			RingBasePaLow += TXD_SIZE;
+			RingBaseVa = (PUCHAR) RingBaseVa + TXD_SIZE;
+
+			// advance to next TxBuf address
+			BufBasePaLow += TX_DMA_1ST_BUFFER_SIZE;
+			BufBaseVa = (PUCHAR) BufBaseVa + TX_DMA_1ST_BUFFER_SIZE;
+		}
+		DBGPRINT(RT_DEBUG_TRACE, ("TxRing[%d]: total %d entry initialized\n", num, index));
+	}
+
+
+	//
+	// Initialize MGMT Ring and associated buffer memory
+	//
+	RingBasePaHigh = RTMP_GetPhysicalAddressHigh(pAd->MgmtDescRing.AllocPa);
+	RingBasePaLow  = RTMP_GetPhysicalAddressLow (pAd->MgmtDescRing.AllocPa);
+	RingBaseVa     = pAd->MgmtDescRing.AllocVa;
+	NdisZeroMemory(pAd->MgmtDescRing.AllocVa, pAd->MgmtDescRing.AllocSize);
+	for (index = 0; index < MGMT_RING_SIZE; index++)
+	{
+		pAd->MgmtRing.Cell[index].pNdisPacket = NULL;
+		pAd->MgmtRing.Cell[index].pNextNdisPacket = NULL;
+		// Init MGMT Ring Size, Va, Pa variables
+		pAd->MgmtRing.Cell[index].AllocSize = TXD_SIZE;
+		pAd->MgmtRing.Cell[index].AllocVa = RingBaseVa;
+		RTMP_SetPhysicalAddressHigh(pAd->MgmtRing.Cell[index].AllocPa, RingBasePaHigh);
+		RTMP_SetPhysicalAddressLow (pAd->MgmtRing.Cell[index].AllocPa, RingBasePaLow);
+
+		// Offset to next ring descriptor address
+		RingBasePaLow += TXD_SIZE;
+		RingBaseVa = (PUCHAR) RingBaseVa + TXD_SIZE;
+
+		// link the pre-allocated TxBuf to TXD
+		pTxD = (PTXD_STRUC) pAd->MgmtRing.Cell[index].AllocVa;
+		pTxD->DMADONE = 1;
+
+#ifdef RT_BIG_ENDIAN
+		RTMPDescriptorEndianChange((PUCHAR)pTxD, TYPE_TXD);
+#endif
+		// no pre-allocated buffer required in MgmtRing for scatter-gather case
+	}
+	
+
+	//
+	// Initialize Rx Ring and associated buffer memory
+	//
+	NdisZeroMemory(pAd->RxDescRing.AllocVa, pAd->RxDescRing.AllocSize);
+	DBGPRINT(RT_DEBUG_OFF,  ("RX DESC %p  size = %ld\n", 
+					pAd->RxDescRing.AllocVa, pAd->RxDescRing.AllocSize));
+
+	// Save PA & VA for further operation
+	RingBasePaHigh = RTMP_GetPhysicalAddressHigh(pAd->RxDescRing.AllocPa);
+	RingBasePaLow  = RTMP_GetPhysicalAddressLow (pAd->RxDescRing.AllocPa);
+	RingBaseVa     = pAd->RxDescRing.AllocVa;
+
+	// Linking Rx Ring and associated buffer memory
+	for (index = 0; index < RX_RING_SIZE; index++)
+	{
+		// Init RX Ring Size, Va, Pa variables
+		pAd->RxRing.Cell[index].AllocSize = RXD_SIZE;
+		pAd->RxRing.Cell[index].AllocVa = RingBaseVa;
+		RTMP_SetPhysicalAddressHigh(pAd->RxRing.Cell[index].AllocPa, RingBasePaHigh);
+		RTMP_SetPhysicalAddressLow (pAd->RxRing.Cell[index].AllocPa, RingBasePaLow);;
+
+		// Offset to next ring descriptor address
+		RingBasePaLow += RXD_SIZE;
+		RingBaseVa = (PUCHAR) RingBaseVa + RXD_SIZE;
+
+		// Setup Rx associated Buffer size & allocate share memory
+		pDmaBuf = &pAd->RxRing.Cell[index].DmaBuf;
+		pDmaBuf->AllocSize = RX_BUFFER_AGGRESIZE;
+		pPacket = RTMP_AllocateRxPacketBuffer(
+			pAd,
+			pDmaBuf->AllocSize,
+			FALSE,
+			&pDmaBuf->AllocVa,
+			&pDmaBuf->AllocPa);
+		
+		/* keep allocated rx packet */
+		pAd->RxRing.Cell[index].pNdisPacket = pPacket;
+
+		// Error handling
+		if (pDmaBuf->AllocVa == NULL)
+		{
+			ErrorValue = ERRLOG_OUT_OF_SHARED_MEMORY;
+			DBGPRINT_ERR(("Failed to allocate RxRing's 1st buffer\n"));
+			Status = NDIS_STATUS_RESOURCES;
+			break;
+		}
+
+		// Zero init this memory block
+		NdisZeroMemory(pDmaBuf->AllocVa, pDmaBuf->AllocSize);
+
+		// Write RxD buffer address & allocated buffer length
+		pRxD = (PRXD_STRUC) pAd->RxRing.Cell[index].AllocVa;
+		pRxD->SDP0 = RTMP_GetPhysicalAddressLow(pDmaBuf->AllocPa);
+		pRxD->DDONE = 0;
+
+#ifdef RT_BIG_ENDIAN
+		RTMPDescriptorEndianChange((PUCHAR)pRxD, TYPE_RXD);
+#endif
+	}
+
+
+	NdisZeroMemory(&pAd->FragFrame, sizeof(FRAGMENT_FRAME));
+	pAd->FragFrame.pFragPacket =  RTMP_AllocateFragPacketBuffer(pAd, RX_BUFFER_NORMSIZE);
+
+	if (pAd->FragFrame.pFragPacket == NULL)
+	{
+		Status = NDIS_STATUS_RESOURCES;
+	}
+
+
+	// Following code segment get from original func:NICInitTxRxRingAndBacklogQueue(), now should integrate it to here.
+	{
+		DBGPRINT(RT_DEBUG_TRACE, ("--> NICInitTxRxRingAndBacklogQueue\n"));
+
+/*	
+		// Disable DMA.
+		RTMP_IO_READ32(pAd, WPDMA_GLO_CFG, &GloCfg.word);
+		GloCfg.word &= 0xff0;
+		GloCfg.field.EnTXWriteBackDDONE =1;
+		RTMP_IO_WRITE32(pAd, WPDMA_GLO_CFG, GloCfg.word);
+*/
+
+		// Initialize all transmit related software queues
+		for(index = 0; index < NUM_OF_TX_RING; index++)
+		{
+			InitializeQueueHeader(&pAd->TxSwQueue[index]);
+			// Init TX rings index pointer
+			pAd->TxRing[index].TxSwFreeIdx = 0;
+			pAd->TxRing[index].TxCpuIdx = 0;
+			//RTMP_IO_WRITE32(pAd, (TX_CTX_IDX0 + i * 0x10) ,  pAd->TxRing[i].TX_CTX_IDX);
+		}
+	
+		// Init RX Ring index pointer
+		pAd->RxRing.RxSwReadIdx = 0;
+		pAd->RxRing.RxCpuIdx = RX_RING_SIZE - 1;
+		//RTMP_IO_WRITE32(pAd, RX_CRX_IDX, pAd->RxRing.RX_CRX_IDX0);
+
+		
+		// init MGMT ring index pointer
+		pAd->MgmtRing.TxSwFreeIdx = 0;
+		pAd->MgmtRing.TxCpuIdx = 0;
+
+		pAd->PrivateInfo.TxRingFullCnt = 0;
+		
+		DBGPRINT(RT_DEBUG_TRACE, ("<-- NICInitTxRxRingAndBacklogQueue\n"));
+	}
+	
+	return Status;
+	
+}
+
+
+/*
+	========================================================================
+	
+	Routine Description:
+		Allocate DMA memory blocks for send, receive
+
+	Arguments:
+		Adapter		Pointer to our adapter
+
+	Return Value:
+		NDIS_STATUS_SUCCESS
+		NDIS_STATUS_FAILURE
+		NDIS_STATUS_RESOURCES
+
+	IRQL = PASSIVE_LEVEL
+
+	Note:
+	
+	========================================================================
+*/
+NDIS_STATUS	RTMPAllocTxRxRingMemory(
+	IN	PRTMP_ADAPTER	pAd)
+{
+	NDIS_STATUS		Status = NDIS_STATUS_SUCCESS;
+	ULONG			RingBasePaHigh;
+	ULONG			RingBasePaLow;
+	PVOID			RingBaseVa;
+	INT				index, num;
+	PTXD_STRUC		pTxD;
+	PRXD_STRUC		pRxD;
+	ULONG			ErrorValue = 0;
+	PRTMP_TX_RING	pTxRing;
+	PRTMP_DMABUF	pDmaBuf;
+	PNDIS_PACKET	pPacket;
+//	PRTMP_REORDERBUF	pReorderBuf;
+
+	DBGPRINT(RT_DEBUG_TRACE, ("--> RTMPAllocTxRxRingMemory\n"));
+	do
+	{
+		//
+		// Allocate all ring descriptors, include TxD, RxD, MgmtD.
+		// Although each size is different, to prevent cacheline and alignment
+		// issue, I intentional set them all to 64 bytes.
+		//
+		for (num=0; num<NUM_OF_TX_RING; num++)
+		{
+			ULONG  BufBasePaHigh;
+			ULONG  BufBasePaLow;
+			PVOID  BufBaseVa;
+			
+			// 
+			// Allocate Tx ring descriptor's memory (5 TX rings = 4 ACs + 1 HCCA)
+			//
+			pAd->TxDescRing[num].AllocSize = TX_RING_SIZE * TXD_SIZE;
+			RTMP_AllocateTxDescMemory(
+				pAd,
+				num,
+				pAd->TxDescRing[num].AllocSize,
+				FALSE,
+				&pAd->TxDescRing[num].AllocVa,
+				&pAd->TxDescRing[num].AllocPa);
+
+			if (pAd->TxDescRing[num].AllocVa == NULL)
+			{
+				ErrorValue = ERRLOG_OUT_OF_SHARED_MEMORY;
+				DBGPRINT_ERR(("Failed to allocate a big buffer\n"));
+				Status = NDIS_STATUS_RESOURCES;
+				break;
+			}
+
+			// 
+			// Allocate all 1st TXBuf's memory for this TxRing
+			//
+			pAd->TxBufSpace[num].AllocSize = TX_RING_SIZE * TX_DMA_1ST_BUFFER_SIZE;
+			RTMP_AllocateFirstTxBuffer(
+				pAd,
+				num,
+				pAd->TxBufSpace[num].AllocSize,
+				FALSE,
+				&pAd->TxBufSpace[num].AllocVa,
+				&pAd->TxBufSpace[num].AllocPa);
+
+			if (pAd->TxBufSpace[num].AllocVa == NULL)
+			{
+				ErrorValue = ERRLOG_OUT_OF_SHARED_MEMORY;
+				DBGPRINT_ERR(("Failed to allocate a big buffer\n"));
+				Status = NDIS_STATUS_RESOURCES;
+				break;
+			}
+
+			DBGPRINT(RT_DEBUG_TRACE, ("TxRing[%d]: total %d entry allocated\n", num, index));
+		}
+		if (Status == NDIS_STATUS_RESOURCES)
+			break;
+
+		//
+		// Allocate MGMT ring descriptor's memory except Tx ring which allocated eariler
+		//
+		pAd->MgmtDescRing.AllocSize = MGMT_RING_SIZE * TXD_SIZE;
+		RTMP_AllocateMgmtDescMemory(
+			pAd,
+			pAd->MgmtDescRing.AllocSize,
+			FALSE,
+			&pAd->MgmtDescRing.AllocVa,
+			&pAd->MgmtDescRing.AllocPa);
+
+		if (pAd->MgmtDescRing.AllocVa == NULL)
+		{
+			ErrorValue = ERRLOG_OUT_OF_SHARED_MEMORY;
+			DBGPRINT_ERR(("Failed to allocate a big buffer\n"));
+			Status = NDIS_STATUS_RESOURCES;
+			break;
+		}
+		DBGPRINT(RT_DEBUG_TRACE, ("MGMT Ring: total %d entry allocated\n", index));
+
+
+		//
+		// Allocate RX ring descriptor's memory except Tx ring which allocated eariler
+		//
+		pAd->RxDescRing.AllocSize = RX_RING_SIZE * RXD_SIZE;
+		RTMP_AllocateRxDescMemory(
+			pAd,
+			pAd->RxDescRing.AllocSize,
+			FALSE,
+			&pAd->RxDescRing.AllocVa,
+			&pAd->RxDescRing.AllocPa);
+
+		if (pAd->RxDescRing.AllocVa == NULL)
+		{
+			ErrorValue = ERRLOG_OUT_OF_SHARED_MEMORY;
+			DBGPRINT_ERR(("Failed to allocate a big buffer\n"));
+			Status = NDIS_STATUS_RESOURCES;
+			break;
+		}
+		DBGPRINT(RT_DEBUG_TRACE, ("Rx Ring: total %d entry allocated\n", index));
+
+	}	while (FALSE);
+
+
+	if (Status != NDIS_STATUS_SUCCESS)
+	{
+		// Log error inforamtion
+		NdisWriteErrorLogEntry(
+			pAd->AdapterHandle,
+			NDIS_ERROR_CODE_OUT_OF_RESOURCES,
+			1,
+			ErrorValue);
+	}
+
+	DBGPRINT_S(Status, ("<-- RTMPAllocTxRxRingMemory, Status=%x\n", Status));
+	return Status;
+}
+
+#else
 /*
 	========================================================================
 	
@@ -388,6 +908,114 @@ NDIS_STATUS	RTMPAllocTxRxRingMemory(
 
 
 
+VOID RTMPFreeTxRxRingMemory(
+    IN  PRTMP_ADAPTER   pAd)
+{
+	int index, num , j;
+	PRTMP_TX_RING pTxRing;
+	PTXD_STRUC	  pTxD;
+	PNDIS_PACKET  pPacket;
+	unsigned int  IrqFlags;
+
+	//POS_COOKIE pObj =(POS_COOKIE) pAd->OS_Cookie;
+	
+	DBGPRINT(RT_DEBUG_TRACE, ("--> RTMPFreeTxRxRingMemory\n"));
+
+	// Free TxSwQueue Packet
+	for (index=0; index <NUM_OF_TX_RING; index++)
+	{
+		PQUEUE_ENTRY pEntry;
+		PNDIS_PACKET pPacket;
+		PQUEUE_HEADER   pQueue;
+
+		RTMP_IRQ_LOCK(&pAd->irq_lock, IrqFlags);
+		pQueue = &pAd->TxSwQueue[index];
+		while (pQueue->Head)
+		{
+			pEntry = RemoveHeadQueue(pQueue);
+			pPacket = QUEUE_ENTRY_TO_PACKET(pEntry);
+			RELEASE_NDIS_PACKET(pAd, pPacket, NDIS_STATUS_FAILURE);
+		}
+		RTMP_IRQ_UNLOCK(&pAd->irq_lock, IrqFlags);
+	}
+
+	// Free Tx Ring Packet
+	for (index=0;index< NUM_OF_TX_RING;index++)
+	{
+		pTxRing = &pAd->TxRing[index];
+		
+		for (j=0; j< TX_RING_SIZE; j++)
+		{	
+			pTxD = (PTXD_STRUC) (pTxRing->Cell[j].AllocVa);
+			pPacket = pTxRing->Cell[j].pNdisPacket;
+
+			if (pPacket)
+			{
+				PCI_UNMAP_SINGLE(pAd, pTxD->SDPtr0, pTxD->SDLen0, PCI_DMA_TODEVICE);
+				RELEASE_NDIS_PACKET(pAd, pPacket, NDIS_STATUS_SUCCESS);
+			}		
+			//Always assign pNdisPacket as NULL after clear
+			pTxRing->Cell[j].pNdisPacket = NULL;
+					
+			pPacket = pTxRing->Cell[j].pNextNdisPacket;
+			
+			if (pPacket)
+			{
+				PCI_UNMAP_SINGLE(pAd, pTxD->SDPtr1, pTxD->SDLen1, PCI_DMA_TODEVICE);
+				RELEASE_NDIS_PACKET(pAd, pPacket, NDIS_STATUS_SUCCESS);
+			}
+			//Always assign pNextNdisPacket as NULL after clear
+			pTxRing->Cell[pTxRing->TxSwFreeIdx].pNextNdisPacket = NULL;
+
+		}
+	}	
+	
+	for (index = RX_RING_SIZE - 1 ; index >= 0; index--)
+	{
+		if ((pAd->RxRing.Cell[index].DmaBuf.AllocVa) && (pAd->RxRing.Cell[index].pNdisPacket))
+		{
+			PCI_UNMAP_SINGLE(pAd, pAd->RxRing.Cell[index].DmaBuf.AllocPa, pAd->RxRing.Cell[index].DmaBuf.AllocSize, PCI_DMA_FROMDEVICE);
+			RELEASE_NDIS_PACKET(pAd, pAd->RxRing.Cell[index].pNdisPacket, NDIS_STATUS_SUCCESS);
+		}
+	}
+	NdisZeroMemory(pAd->RxRing.Cell, RX_RING_SIZE * sizeof(RTMP_DMACB));
+	
+	if (pAd->RxDescRing.AllocVa)
+    {
+		RTMP_FreeDescMemory(pAd, pAd->RxDescRing.AllocSize, pAd->RxDescRing.AllocVa, pAd->RxDescRing.AllocPa);
+    }
+    NdisZeroMemory(&pAd->RxDescRing, sizeof(RTMP_DMABUF));
+
+	if (pAd->MgmtDescRing.AllocVa)
+	{
+		RTMP_FreeDescMemory(pAd, pAd->MgmtDescRing.AllocSize, pAd->MgmtDescRing.AllocVa, pAd->MgmtDescRing.AllocPa);
+	}
+	NdisZeroMemory(&pAd->MgmtDescRing, sizeof(RTMP_DMABUF));
+
+	for (num = 0; num < NUM_OF_TX_RING; num++)
+	{
+    	if (pAd->TxBufSpace[num].AllocVa)
+		{
+			RTMP_FreeFirstTxBuffer(pAd, pAd->TxBufSpace[num].AllocSize, FALSE, pAd->TxBufSpace[num].AllocVa, pAd->TxBufSpace[num].AllocPa);
+	    }
+	    NdisZeroMemory(&pAd->TxBufSpace[num], sizeof(RTMP_DMABUF));
+	    
+    	if (pAd->TxDescRing[num].AllocVa)
+		{
+			RTMP_FreeDescMemory(pAd, pAd->TxDescRing[num].AllocSize, pAd->TxDescRing[num].AllocVa, pAd->TxDescRing[num].AllocPa);
+	    }
+	    NdisZeroMemory(&pAd->TxDescRing[num], sizeof(RTMP_DMABUF));
+	}
+
+	if (pAd->FragFrame.pFragPacket)
+		RELEASE_NDIS_PACKET(pAd, pAd->FragFrame.pFragPacket, NDIS_STATUS_SUCCESS);
+
+	DBGPRINT(RT_DEBUG_TRACE, ("<-- RTMPFreeTxRxRingMemory\n"));
+}
+
+#endif // RESOURCE_PRE_ALLOC //
+
+
 /*
 	========================================================================
 	
@@ -532,112 +1160,6 @@ VOID	RTMPRingCleanUp(
 		default:
 			break;
 	}
-}
-
-
-VOID RTMPFreeTxRxRingMemory(
-    IN  PRTMP_ADAPTER   pAd)
-{
-	int index, num , j;
-	PRTMP_TX_RING pTxRing;
-	PTXD_STRUC	  pTxD;
-	PNDIS_PACKET  pPacket;
-	unsigned int  IrqFlags;
-
-	//POS_COOKIE pObj =(POS_COOKIE) pAd->OS_Cookie;
-	
-	DBGPRINT(RT_DEBUG_TRACE, ("--> RTMPFreeTxRxRingMemory\n"));
-
-	// Free TxSwQueue Packet
-	for (index=0; index <NUM_OF_TX_RING; index++)
-	{
-		PQUEUE_ENTRY pEntry;
-		PNDIS_PACKET pPacket;
-		PQUEUE_HEADER   pQueue;
-
-		RTMP_IRQ_LOCK(&pAd->irq_lock, IrqFlags);
-		pQueue = &pAd->TxSwQueue[index];
-		while (pQueue->Head)
-		{
-			pEntry = RemoveHeadQueue(pQueue);
-			pPacket = QUEUE_ENTRY_TO_PACKET(pEntry);
-			RELEASE_NDIS_PACKET(pAd, pPacket, NDIS_STATUS_FAILURE);
-		}
-		RTMP_IRQ_UNLOCK(&pAd->irq_lock, IrqFlags);
-	}
-
-	// Free Tx Ring Packet
-	for (index=0;index< NUM_OF_TX_RING;index++)
-	{
-		pTxRing = &pAd->TxRing[index];
-		
-		for (j=0; j< TX_RING_SIZE; j++)
-		{	
-			pTxD = (PTXD_STRUC) (pTxRing->Cell[j].AllocVa);
-			pPacket = pTxRing->Cell[j].pNdisPacket;
-
-			if (pPacket)
-			{
-				PCI_UNMAP_SINGLE(pAd, pTxD->SDPtr0, pTxD->SDLen0, PCI_DMA_TODEVICE);
-				RELEASE_NDIS_PACKET(pAd, pPacket, NDIS_STATUS_SUCCESS);
-			}		
-			//Always assign pNdisPacket as NULL after clear
-			pTxRing->Cell[j].pNdisPacket = NULL;
-					
-			pPacket = pTxRing->Cell[j].pNextNdisPacket;
-			
-			if (pPacket)
-			{
-				PCI_UNMAP_SINGLE(pAd, pTxD->SDPtr1, pTxD->SDLen1, PCI_DMA_TODEVICE);
-				RELEASE_NDIS_PACKET(pAd, pPacket, NDIS_STATUS_SUCCESS);
-			}
-			//Always assign pNextNdisPacket as NULL after clear
-			pTxRing->Cell[pTxRing->TxSwFreeIdx].pNextNdisPacket = NULL;
-
-		}
-	}	
-	
-	for (index = RX_RING_SIZE - 1 ; index >= 0; index--)
-	{
-		if ((pAd->RxRing.Cell[index].DmaBuf.AllocVa) && (pAd->RxRing.Cell[index].pNdisPacket))
-		{
-			PCI_UNMAP_SINGLE(pAd, pAd->RxRing.Cell[index].DmaBuf.AllocPa, pAd->RxRing.Cell[index].DmaBuf.AllocSize, PCI_DMA_FROMDEVICE);
-			RELEASE_NDIS_PACKET(pAd, pAd->RxRing.Cell[index].pNdisPacket, NDIS_STATUS_SUCCESS);
-		}
-	}
-	NdisZeroMemory(pAd->RxRing.Cell, RX_RING_SIZE * sizeof(RTMP_DMACB));
-	
-	if (pAd->RxDescRing.AllocVa)
-    {
-		RTMP_FreeDescMemory(pAd, pAd->RxDescRing.AllocSize, pAd->RxDescRing.AllocVa, pAd->RxDescRing.AllocPa);
-    }
-    NdisZeroMemory(&pAd->RxDescRing, sizeof(RTMP_DMABUF));
-
-	if (pAd->MgmtDescRing.AllocVa)
-	{
-		RTMP_FreeDescMemory(pAd, pAd->MgmtDescRing.AllocSize, pAd->MgmtDescRing.AllocVa, pAd->MgmtDescRing.AllocPa);
-	}
-	NdisZeroMemory(&pAd->MgmtDescRing, sizeof(RTMP_DMABUF));
-
-	for (num = 0; num < NUM_OF_TX_RING; num++)
-	{
-    	if (pAd->TxBufSpace[num].AllocVa)
-		{
-			RTMP_FreeFirstTxBuffer(pAd, pAd->TxBufSpace[num].AllocSize, FALSE, pAd->TxBufSpace[num].AllocVa, pAd->TxBufSpace[num].AllocPa);
-	    }
-	    NdisZeroMemory(&pAd->TxBufSpace[num], sizeof(RTMP_DMABUF));
-	    
-    	if (pAd->TxDescRing[num].AllocVa)
-		{
-			RTMP_FreeDescMemory(pAd, pAd->TxDescRing[num].AllocSize, pAd->TxDescRing[num].AllocVa, pAd->TxDescRing[num].AllocPa);
-	    }
-	    NdisZeroMemory(&pAd->TxDescRing[num], sizeof(RTMP_DMABUF));
-	}
-
-	if (pAd->FragFrame.pFragPacket)
-		RELEASE_NDIS_PACKET(pAd, pAd->FragFrame.pFragPacket, NDIS_STATUS_SUCCESS);
-
-	DBGPRINT(RT_DEBUG_TRACE, ("<-- RTMPFreeTxRxRingMemory\n"));
 }
 
 
@@ -809,10 +1331,10 @@ VOID RT28xx_UpdateBeaconToAsic(
 	UINT  			i;
 	BOOLEAN			bBcnReq = FALSE;
 	UCHAR			bcn_idx = 0;
-#ifdef RT3593
-	PBF_SYS_CTRL_STRUC PbfSysCtrl = { { 0 } };
-#endif // RT3593 //
 
+#ifdef SPECIFIC_BCN_BUF_SUPPORT	
+	unsigned long irqFlag;
+#endif // SPECIFIC_BCN_BUF_SUPPORT //
 
 	{
 		DBGPRINT(RT_DEBUG_ERROR, ("%s() : No valid Interface be found.\n", __FUNCTION__));
@@ -821,10 +1343,18 @@ VOID RT28xx_UpdateBeaconToAsic(
 
 	if (bBcnReq == FALSE)
 	{
+#ifdef SPECIFIC_BCN_BUF_SUPPORT
+		RTMP_MAC_SHR_MSEL_LOCK(pAd, HIGHER_SHRMEM, irqFlag);
+#endif // SPECIFIC_BCN_BUF_SUPPORT //	
+
 		/* when the ra interface is down, do not send its beacon frame */
 		/* clear all zero */
 		for(i=0; i<TXWI_SIZE; i+=4)
 			RTMP_IO_WRITE32(pAd, pAd->BeaconOffset[bcn_idx] + i, 0x00);
+
+#ifdef SPECIFIC_BCN_BUF_SUPPORT
+		RTMP_MAC_SHR_MSEL_UNLOCK(pAd, LOWER_SHRMEM, irqFlag);	
+#endif // SPECIFIC_BCN_BUF_SUPPORT //		
 	}
 	else
 	{
@@ -833,19 +1363,13 @@ VOID RT28xx_UpdateBeaconToAsic(
 		RTMPWIEndianChange(ptr, TYPE_TXWI);
 #endif
 
-#ifdef RT3593
-		if (IS_RT3593(pAd))
-		{
-			DBGPRINT(RT_DEBUG_INFO, ("%s: Put the beacon contents in the higher shared memory location\n", __FUNCTION__));
-			
-			//
-			// Shared memory access selection (higher 8KB shared memory)
-			//
-			RTMP_IO_READ32(pAd, PBF_SYS_CTRL, &PbfSysCtrl.word);
-			PbfSysCtrl.field.SHR_MSEL = 1;
-			RTMP_IO_WRITE32(pAd, PBF_SYS_CTRL, PbfSysCtrl.word);
-		}
-#endif // RT3593 //
+
+#ifdef SPECIFIC_BCN_BUF_SUPPORT
+		/*
+			Shared memory access selection (higher 8KB shared memory)
+		*/
+		RTMP_MAC_SHR_MSEL_LOCK(pAd, HIGHER_SHRMEM, irqFlag);
+#endif // SPECIFIC_BCN_BUF_SUPPORT //
 
 		for (i=0; i<TXWI_SIZE; i+=4)  // 16-byte TXWI field
 		{
@@ -870,25 +1394,13 @@ VOID RT28xx_UpdateBeaconToAsic(
 			}
 		}
 
-#ifdef RT3593
-		if (IS_RT3593(pAd))
-		{
-			DBGPRINT(RT_DEBUG_INFO, ("%s: Configure the beacon offsets and select the lower 8KB shared memory\n", __FUNCTION__));
-			
-			//
-			// Set the beacon offset (higher 8KB shared memory)
-			//
-			RTMP_IO_WRITE32(pAd, BCN_OFFSET0, 0x18100800); // 0x0000(00), 0x0200(08), 0x0400(10), 0x0600(18), 512B for each beacon
-			RTMP_IO_WRITE32(pAd, BCN_OFFSET1, 0x38302820); // 0x0800(20), 0x0A00(28), 0x0C00(30), 0x0E00(38), 512B for each beacon
 
-			//
-			// Shared memory access selection (lower 8KB shared memory)
-			//
-			RTMP_IO_READ32(pAd, PBF_SYS_CTRL, &PbfSysCtrl.word);
-			PbfSysCtrl.field.SHR_MSEL = 0;
-			RTMP_IO_WRITE32(pAd, PBF_SYS_CTRL, PbfSysCtrl.word);
-		}
-#endif // RT3593 //
+#ifdef SPECIFIC_BCN_BUF_SUPPORT
+		/*
+			Shared memory access selection (lower 16KB shared memory)
+		*/
+		RTMP_MAC_SHR_MSEL_UNLOCK(pAd, LOWER_SHRMEM, irqFlag);	
+#endif // SPECIFIC_BCN_BUF_SUPPORT //
 	}
 	
 }
@@ -981,7 +1493,7 @@ VOID RT28xxPciStaAsicForceWakeup(
     {
         // PCI, 2860-PCIe
          DBGPRINT(RT_DEBUG_TRACE, ("<==RT28xxPciStaAsicForceWakeup::Original PCI Power Saving\n"));
-        AsicSendCommandToMcu(pAd, 0x31, 0xff, 0x00, 0x02);
+        AsicSendCommandToMcu(pAd, TRUE, 0x31, 0xff, 0x00, 0x02);
         AutoWakeupCfg.word = 0;
 	    RTMP_IO_WRITE32(pAd, AUTO_WAKEUP_CFG, AutoWakeupCfg.word);
     }
@@ -1051,7 +1563,7 @@ VOID RT28xxPciStaAsicSleepThenAutoWakeup(
 		AutoWakeupCfg.field.EnableAutoWakeup = 1;   
 		AutoWakeupCfg.field.AutoLeadTime = 5;   
 		RTMP_IO_WRITE32(pAd, AUTO_WAKEUP_CFG, AutoWakeupCfg.word);  
-		AsicSendCommandToMcu(pAd, 0x30, 0xff, 0xff, 0x00);   // send POWER-SAVE command to MCU. Timeout 40us.
+		AsicSendCommandToMcu(pAd, TRUE, 0x30, 0xff, 0xff, 0x00);   // send POWER-SAVE command to MCU. Timeout 40us.
 		OPSTATUS_SET_FLAG(pAd, fOP_STATUS_DOZE);
 		DBGPRINT(RT_DEBUG_TRACE, ("<-- %s, TbttNumToNextWakeUp=%d \n", __FUNCTION__, TbttNumToNextWakeUp));
 	}
@@ -1144,7 +1656,7 @@ if (OPSTATUS_TEST_FLAG(pAd, fOP_STATUS_ADVANCE_POWER_SAVE_PCIE_DEVICE)
 		RTMPRingCleanUp(pAd, QID_RX);
 
 		// 2. Send wake up command.
-		AsicSendCommandToMcu(pAd, 0x31, PowerWakeCID, 0x00, 0x02);   
+		AsicSendCommandToMcu(pAd, TRUE, 0x31, PowerWakeCID, 0x00, 0x02);   
 		// 2-1. wait command ok.
 		AsicCheckCommanOk(pAd, PowerWakeCID);	
         
@@ -1246,8 +1758,8 @@ BOOLEAN RT28xxPciAsicRadioOn(
 			RTMPCancelTimer(&pAd->Mlme.PsPollTimer,	&Cancelled);
 		}
 		if ((pAd->StaCfg.PSControl.field.EnableNewPS == TRUE)&&
-			((Level == GUIRADIO_OFF) || (Level == GUI_IDLE_POWER_SAVE))
-			||(RTMP_TEST_PSFLAG(pAd, fRTMP_PS_SET_PCI_CLK_OFF_COMMAND)))
+			(((Level == GUIRADIO_OFF) || (Level == GUI_IDLE_POWER_SAVE))
+			||(RTMP_TEST_PSFLAG(pAd, fRTMP_PS_SET_PCI_CLK_OFF_COMMAND))))
 		{
 			// Some chips don't need to delay 6ms, so copy RTMPPCIePowerLinkCtrlRestore
 			// return condition here.
@@ -1278,8 +1790,9 @@ if (!(((IS_RT3090(pAd) || IS_RT3572(pAd) ||
 	}
 #endif // PCIE_PS_SUPPORT //
 #endif // CONFIG_STA_SUPPORT //
+
 	// 2. Send wake up command.
-	AsicSendCommandToMcu(pAd, 0x31, PowerWakeCID, 0x00, 0x02);
+	AsicSendCommandToMcu(pAd, TRUE, 0x31, PowerWakeCID, 0x00, 0x02);
     pAd->bPCIclkOff = FALSE;
 	// 2-1. wait command ok.
 	AsicCheckCommanOk(pAd, PowerWakeCID);	
@@ -1371,7 +1884,9 @@ BOOLEAN RT28xxPciAsicRadioOff(
 	BOOLEAN		Cancelled;
 #endif // PCIE_PS_SUPPORT //	
 #endif // CONFIG_STA_SUPPORT //
+#if defined(CONFIG_STA_SUPPORT) || defined(RT2860)
 	BOOLEAN		brc = FALSE;
+#endif // defined(CONFIG_STA_SUPPORT) || defined(RT2860) //
     UINT32		RxDmaIdx, RxCpuIdx;
 	DBGPRINT(RT_DEBUG_TRACE, ("%s ===> Lv= %d, TxCpuIdx = %d, TxDmaIdx = %d. RxCpuIdx = %d, RxDmaIdx = %d.\n", 
 								__FUNCTION__, Level,pAd->TxRing[0].TxCpuIdx, pAd->TxRing[0].TxDmaIdx, pAd->RxRing.RxCpuIdx, pAd->RxRing.RxDmaIdx));
@@ -1493,9 +2008,8 @@ BOOLEAN RT28xxPciAsicRadioOff(
 	RTMP_IO_WRITE32(pAd, H2M_MAILBOX_STATUS, 0xffffffff);
 	RTMP_IO_WRITE32(pAd, H2M_MAILBOX_CID, 0xffffffff);    
 	// send POWER-SAVE command to MCU. high-byte = 1 save power as much as possible. high byte = 0 save less power
-	AsicSendCommandToMcu(pAd, SLEEP_MCU_CMD, PowerSafeCID, 0xff, 0x1);   
+	AsicSendCommandToMcu(pAd, TRUE, SLEEP_MCU_CMD, PowerSafeCID, 0xff, 0x1);   
 
-	// in rt3xxx, after issue SLEEP command, can't read/write register. So don't check Command ok.
     
 #ifdef CONFIG_STA_SUPPORT
 	// 1. Wait DMA not busy
@@ -1523,22 +2037,28 @@ BOOLEAN RT28xxPciAsicRadioOff(
 #endif // CONFIG_STA_SUPPORT //
 //KH Debug:My original codes have the follwoing codes, but currecnt codes do not have it.
 // Disable for stability. If PCIE Link Control is modified for advance power save, re-covery this code segment.
-RTMP_IO_WRITE32(pAd, PBF_SYS_CTRL, 0x1280);
+//RTMP_IO_WRITE32(pAd, PBF_SYS_CTRL, 0x1280);
 //OPSTATUS_SET_FLAG(pAd, fOP_STATUS_CLKSELECT_40MHZ);
 
 #ifdef CONFIG_STA_SUPPORT
 #ifdef PCIE_PS_SUPPORT
 #if defined(RT3090) || defined(RT3592) || defined(RT3390) || defined(RT3593)
+//KH Debug:My original codes have the follwoing codes, but currecnt codes do not have it.
+// Disable for stability. If PCIE Link Control is modified for advance power save, re-covery this code segment.
+RTMP_IO_WRITE32(pAd, PBF_SYS_CTRL, 0x1280);
+//OPSTATUS_SET_FLAG(pAd, fOP_STATUS_CLKSELECT_40MHZ);
+
 if ((IS_RT3090(pAd) || IS_RT3572(pAd) ||
 	IS_RT3390(pAd) || IS_RT3593(pAd)) && IS_VERSION_AFTER_F(pAd)
 	&& (pAd->StaCfg.PSControl.field.rt30xxPowerMode == 3)
 	&& (pAd->StaCfg.PSControl.field.EnableNewPS == TRUE))
 	{
-	DBGPRINT(RT_DEBUG_TRACE, ("RT28xxPciAsicRadioOff::3090 return to skip the following TbttNumToNextWakeUp setting for 279x\n"));
-	pAd->bPCIclkOff = TRUE;
-	RTMP_CLEAR_PSFLAG(pAd, fRTMP_PS_DISABLE_TX);
-	// For this case, doesn't need to below actions, so return here.
-	return brc;	
+		DBGPRINT(RT_DEBUG_TRACE, ("RT28xxPciAsicRadioOff::3090 return to skip the following TbttNumToNextWakeUp setting for 279x\n"));
+		pAd->bPCIclkOff = TRUE;
+		RTMP_CLEAR_PSFLAG(pAd, fRTMP_PS_DISABLE_TX);
+		// For this case, doesn't need to below actions, so return here.
+		//return brc;
+		return TRUE;
 	}
 #endif // #if defined(RT3090) || defined(RT3592) || defined(RT3390) || defined(RT3593) //
 #endif // PCIE_PS_SUPPORT //
@@ -1615,8 +2135,10 @@ VOID RT28xxPciMlmeRadioOn(
     	RTMPRingCleanUp(pAd, QID_MGMT);
     	RTMPRingCleanUp(pAd, QID_RX);
 
+#ifdef RTMP_PCI_SUPPORT
+	if (pAd->infType == RTMP_DEV_INF_PCI || pAd->infType == RTMP_DEV_INF_PCIE)
 		RT28xxPciAsicRadioOn(pAd, GUI_IDLE_POWER_SAVE);
-		//NICResetFromError(pAd);
+#endif // RTMP_PCI_SUPPORT //
 
     	// Enable Tx/Rx
     	RTMPEnableRxTx(pAd);
@@ -1655,7 +2177,9 @@ VOID RT28xxPciMlmeRadioOn(
 VOID RT28xxPciMlmeRadioOFF(
 	IN PRTMP_ADAPTER pAd)
 {
+#ifdef RTMP_PCI_SUPPORT
 	BOOLEAN brc=TRUE;
+#endif // RTMP_PCI_SUPPORT //
     
     if (RTMP_TEST_FLAG(pAd, fRTMP_ADAPTER_RADIO_OFF))
     	return;
@@ -1761,55 +2285,16 @@ if (pAd->OpMode == OPMODE_STA&&
 else 
 #endif // PCIE_PS_SUPPORT //
 #endif // CONFIG_STA_SUPPORT //
+#ifdef RTMP_PCI_SUPPORT
+	if (pAd->infType == RTMP_DEV_INF_PCI || pAd->infType == RTMP_DEV_INF_PCIE)
 {
-
-
 		brc=RT28xxPciAsicRadioOff(pAd, GUIRADIO_OFF, 0);
-	
 	if (brc==FALSE)
 	{
 		DBGPRINT(RT_DEBUG_ERROR,("%s call RT28xxPciAsicRadioOff fail !!\n", __FUNCTION__)); 
 	}
 }
-/*
-		// Disable Tx/Rx DMA
-		RTMP_IO_READ32(pAd, WPDMA_GLO_CFG, &GloCfg.word);	   // disable DMA 
-		GloCfg.field.EnableTxDMA = 0;
-		GloCfg.field.EnableRxDMA = 0;
-		RTMP_IO_WRITE32(pAd, WPDMA_GLO_CFG, GloCfg.word);	   // abort all TX rings
+#endif // RTMP_PCI_SUPPORT //
 
-		
-		// MAC_SYS_CTRL => value = 0x0 => 40mA
-		RTMP_IO_WRITE32(pAd, MAC_SYS_CTRL, 0);
-		
-		// PWR_PIN_CFG => value = 0x0 => 40mA
-		RTMP_IO_WRITE32(pAd, PWR_PIN_CFG, 0);
-		
-		// TX_PIN_CFG => value = 0x0 => 20mA
-		RTMP_IO_WRITE32(pAd, TX_PIN_CFG, 0);
-
-		if (pAd->CommonCfg.BBPCurrentBW == BW_40)
-		{	
-			// Must using 40MHz.
-			AsicTurnOffRFClk(pAd, pAd->CommonCfg.CentralChannel);
-		}
-		else
-		{	
-			// Must using 20MHz.
-			AsicTurnOffRFClk(pAd, pAd->CommonCfg.Channel);
-		}
-
-		// Waiting for DMA idle
-		i = 0;
-		do
-		{
-			RTMP_IO_READ32(pAd, WPDMA_GLO_CFG, &GloCfg.word);
-			if ((GloCfg.field.TxDMABusy == 0) && (GloCfg.field.RxDMABusy == 0))
-				break;
-			
-			RTMPusecDelay(1000);
-		}while (i++ < 100);
-*/
 }
-
 #endif // RTMP_MAC_PCI //

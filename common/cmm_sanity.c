@@ -5,35 +5,26 @@
  * Hsinchu County 302,
  * Taiwan, R.O.C.
  *
- * (c) Copyright 2002-2007, Ralink Technology, Inc.
+ * (c) Copyright 2002-2010, Ralink Technology, Inc.
  *
- * This program is free software; you can redistribute it and/or modify  * 
- * it under the terms of the GNU General Public License as published by  * 
- * the Free Software Foundation; either version 2 of the License, or     * 
- * (at your option) any later version.                                   * 
- *                                                                       * 
- * This program is distributed in the hope that it will be useful,       * 
- * but WITHOUT ANY WARRANTY; without even the implied warranty of        * 
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         * 
- * GNU General Public License for more details.                          * 
- *                                                                       * 
- * You should have received a copy of the GNU General Public License     * 
- * along with this program; if not, write to the                         * 
- * Free Software Foundation, Inc.,                                       * 
- * 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             * 
- *                                                                       * 
- *************************************************************************
+ * This program is free software; you can redistribute it and/or modify  *
+ * it under the terms of the GNU General Public License as published by  *
+ * the Free Software Foundation; either version 2 of the License, or     *
+ * (at your option) any later version.                                   *
+ *                                                                       *
+ * This program is distributed in the hope that it will be useful,       *
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of        *
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
+ * GNU General Public License for more details.                          *
+ *                                                                       *
+ * You should have received a copy of the GNU General Public License     *
+ * along with this program; if not, write to the                         *
+ * Free Software Foundation, Inc.,                                       *
+ * 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
+ *                                                                       *
+ *************************************************************************/
 
-	Module Name:
-	sanity.c
 
-	Abstract:
-
-	Revision History:
-	Who			When			What
-	--------	----------		----------------------------------------------
-	John Chang  2004-09-01      add WMM support
-*/
 #include "rt_config.h"
 
 extern UCHAR	CISCO_OUI[];
@@ -45,6 +36,13 @@ extern UCHAR	WME_PARM_ELEM[];
 extern UCHAR	RALINK_OUI[];
 extern UCHAR	BROADCOM_OUI[];
 extern UCHAR    WPS_OUI[];
+
+typedef struct wsc_ie_probreq_data
+{
+	UCHAR	ssid[32];
+	UCHAR	macAddr[6];
+	UCHAR	data[2];
+} WSC_IE_PROBREQ_DATA;
 
 /* 
     ==========================================================================
@@ -599,26 +597,6 @@ BOOLEAN PeerBeaconAndProbeRspSanity(
             // Wifi WMM use the same IE vale, need to parse that too
             // case IE_WPA:
             case IE_VENDOR_SPECIFIC:
-                // Check Broadcom/Atheros 802.11n OUI version, for HT Capability IE. 
-                // This HT IE is before IEEE draft set HT IE value.2006-09-28 by Jan. 
-                /*if (NdisEqualMemory(pEid->Octet, BROADCOM_OUI, 3) && (pEid->Len >= 4))
-                {
-                	if ((pEid->Octet[3] == OUI_BROADCOM_HT) && (pEid->Len >= 30))
-            		{
-				{
-					NdisMoveMemory(pHtCapability, &pEid->Octet[4], sizeof(HT_CAPABILITY_IE));
-					*pHtCapabilityLen = SIZE_HT_CAP_IE;	// Nnow we only support 26 bytes.
-				}
-         		}
-                	if ((pEid->Octet[3] == OUI_BROADCOM_HT) && (pEid->Len >= 26))
-            		{
-				{
-					NdisMoveMemory(AddHtInfo, &pEid->Octet[4], sizeof(ADD_HT_INFO_IE));
-					*AddHtInfoLen = SIZE_ADD_HT_INFO_IE;	// Nnow we only support 26 bytes.
-				}
-         		}
-                }
-				*/
                 // Check the OUI version, filter out non-standard usage
                 if (NdisEqualMemory(pEid->Octet, RALINK_OUI, 3) && (pEid->Len == 7))
                 {
@@ -1604,6 +1582,7 @@ BOOLEAN PeerProbeReqSanity(
     UCHAR		eid =0, eid_len = 0, *eid_data;
 	UINT		total_ie_len = 0;	
 
+
     // to prevent caller from using garbage output value
     *SsidLen = 0;
 
@@ -1642,6 +1621,11 @@ BOOLEAN PeerProbeReqSanity(
                 }
 #endif // RSSI_FEEDBACK //
 
+                if (NdisEqualMemory(eid_data, WPS_OUI, 4))
+                {
+
+                    break;
+                }
 
             default:
                 break;

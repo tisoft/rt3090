@@ -5,46 +5,41 @@
  * Hsinchu County 302,
  * Taiwan, R.O.C.
  *
- * (c) Copyright 2002-2007, Ralink Technology, Inc.
+ * (c) Copyright 2002-2010, Ralink Technology, Inc.
  *
- * This program is free software; you can redistribute it and/or modify  * 
- * it under the terms of the GNU General Public License as published by  * 
- * the Free Software Foundation; either version 2 of the License, or     * 
- * (at your option) any later version.                                   * 
- *                                                                       * 
- * This program is distributed in the hope that it will be useful,       * 
- * but WITHOUT ANY WARRANTY; without even the implied warranty of        * 
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         * 
- * GNU General Public License for more details.                          * 
- *                                                                       * 
- * You should have received a copy of the GNU General Public License     * 
- * along with this program; if not, write to the                         * 
- * Free Software Foundation, Inc.,                                       * 
- * 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             * 
- *                                                                       * 
- *************************************************************************
+ * This program is free software; you can redistribute it and/or modify  *
+ * it under the terms of the GNU General Public License as published by  *
+ * the Free Software Foundation; either version 2 of the License, or     *
+ * (at your option) any later version.                                   *
+ *                                                                       *
+ * This program is distributed in the hope that it will be useful,       *
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of        *
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
+ * GNU General Public License for more details.                          *
+ *                                                                       *
+ * You should have received a copy of the GNU General Public License     *
+ * along with this program; if not, write to the                         *
+ * Free Software Foundation, Inc.,                                       *
+ * 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
+ *                                                                       *
+ *************************************************************************/
 
-	Module Name:
-	rt_config.h
 
-	Abstract:
-	Central header file to maintain all include files for all NDIS
-	miniport driver routines.
-
-	Revision History:
-	Who         When          What
-	--------    ----------    ----------------------------------------------
-	Paul Lin    08-01-2002    created
-
-*/
 #ifndef	__RT_CONFIG_H__
 #define	__RT_CONFIG_H__
 
 #define VENDOR_FEATURE1_SUPPORT
 //#define VENDOR_FEATURE2_SUPPORT
 //#define VENDOR_FEATURE3_SUPPORT
+//#define VENDOR_FEATURE4_SUPPORT
 
 //#define MONITOR_FLAG_11N_SNIFFER_SUPPORT
+
+
+
+#ifdef CONFIG_STA_SUPPORT
+//#define AGS_SUPPORT
+#endif // CONFIG_STA_SUPPORT //
 
 #ifdef VENDOR_FEATURE3_SUPPORT 
 #ifdef DOT1X_SUPPORT
@@ -70,9 +65,18 @@
 #include "rtmp_chip.h"
 #include "rtmp_timer.h"
 
+
+#ifdef LINUX
 #ifdef RT_CFG80211_SUPPORT
 #include "cfg80211extr.h"
 #endif // RT_CFG80211_SUPPORT //
+#endif // LINUX //
+
+#ifdef CONFIG_STA_SUPPORT
+#ifdef AGS_SUPPORT
+#include "ags.h"
+#endif // AGS_SUPPORT //
+#endif // CONFIG_STA_SUPPORT //
 
 #include "oid.h"
 #include "mlme.h"
@@ -115,13 +119,17 @@
 
 #ifdef RALINK_ATE
 #include "rt_ate.h"
+#ifdef LINUX
+#include <linux/time.h>
+#endif // LINUX //
 #endif // RALINK_ATE //
 
-#ifdef RALINK_28xx_QA
+#ifdef RALINK_QA
 #ifndef RALINK_ATE
 #error "For supporting QA GUI, please set HAS_ATE=y and HAS_QA_SUPPORT=y."
 #endif // RALINK_ATE //
-#endif // RALINK_28xx_QA //
+#endif // RALINK_QA //
+
 
 
 
@@ -156,11 +164,22 @@
 #include "sta_cfg.h"
 #endif // CONFIG_STA_SUPPORT //
 
+#ifdef LINUX
 #ifdef RT_CFG80211_SUPPORT
 #include "cfg80211.h"
 #endif // RT_CFG80211_SUPPORT //
 
+#ifdef BG_FT_SUPPORT
+#include "br_ftph.h"
+#endif // BG_FT_SUPPORT //
+#endif // LINUX //
+
 #include	"misc.h"
+
+
+#ifdef WLAN_LED
+#include	"led.h"
+#endif // WLAN_LED //
 
 #endif	// __RT_CONFIG_H__
 

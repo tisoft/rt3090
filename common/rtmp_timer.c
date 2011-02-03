@@ -5,38 +5,25 @@
  * Hsinchu County 302,
  * Taiwan, R.O.C.
  *
- * (c) Copyright 2002-2007, Ralink Technology, Inc.
+ * (c) Copyright 2002-2010, Ralink Technology, Inc.
  *
- * This program is free software; you can redistribute it and/or modify  * 
- * it under the terms of the GNU General Public License as published by  * 
- * the Free Software Foundation; either version 2 of the License, or     * 
- * (at your option) any later version.                                   * 
- *                                                                       * 
- * This program is distributed in the hope that it will be useful,       * 
- * but WITHOUT ANY WARRANTY; without even the implied warranty of        * 
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         * 
- * GNU General Public License for more details.                          * 
- *                                                                       * 
- * You should have received a copy of the GNU General Public License     * 
- * along with this program; if not, write to the                         * 
- * Free Software Foundation, Inc.,                                       * 
- * 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             * 
- *                                                                       * 
- *************************************************************************
+ * This program is free software; you can redistribute it and/or modify  *
+ * it under the terms of the GNU General Public License as published by  *
+ * the Free Software Foundation; either version 2 of the License, or     *
+ * (at your option) any later version.                                   *
+ *                                                                       *
+ * This program is distributed in the hope that it will be useful,       *
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of        *
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
+ * GNU General Public License for more details.                          *
+ *                                                                       *
+ * You should have received a copy of the GNU General Public License     *
+ * along with this program; if not, write to the                         *
+ * Free Software Foundation, Inc.,                                       *
+ * 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
+ *                                                                       *
+ *************************************************************************/
 
-    Module Name:
-    rtmp_timer.c
-
-    Abstract:
-    task for timer handling
-
-    Revision History:
-    Who         When            What
-    --------    ----------      ----------------------------------------------
-    Name          Date            Modification logs
-    Shiang Tu	08-28-2008   init version
-    
-*/
 
 #include "rt_config.h"
 
@@ -47,7 +34,6 @@ BUILD_TIMER_FUNCTION(AsicRxAntEvalTimeout);
 BUILD_TIMER_FUNCTION(APSDPeriodicExec);
 BUILD_TIMER_FUNCTION(EnqueueStartForPSKExec);
 #ifdef CONFIG_STA_SUPPORT
-BUILD_TIMER_FUNCTION(Adhoc_WpaRetryExec);
 #endif // CONFIG_STA_SUPPORT //
 
 
@@ -77,19 +63,16 @@ BUILD_TIMER_FUNCTION(DlsTimeoutAction);
 
 
 
-#if defined(AP_LED) || defined(STA_LED)
+#ifdef WLAN_LED
 extern void LedCtrlMain(
 	IN PVOID SystemSpecific1, 
 	IN PVOID FunctionContext, 
 	IN PVOID SystemSpecific2, 
 	IN PVOID SystemSpecific3);
 BUILD_TIMER_FUNCTION(LedCtrlMain);
-#endif
+#endif // WLAN_LED //
 
 
-#ifdef RT2883_TEMP_PATCH
-BUILD_TIMER_FUNCTION(eTxBfProbeTimerExec);
-#endif // RT2883_TEMP_PATCH //
 
 #ifdef RTMP_TIMER_TASK_SUPPORT
 static void RtmpTimerQHandle(RTMP_ADAPTER *pAd)

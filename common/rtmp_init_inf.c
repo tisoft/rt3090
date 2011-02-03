@@ -5,35 +5,26 @@
  * Hsinchu County 302,
  * Taiwan, R.O.C.
  *
- * (c) Copyright 2002-2007, Ralink Technology, Inc.
+ * (c) Copyright 2002-2010, Ralink Technology, Inc.
  *
- * This program is free software; you can redistribute it and/or modify  * 
- * it under the terms of the GNU General Public License as published by  * 
- * the Free Software Foundation; either version 2 of the License, or     * 
- * (at your option) any later version.                                   * 
- *                                                                       * 
- * This program is distributed in the hope that it will be useful,       * 
- * but WITHOUT ANY WARRANTY; without even the implied warranty of        * 
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         * 
- * GNU General Public License for more details.                          * 
- *                                                                       * 
- * You should have received a copy of the GNU General Public License     * 
- * along with this program; if not, write to the                         * 
- * Free Software Foundation, Inc.,                                       * 
- * 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             * 
- *                                                                       * 
- *************************************************************************
+ * This program is free software; you can redistribute it and/or modify  *
+ * it under the terms of the GNU General Public License as published by  *
+ * the Free Software Foundation; either version 2 of the License, or     *
+ * (at your option) any later version.                                   *
+ *                                                                       *
+ * This program is distributed in the hope that it will be useful,       *
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of        *
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
+ * GNU General Public License for more details.                          *
+ *                                                                       *
+ * You should have received a copy of the GNU General Public License     *
+ * along with this program; if not, write to the                         *
+ * Free Software Foundation, Inc.,                                       *
+ * 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
+ *                                                                       *
+ *************************************************************************/
 
-	Module Name:
-	rtmp_init_inf.c
 
-	Abstract:
-	Miniport generic portion header file
-
-	Revision History:
-	Who         When          What
-	--------    ----------    ----------------------------------------------
-*/
 #include	"rt_config.h"
 
 #ifdef OS_ABL_SUPPORT
@@ -78,7 +69,8 @@ int rt28xx_init(
 
 #ifdef DOT11_N_SUPPORT
 	// Allocate BA Reordering memory
-	ba_reordering_resource_init(pAd, MAX_REORDERING_MPDU_NUM);
+	if (ba_reordering_resource_init(pAd, MAX_REORDERING_MPDU_NUM) != TRUE)		
+		goto err1;
 #endif // DOT11_N_SUPPORT //
 
 	// Make sure MAC gets ready.
@@ -91,6 +83,9 @@ int rt28xx_init(
 		if ((pAd->MACVersion != 0x00) && (pAd->MACVersion != 0xFFFFFFFF))
 			break;
 
+		if (RTMP_TEST_FLAG(pAd, fRTMP_ADAPTER_NIC_NOT_EXIST))			
+			goto err1;
+		
 		RTMPusecDelay(10);
 	} while (index++ < 100);
 	DBGPRINT(RT_DEBUG_TRACE, ("MAC_CSR0  [ Ver:Rev=0x%08x]\n", pAd->MACVersion));
@@ -135,11 +130,16 @@ int rt28xx_init(
 	}
 #endif // RTMP_MAC_PCI //
 
+#ifdef RESOURCE_PRE_ALLOC
+	Status = RTMPInitTxRxRingMemory(pAd);
+#else
 	Status = RTMPAllocTxRxRingMemory(pAd);
+#endif // RESOURCE_PRE_ALLOC //
+
 	if (Status != NDIS_STATUS_SUCCESS)
 	{
-		DBGPRINT_ERR(("RTMPAllocDMAMemory failed, Status[=0x%08x]\n", Status));
-		goto err1;
+		DBGPRINT_ERR(("RTMPAllocTxRxMemory failed, Status[=0x%08x]\n", Status));
+		goto err2;
 	}
 
 	RTMP_SET_FLAG(pAd, fRTMP_ADAPTER_INTERRUPT_IN_USE);
@@ -149,21 +149,28 @@ int rt28xx_init(
 
 	Status = RtmpMgmtTaskInit(pAd);
 	if (Status != NDIS_STATUS_SUCCESS)
-		goto err2;
+		goto err3;
 
 	Status = MlmeInit(pAd);
 	if (Status != NDIS_STATUS_SUCCESS)
 	{
 		DBGPRINT_ERR(("MlmeInit failed, Status[=0x%08x]\n", Status));
-		goto err2;
+		goto err4;
 	}
+
+#ifdef RMTP_RBUS_SUPPORT
+#ifdef VIDEO_TURBINE_SUPPORT
+	VideoConfigInit(pAd);
+#endif // VIDEO_TURBINE_SUPPORT //
+#endif // RMTP_RBUS_SUPPORT //
 
 	// Initialize pAd->StaCfg, pAd->ApCfg, pAd->CommonCfg to manufacture default
 	//
 	UserCfgInit(pAd);
+
 	Status = RtmpNetTaskInit(pAd);
 	if (Status != NDIS_STATUS_SUCCESS)
-		goto err3;
+		goto err5;
 
 //	COPY_MAC_ADDR(pAd->ApCfg.MBSSID[apidx].Bssid, netif->hwaddr);
 //	pAd->bForcePrintTX = TRUE;
@@ -179,14 +186,13 @@ int rt28xx_init(
 	if (Status != NDIS_STATUS_SUCCESS)
 	{
 		DBGPRINT_ERR(("MeasureReqTabInit failed, Status[=0x%08x]\n",Status));
-		goto err4;
+		goto err6;	
 	}
-
 	Status = TpcReqTabInit(pAd);
 	if (Status != NDIS_STATUS_SUCCESS)
 	{
 		DBGPRINT_ERR(("TpcReqTabInit failed, Status[=0x%08x]\n",Status));
-		goto err4;
+		goto err6;	
 	}
 
 	//
@@ -197,17 +203,24 @@ int rt28xx_init(
 	{
 		DBGPRINT_ERR(("NICInitializeAdapter failed, Status[=0x%08x]\n", Status));
 		if (Status != NDIS_STATUS_SUCCESS)
-		goto err4;
+		goto err6;
 	}	
 
+
 	// Read parameters from Config File 
+	/* unknown, it will be updated in NICReadEEPROMParameters */
+	pAd->RfIcType = RFIC_UNKNOWN;
 	Status = RTMPReadParametersHook(pAd);
+
+#ifdef CREDENTIAL_STORE
+	RecoverConnectInfo(pAd);
+#endif /* CREDENTIAL_STORE */
 
 	DBGPRINT(RT_DEBUG_OFF, ("1. Phy Mode = %d\n", pAd->CommonCfg.PhyMode));
 	if (Status != NDIS_STATUS_SUCCESS)
 	{
 		DBGPRINT_ERR(("RTMPReadParametersHook failed, Status[=0x%08x]\n",Status));
-		goto err4;
+		goto err6;
 	}
 
 
@@ -243,6 +256,7 @@ int rt28xx_init(
 
 	NICInitAsicFromEEPROM(pAd); //rt2860b
 	
+
 #ifdef RTMP_INTERNAL_TX_ALC
 	//
 	// Initialize the desired TSSI table
@@ -262,7 +276,7 @@ int rt28xx_init(
 	if (pAd->ChannelListNum == 0)
 	{
 		DBGPRINT(RT_DEBUG_ERROR, ("Wrong configuration. No valid channel found. Check \"ContryCode\" and \"ChannelGeography\" setting.\n"));
-		goto err4;
+		goto err6;
 	}
 
 #ifdef DOT11_N_SUPPORT
@@ -279,11 +293,7 @@ int rt28xx_init(
 	VR_IKANOS_FP_Init(pAd->ApCfg.BssidNum, pAd->PermanentAddress);
 #endif // IKANOS_VX_1X0 //
 
-		//
-	// Initialize RF register to default value
-	//
-	AsicSwitchChannel(pAd, pAd->CommonCfg.Channel, FALSE);
-	AsicLockChannel(pAd, pAd->CommonCfg.Channel);		
+
 
 	/*
 		Some modules init must be called before APStartUp().
@@ -308,7 +318,6 @@ int rt28xx_init(
 	{
 		// Microsoft HCT require driver send a disconnect event after driver initialization.
 		OPSTATUS_CLEAR_FLAG(pAd, fOP_STATUS_MEDIA_STATE_CONNECTED);
-//		pAd->IndicateMediaState = NdisMediaStateDisconnected;
 		RTMP_SET_FLAG(pAd, fRTMP_ADAPTER_MEDIA_STATE_CHANGE);
 
 		DBGPRINT(RT_DEBUG_TRACE, ("NDIS_STATUS_MEDIA_DISCONNECT Event B!\n"));
@@ -321,6 +330,7 @@ int rt28xx_init(
 	RtmpOSNetDevAddrSet(pAd->net_dev, &pAd->CurrentAddress[0]);
 
 	// Various AP function init
+
 
 
 
@@ -339,24 +349,44 @@ int rt28xx_init(
 #endif // CONFIG_STA_SUPPORT //
 
 
+
+
+
+#ifdef RT33xx
+	if (IS_RT3390(pAd))
+	{
+		RTMP_TxEvmCalibration(pAd);
+	}	
+#endif // RT33xx //
+
+
+
 	DBGPRINT_S(Status, ("<==== rt28xx_init, Status=%x\n", Status));
 
 	return TRUE;
 
-
-err4:
+err6:	
 	MeasureReqTabExit(pAd);
 	TpcReqTabExit(pAd);
-err3:
+err5:	
 	RtmpNetTaskExit(pAd);
-err2:
+	UserCfgExit(pAd);
+err4:	
 	MlmeHalt(pAd);
+err3:	
 	RtmpMgmtTaskExit(pAd);
+err2:
+#ifdef RESOURCE_PRE_ALLOC
+	RTMPResetTxRxRingMemory(pAd);
+#else
 	RTMPFreeTxRxRingMemory(pAd);
+#endif // RESOURCE_PRE_ALLOC //
+
 err1:
 
 #ifdef DOT11_N_SUPPORT
-	os_free_mem(pAd, pAd->mpdu_blk_pool.mem); // free BA pool
+	if(pAd->mpdu_blk_pool.mem)
+		os_free_mem(pAd, pAd->mpdu_blk_pool.mem); // free BA pool
 #endif // DOT11_N_SUPPORT //
 
 	// shall not set priv to NULL here because the priv didn't been free yet.

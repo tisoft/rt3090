@@ -5,38 +5,25 @@
  * Hsinchu County 302,
  * Taiwan, R.O.C.
  *
- * (c) Copyright 2002-2007, Ralink Technology, Inc.
+ * (c) Copyright 2002-2010, Ralink Technology, Inc.
  *
- * This program is free software; you can redistribute it and/or modify  * 
- * it under the terms of the GNU General Public License as published by  * 
- * the Free Software Foundation; either version 2 of the License, or     * 
- * (at your option) any later version.                                   * 
- *                                                                       * 
- * This program is distributed in the hope that it will be useful,       * 
- * but WITHOUT ANY WARRANTY; without even the implied warranty of        * 
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         * 
- * GNU General Public License for more details.                          * 
- *                                                                       * 
- * You should have received a copy of the GNU General Public License     * 
- * along with this program; if not, write to the                         * 
- * Free Software Foundation, Inc.,                                       * 
- * 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             * 
- *                                                                       * 
- *************************************************************************
+ * This program is free software; you can redistribute it and/or modify  *
+ * it under the terms of the GNU General Public License as published by  *
+ * the Free Software Foundation; either version 2 of the License, or     *
+ * (at your option) any later version.                                   *
+ *                                                                       *
+ * This program is distributed in the hope that it will be useful,       *
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of        *
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
+ * GNU General Public License for more details.                          *
+ *                                                                       *
+ * You should have received a copy of the GNU General Public License     *
+ * along with this program; if not, write to the                         *
+ * Free Software Foundation, Inc.,                                       *
+ * 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
+ *                                                                       *
+ *************************************************************************/
 
-    Module Name:
-	rtmp_timer.h
-
-    Abstract:
-	Ralink Wireless Driver timer related data structures and delcarations
-	
-    Revision History:
-	Who           When                What
-	--------    ----------      ----------------------------------------------
-	Name          Date                 Modification logs
-	Shiang Tu    Aug-28-2008	init version
-	
-*/
 
 #ifndef __RTMP_TIMER_H__
 #define  __RTMP_TIMER_H__
@@ -129,7 +116,6 @@ DECLARE_TIMER_FUNCTION(AsicRxAntEvalTimeout);
 DECLARE_TIMER_FUNCTION(APSDPeriodicExec);
 DECLARE_TIMER_FUNCTION(EnqueueStartForPSKExec);
 #ifdef CONFIG_STA_SUPPORT
-DECLARE_TIMER_FUNCTION(Adhoc_WpaRetryExec);
 #endif // CONFIG_STA_SUPPORT //
 
 
@@ -160,9 +146,9 @@ DECLARE_TIMER_FUNCTION(DlsTimeoutAction);
 
 
 
-#if defined(AP_LED) || defined(STA_LED)
+#if defined (WLAN_LED)
 DECLARE_TIMER_FUNCTION(LedCtrlMain);
-#endif
+#endif // WLAN_LED //
 
 
 #endif // __RTMP_TIMER_H__ //

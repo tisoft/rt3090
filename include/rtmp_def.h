@@ -5,37 +5,26 @@
  * Hsinchu County 302,
  * Taiwan, R.O.C.
  *
- * (c) Copyright 2002-2007, Ralink Technology, Inc.
+ * (c) Copyright 2002-2010, Ralink Technology, Inc.
  *
- * This program is free software; you can redistribute it and/or modify  * 
- * it under the terms of the GNU General Public License as published by  * 
- * the Free Software Foundation; either version 2 of the License, or     * 
- * (at your option) any later version.                                   * 
- *                                                                       * 
- * This program is distributed in the hope that it will be useful,       * 
- * but WITHOUT ANY WARRANTY; without even the implied warranty of        * 
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         * 
- * GNU General Public License for more details.                          * 
- *                                                                       * 
- * You should have received a copy of the GNU General Public License     * 
- * along with this program; if not, write to the                         * 
- * Free Software Foundation, Inc.,                                       * 
- * 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             * 
- *                                                                       * 
- *************************************************************************
+ * This program is free software; you can redistribute it and/or modify  *
+ * it under the terms of the GNU General Public License as published by  *
+ * the Free Software Foundation; either version 2 of the License, or     *
+ * (at your option) any later version.                                   *
+ *                                                                       *
+ * This program is distributed in the hope that it will be useful,       *
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of        *
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
+ * GNU General Public License for more details.                          *
+ *                                                                       *
+ * You should have received a copy of the GNU General Public License     *
+ * along with this program; if not, write to the                         *
+ * Free Software Foundation, Inc.,                                       *
+ * 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
+ *                                                                       *
+ *************************************************************************/
 
-    Module Name:
-    rtmp_def.h
 
-    Abstract:
-    Miniport related definition header
-
-    Revision History:
-    Who         When          What
-    --------    ----------    ----------------------------------------------
-    Paul Lin    08-01-2002    created
-    John Chang  08-05-2003    add definition for 11g & other drafts
-*/
 #ifndef __RTMP_DEF_H__
 #define __RTMP_DEF_H__
 
@@ -77,6 +66,7 @@
 //#define GNU_PACKED
 #define RALINK_2883_VERSION		((UINT32)0x28830300)
 #define RALINK_2880E_VERSION	((UINT32)0x28720200)
+#define RALINK_3883_VERSION		((UINT32)0x38830400)
 #define RALINK_3070_VERSION		((UINT32)0x30700200)
 
 #define MAX_RX_PKT_LEN	1520
@@ -86,9 +76,15 @@
 //
 
 #ifdef RTMP_MAC_PCI
+#ifdef MEMORY_OPTIMIZATION
+#define TX_RING_SIZE            64
+#define MGMT_RING_SIZE          32
+#define RX_RING_SIZE            64
+#else
 #define TX_RING_SIZE            64 //64
 #define MGMT_RING_SIZE          128
 #define RX_RING_SIZE            128 //64
+#endif
 #define MAX_TX_PROCESS          TX_RING_SIZE //8
 #define MAX_DMA_DONE_PROCESS    TX_RING_SIZE
 #define MAX_TX_DONE_PROCESS     TX_RING_SIZE //8
@@ -103,19 +99,27 @@
 #define MAX_NUM_OF_MULTIPLE_CARD		32
 #endif // MULTIPLE_CARD_SUPPORT //
 
+#ifdef MEMORY_OPTIMIZATION
+#define MAX_RX_PROCESS          32
+#else
 #define MAX_RX_PROCESS          128 //64 //32
+#endif
 #define NUM_OF_LOCAL_TXBUF      2
 #define TXD_SIZE                16
 #define TXWI_SIZE               16
 #define RXD_SIZE               	16
 #define RXWI_SIZE             	16
-#if defined(RT2883) || defined(RT3593)
-#undef	RXWI_SIZE
-#define RXWI_SIZE             	20
-#endif // RT2883 //
 // TXINFO_SIZE + TXWI_SIZE + 802.11 Header Size + AMSDU sub frame header
 #define TX_DMA_1ST_BUFFER_SIZE  96    // only the 1st physical buffer is pre-allocated
-#define MGMT_DMA_BUFFER_SIZE    1536 //2048
+
+//#define MGMT_DMA_BUFFER_SIZE    1536 //2048
+/*
+	Note 20100212 by SampleLin: do not set MGMT_DMA_BUFFER_SIZE smaller than
+	1600; Or kernel will crash in deaggregate_AMSDU_announce() for EAPOL packet
+	in enterprise WPA mode.
+*/
+#define MGMT_DMA_BUFFER_SIZE    1600 //2048
+
 #define RX_BUFFER_AGGRESIZE     3840 //3904 //3968 //4096 //2048 //4096
 #define RX_BUFFER_NORMSIZE      3840 //3904 //3968 //4096 //2048 //4096
 #define TX_BUFFER_NORMSIZE		RX_BUFFER_NORMSIZE
@@ -148,8 +152,6 @@
 	And in rt_main_end.c, clConfig.clNum = RX_RING_SIZE * 3; is changed to
 	clConfig.clNum = RX_RING_SIZE * 4;
 */
-// TODO: For VxWorks the size is 256. Shall we cahnge the value as 256 for all OS?????
-#define MAX_PACKETS_IN_QUEUE				(512) //(512)    // to pass WMM A5-WPAPSK
 
 #define MAX_PACKETS_IN_MCAST_PS_QUEUE		32	 
 #define MAX_PACKETS_IN_PS_QUEUE				128	//32
@@ -162,6 +164,8 @@
 #define EFUSE_BUFFER_PATH						"/tmp/RT30xxEEPROM.bin"
 //2008/09/11:KH add to support efuse-->
 #endif // RTMP_EFUSE_SUPPORT //
+
+#define MAX_AGG_3SS_BALIMIT		31
 
 // RxFilter
 #define STANORMAL	 0x17f97
@@ -384,7 +388,22 @@
 #define MAX_MBSSID_NUM				1
 #ifdef MBSS_SUPPORT
 #undef	MAX_MBSSID_NUM
-#define MAX_MBSSID_NUM				(8 - MAX_MESH_NUM - MAX_APCLI_NUM)
+#ifdef SPECIFIC_BCN_BUF_SUPPORT
+#define HW_BEACON_MAX_COUNT			16
+
+/* 	In 16-MBSS support mode, if AP-Client is enabled, 
+	the last 8-MBSS would be occupied for AP-Client using. */
+#ifdef APCLI_SUPPORT
+#define MAX_MBSSID_NUM				(8 - MAX_MESH_NUM)
+#else
+#define MAX_MBSSID_NUM				(16 - MAX_MESH_NUM)
+#endif // APCLI_SUPPORT //
+#else
+#define HW_BEACON_MAX_COUNT			8
+#define MAX_MBSSID_NUM				(HW_BEACON_MAX_COUNT - MAX_MESH_NUM - MAX_APCLI_NUM)
+#endif // SPECIFIC_BCN_BUF_SUPPORT //
+#else
+#define HW_BEACON_MAX_COUNT			8
 #endif // MBSS_SUPPORT //
 
 /* sanity check for apidx */
@@ -400,11 +419,13 @@
 
 
 #define MAX_BEACON_SIZE				512
+#ifdef SPECIFIC_BCN_BUF_SUPPORT
+#define HW_RESERVED_WCID	255
 // If the MAX_MBSSID_NUM is larger than 6, 
 // it shall reserve some WCID space(wcid 222~253) for beacon frames. 
 // -	these wcid 238~253 are reserved for beacon#6(ra6).
 // -	these wcid 222~237 are reserved for beacon#7(ra7).
-#if defined(MAX_MBSSID_NUM) && (MAX_MBSSID_NUM == 8)
+#elif defined(MAX_MBSSID_NUM) && (MAX_MBSSID_NUM == 8)
 #define HW_RESERVED_WCID	222
 #elif defined(MAX_MBSSID_NUM) && (MAX_MBSSID_NUM == 7)
 #define HW_RESERVED_WCID	238
@@ -457,7 +478,7 @@
 #define HASH_TABLE_SIZE                 256  /* Size of hash tab must be power of 2. */
 #define MAX_VIE_LEN                     1024   // New for WPA cipher suite variable IE sizes.
 #define MAX_SUPPORT_MCS             32    
-#define MAX_NUM_OF_BBP_LATCH             140
+#define MAX_NUM_OF_BBP_LATCH             255
 //============================================================
 // ASIC WCID Table definition.
 //============================================================
@@ -490,8 +511,13 @@
 #define MAX_AID_BA                    4
 #define MAX_LEN_OF_BA_REC_TABLE          ((NUM_OF_TID * MAX_LEN_OF_MAC_TABLE)/2)//   (NUM_OF_TID*MAX_AID_BA + 32)	 //Block ACK recipient 
 #define MAX_LEN_OF_BA_ORI_TABLE          ((NUM_OF_TID * MAX_LEN_OF_MAC_TABLE)/2)//   (NUM_OF_TID*MAX_AID_BA + 32)   // Block ACK originator
+#ifdef MEMORY_OPTIMIZATION
+#define MAX_LEN_OF_BSS_TABLE             1
+#define MAX_REORDERING_MPDU_NUM			 256
+#else
 #define MAX_LEN_OF_BSS_TABLE             64
 #define MAX_REORDERING_MPDU_NUM			 512
+#endif
 
 // key related definitions
 #define SHARE_KEY_NUM                   4
@@ -685,7 +711,6 @@
 #define AIRONET_STATE_MACHINE           8
 #define ACTION_STATE_MACHINE           9
 
-
 // AP MLME state machines
 #define AP_ASSOC_STATE_MACHINE          11
 #define AP_AUTH_STATE_MACHINE           12
@@ -701,6 +726,9 @@
 #ifdef QOS_DLS_SUPPORT
 #define DLS_STATE_MACHINE               26
 #endif // QOS_DLS_SUPPORT //
+
+
+
 
 
 
@@ -845,7 +873,7 @@
 #define ACTION_DSE_MEASUREMENT_REPORT		6	// 11y D9.0
 #define ACTION_MEASUREMENT_PILOT_ACTION		7  	// 11y D9.0
 #define ACTION_DSE_POWER_CONSTRAINT			8	// 11y D9.0
-
+#define ACTION_VENDOR_USAGE					221
 
 //HT  Action field value
 #define NOTIFY_BW_ACTION				0
@@ -1334,7 +1362,12 @@
 #define REGION_14_A_BAND                  14       // 36, 40, 44, 48, 52, 56, 60, 64, 100, 104, 108, 112, 116, 136, 140, 149, 153, 157, 161, 165
 #define REGION_15_A_BAND                  15       // 149, 153, 157, 161, 165, 169, 173
 #define REGION_16_A_BAND                  16       // 52, 56, 60, 64, 149, 153, 157, 161, 165
-#define REGION_MAXIMUM_A_BAND             16
+#define REGION_17_A_BAND                  17
+#define REGION_18_A_BAND                  18
+#define REGION_19_A_BAND                  19
+#define REGION_20_A_BAND                  20
+#define REGION_21_A_BAND                  21
+#define REGION_MAXIMUM_A_BAND             21
 
 /* The security mode definition in MAC register */
 #define CIPHER_NONE                 0
@@ -1388,6 +1421,7 @@
 #define MAX_RX_REORDERBUF   64
 #define DEFAULT_TX_TIMEOUT   30
 #define DEFAULT_RX_TIMEOUT   30
+
 
 // definition of Recipient or Originator
 #define I_RECIPIENT                  TRUE
@@ -1448,6 +1482,8 @@
 // MBSSID definition
 #define ENTRY_NOT_FOUND             0xFF
 
+/* The signal threshold (RSSI) over new rate adaption */
+#define SIGNAL_THRESHOLD_OVER_NEW_RATE_ADAPT    -65
 
 /* After Linux 2.6.9, 
  * VLAN module use Private (from user) interface flags (netdevice->priv_flags). 
@@ -1527,7 +1563,7 @@
 #define	ATE_TXFRAME                 (fATE_TX_ENABLE)   
 /* Receive Frames */
 #define	ATE_RXFRAME                 (fATE_RX_ENABLE)   
-#ifdef RALINK_28xx_QA
+#ifdef RALINK_QA
 /* Stop Transmition */
 #define ATE_TXSTOP                  ((~(fATE_TX_ENABLE))&(~(fATE_TXCONT_ENABLE))&(~(fATE_TXCARR_ENABLE))&(~(fATE_TXCARRSUPP_ENABLE)))   
 /* Stop receiving Frames */
@@ -1540,7 +1576,7 @@
 #define	BBP24_TXCONT                0x00   /* Continuous Transmit */
 #define	BBP24_CARRSUPP              0x01   /* Carrier Suppression */
 /* NOTE : may be different with chipset in the future -- */
-#endif // RALINK_28xx_QA //
+#endif // RALINK_QA //
 #endif // RALINK_ATE //
 
 // WEP Key TYPE
@@ -1581,8 +1617,10 @@
 #define IW_SCANNING_EVENT_FLAG						0x0217
 #define IW_START_IBSS_FLAG							0x0218
 #define IW_JOIN_IBSS_FLAG							0x0219
+#define IW_SHARED_WEP_FAIL							0x021A
+#define IW_WPS_END_EVENT_FLAG						0x021B
 // if add new system event flag, please upadte the IW_SYS_EVENT_FLAG_END
-#define	IW_SYS_EVENT_FLAG_END                       0x0219
+#define	IW_SYS_EVENT_FLAG_END                       0x021B
 #define	IW_SYS_EVENT_TYPE_NUM						(IW_SYS_EVENT_FLAG_END - IW_SYS_EVENT_FLAG_START + 1)
 // For system event - end 
 
@@ -1661,6 +1699,14 @@
 #define	WPA_SUPPLICANT_ENABLE_WPS			0x80
 
 // definition for Antenna Diversity flag
+#ifdef ANT_DIVERSITY_SUPPORT
+enum ANT_DIVERSITY_TYPE {
+    ANT_DIVERSITY_DISABLE = 0,
+    ANT_DIVERSITY_ENABLE = 1,
+    ANT_FIX_ANT1 = 2,
+    ANT_FIX_ANT2 = 3
+};
+#endif // ANT_DIVERSITY_SUPPORT //
 
 
 // Endian byte swapping codes

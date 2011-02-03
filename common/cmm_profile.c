@@ -5,35 +5,26 @@
  * Hsinchu County 302,
  * Taiwan, R.O.C.
  *
- * (c) Copyright 2002-2007, Ralink Technology, Inc.
+ * (c) Copyright 2002-2010, Ralink Technology, Inc.
  *
- * This program is free software; you can redistribute it and/or modify  * 
- * it under the terms of the GNU General Public License as published by  * 
- * the Free Software Foundation; either version 2 of the License, or     * 
- * (at your option) any later version.                                   * 
- *                                                                       * 
- * This program is distributed in the hope that it will be useful,       * 
- * but WITHOUT ANY WARRANTY; without even the implied warranty of        * 
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         * 
- * GNU General Public License for more details.                          * 
- *                                                                       * 
- * You should have received a copy of the GNU General Public License     * 
- * along with this program; if not, write to the                         * 
- * Free Software Foundation, Inc.,                                       * 
- * 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             * 
- *                                                                       * 
- *************************************************************************
+ * This program is free software; you can redistribute it and/or modify  *
+ * it under the terms of the GNU General Public License as published by  *
+ * the Free Software Foundation; either version 2 of the License, or     *
+ * (at your option) any later version.                                   *
+ *                                                                       *
+ * This program is distributed in the hope that it will be useful,       *
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of        *
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
+ * GNU General Public License for more details.                          *
+ *                                                                       *
+ * You should have received a copy of the GNU General Public License     *
+ * along with this program; if not, write to the                         *
+ * Free Software Foundation, Inc.,                                       *
+ * 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
+ *                                                                       *
+ *************************************************************************/
 
-    Module Name:
-	cmm_profile.c
- 
-    Abstract:
- 
-    Revision History:
-    Who          When          What
-    ---------    ----------    ----------------------------------------------
- */
- 
+
 #include "rt_config.h"
 
 
@@ -56,6 +47,8 @@ BOOLEAN rtstrmactohex(PSTRING s1, PSTRING s2)
 			break; // fail
 		AtoH(ptokS, (PUCHAR)&s2[i++], 1);
 		ptokS = ptokE;
+		if (ptokS == NULL)
+			break;
 		if (i == 6)
 			break; // parsing finished
 	}
@@ -571,6 +564,17 @@ INT RTMPGetKeyParameterWithOffset(
 }
 
 
+#ifdef CONFIG_STA_SUPPORT
+inline void RTMPSetSTADefKeyId(RTMP_ADAPTER *pAd, ULONG KeyIdx)
+{
+	if((KeyIdx >= 1 ) && (KeyIdx <= 4))
+		pAd->StaCfg.DefaultKeyId = (UCHAR) (KeyIdx - 1);
+	else
+		pAd->StaCfg.DefaultKeyId = 0;
+}
+#endif // CONFIG_STA_SUPPORT //
+
+
 static int rtmp_parse_key_buffer_from_file(IN  PRTMP_ADAPTER pAd,IN  PSTRING buffer,IN  ULONG KeyType,IN  INT BSSIdx,IN  INT KeyIdx)
 {
 	PSTRING		keybuff;
@@ -617,10 +621,7 @@ static void rtmp_read_key_parms_from_file(IN  PRTMP_ADAPTER pAd, PSTRING tmpbuf,
 		IF_DEV_CONFIG_OPMODE_ON_STA(pAd)
 		{
 			KeyIdx = simple_strtol(tmpbuf, 0, 10);
-			if((KeyIdx >= 1 ) && (KeyIdx <= 4))
-				pAd->StaCfg.DefaultKeyId = (UCHAR) (KeyIdx - 1);
-			else
-				pAd->StaCfg.DefaultKeyId = 0;
+			RTMPSetSTADefKeyId(pAd, KeyIdx);
 
 			DBGPRINT(RT_DEBUG_TRACE, ("DefaultKeyID(0~3)=%d\n", pAd->StaCfg.DefaultKeyId));
 		}
@@ -1134,22 +1135,6 @@ static void HTParametersHook(
 		}
 		DBGPRINT(RT_DEBUG_TRACE, ("HT: Rx Stream = %d\n", pAd->CommonCfg.RxStream));
 	}
-#ifdef GREENAP_SUPPORT
-	//Green AP
-	if(RTMPGetKeyParameter("GreenAP", pValueStr, 10, pInput, TRUE))
-	{
-		Value = simple_strtol(pValueStr, 0, 10);
-		if (Value == 0)
-		{		
-			pAd->ApCfg.bGreenAPEnable = FALSE;
-		}
-		else
-		{
-			pAd->ApCfg.bGreenAPEnable = TRUE;
-		}
-		DBGPRINT(RT_DEBUG_TRACE, ("HT: Green AP= %d\n", pAd->ApCfg.bGreenAPEnable));
-	}
-#endif // GREENAP_SUPPORT //
 	// HT_DisallowTKIP
 	if (RTMPGetKeyParameter("HT_DisallowTKIP", pValueStr, 25, pInput, TRUE))
 	{
@@ -1259,6 +1244,15 @@ static void HTParametersHook(
 
 				DBGPRINT(RT_DEBUG_TRACE, ("HT: 20/40 BssCoexSupport = %s\n", (pAd->CommonCfg.bBssCoexEnable == TRUE) ? "ON" : "OFF" ));
 			}
+
+			
+			if (RTMPGetKeyParameter("HT_BSSCoexApCntThr", pValueStr, 25, pInput, TRUE))
+			{
+				pAd->CommonCfg.BssCoexApCntThr = simple_strtol(pValueStr, 0, 10);;
+
+				DBGPRINT(RT_DEBUG_TRACE, ("HT: 20/40 BssCoexApCntThr = %d\n", pAd->CommonCfg.BssCoexApCntThr));
+			}
+				
 #endif // DOT11N_DRAFT3 //
 
 #endif // DOT11_N_SUPPORT //
@@ -1266,6 +1260,90 @@ static void HTParametersHook(
 	//2008/11/05:KH add to support Antenna power-saving of AP-->
 }
 #endif // DOT11_N_SUPPORT //
+
+
+#ifdef CONFIG_STA_SUPPORT
+void RTMPSetSTASSID(RTMP_ADAPTER *pAd, PSTRING SSID)
+{
+	pAd->CommonCfg.SsidLen = (UCHAR) strlen(SSID);
+	NdisZeroMemory(pAd->CommonCfg.Ssid, NDIS_802_11_LENGTH_SSID);
+	NdisMoveMemory(pAd->CommonCfg.Ssid, SSID, pAd->CommonCfg.SsidLen);
+	pAd->CommonCfg.LastSsidLen= pAd->CommonCfg.SsidLen;
+	NdisZeroMemory(pAd->CommonCfg.LastSsid, NDIS_802_11_LENGTH_SSID);
+	NdisMoveMemory(pAd->CommonCfg.LastSsid, SSID, pAd->CommonCfg.LastSsidLen);
+	pAd->MlmeAux.AutoReconnectSsidLen = pAd->CommonCfg.SsidLen;
+	NdisZeroMemory(pAd->MlmeAux.AutoReconnectSsid, NDIS_802_11_LENGTH_SSID);
+	NdisMoveMemory(pAd->MlmeAux.AutoReconnectSsid, SSID, pAd->MlmeAux.AutoReconnectSsidLen);
+	pAd->MlmeAux.SsidLen = pAd->CommonCfg.SsidLen;
+	NdisZeroMemory(pAd->MlmeAux.Ssid, NDIS_802_11_LENGTH_SSID);
+	NdisMoveMemory(pAd->MlmeAux.Ssid, SSID, pAd->MlmeAux.SsidLen);
+}
+
+
+void RTMPSetSTAPassPhrase(RTMP_ADAPTER *pAd, PSTRING PassPh)
+{
+	int     ret = TRUE;
+
+	PassPh[strlen(PassPh)] = '\0'; // make STA can process .$^& for WPAPSK input 
+
+	if ((pAd->StaCfg.AuthMode != Ndis802_11AuthModeWPAPSK) &&
+		(pAd->StaCfg.AuthMode != Ndis802_11AuthModeWPA2PSK) &&
+		(pAd->StaCfg.AuthMode != Ndis802_11AuthModeWPANone) 
+		)
+	{
+		ret = FALSE;
+	}
+	else
+	{
+		ret = RT_CfgSetWPAPSKKey(pAd, PassPh, (PUCHAR)pAd->CommonCfg.Ssid, pAd->CommonCfg.SsidLen, pAd->StaCfg.PMK);
+	}
+				
+	if (ret == TRUE)
+	{
+		RTMPZeroMemory(pAd->StaCfg.WpaPassPhrase, 64);
+		RTMPMoveMemory(pAd->StaCfg.WpaPassPhrase, PassPh, strlen(PassPh));
+		pAd->StaCfg.WpaPassPhraseLen= strlen(PassPh);
+					
+	    if ((pAd->StaCfg.AuthMode == Ndis802_11AuthModeWPAPSK) ||
+			(pAd->StaCfg.AuthMode == Ndis802_11AuthModeWPA2PSK))
+		{
+			// Start STA supplicant state machine
+			pAd->StaCfg.WpaState = SS_START;
+		}
+		else if (pAd->StaCfg.AuthMode == Ndis802_11AuthModeWPANone)
+		{
+			pAd->StaCfg.WpaState = SS_NOTUSE;
+		}
+		DBGPRINT(RT_DEBUG_TRACE, ("%s::(WPAPSK=%s)\n", __FUNCTION__, PassPh));
+	}
+}
+
+
+inline void RTMPSetSTACipherSuites(RTMP_ADAPTER *pAd, NDIS_802_11_ENCRYPTION_STATUS WepStatus)
+{
+	// Update all wepstatus related
+	pAd->StaCfg.PairCipher		= WepStatus;
+	pAd->StaCfg.GroupCipher 	= WepStatus;
+	pAd->StaCfg.bMixCipher 		= FALSE;
+}
+#endif // CONFIG_STA_SUPPORT // 
+
+
+void RTMPSetCountryCode(RTMP_ADAPTER *pAd, PSTRING CountryCode)
+{
+	NdisMoveMemory(pAd->CommonCfg.CountryCode, CountryCode , 2);
+	pAd->CommonCfg.CountryCode[2] = ' ';
+#ifdef CONFIG_STA_SUPPORT
+#ifdef EXT_BUILD_CHANNEL_LIST
+	IF_DEV_CONFIG_OPMODE_ON_STA(pAd)
+		NdisMoveMemory(pAd->StaCfg.StaOriCountryCode, CountryCode , 2);
+#endif // EXT_BUILD_CHANNEL_LIST //
+#endif // CONFIG_STA_SUPPORT //
+	if (strlen((PSTRING) pAd->CommonCfg.CountryCode) != 0)
+		pAd->CommonCfg.bCountryFlag = TRUE;
+
+	DBGPRINT(RT_DEBUG_TRACE, ("CountryCode=%s\n", pAd->CommonCfg.CountryCode));
+}
 
 
 NDIS_STATUS	RTMPSetProfileParameters(
@@ -1277,6 +1355,9 @@ NDIS_STATUS	RTMPSetProfileParameters(
 	ULONG					FragThresh;
 	PSTRING					macptr;							
 	INT						i = 0, retval;
+#ifdef DFS_HARDWARE_SUPPORT
+	INT k=0;
+#endif // DFS_HARDWARE_SUPPORT //
 	tmpbuf = kmalloc(MAX_PARAM_BUFFER_SIZE, MEM_ALLOC_FLAG);
 	if(tmpbuf == NULL)
 		return NDIS_STATUS_FAILURE;
@@ -1317,20 +1398,7 @@ NDIS_STATUS	RTMPSetProfileParameters(
 #endif // RTMP_EFUSE_SUPPORT //
 		//CountryCode
 		if(RTMPGetKeyParameter("CountryCode", tmpbuf, 25, pBuffer, TRUE))
-		{
-			NdisMoveMemory(pAd->CommonCfg.CountryCode, tmpbuf , 2);
-#ifdef CONFIG_STA_SUPPORT
-#ifdef EXT_BUILD_CHANNEL_LIST
-			IF_DEV_CONFIG_OPMODE_ON_STA(pAd)
-				NdisMoveMemory(pAd->StaCfg.StaOriCountryCode, tmpbuf , 2);
-#endif // EXT_BUILD_CHANNEL_LIST //
-#endif // CONFIG_STA_SUPPORT //
-			if (strlen((PSTRING) pAd->CommonCfg.CountryCode) != 0)
-			{
-				pAd->CommonCfg.bCountryFlag = TRUE;
-			}
-			DBGPRINT(RT_DEBUG_TRACE, ("CountryCode=%s\n", pAd->CommonCfg.CountryCode));
-		}
+			RTMPSetCountryCode(pAd, tmpbuf);
 
 #ifdef EXT_BUILD_CHANNEL_LIST
 		//ChannelGeography
@@ -1368,18 +1436,7 @@ NDIS_STATUS	RTMPSetProfileParameters(
 			{
 				if (strlen(tmpbuf) <= 32)
 				{
-					pAd->CommonCfg.SsidLen = (UCHAR) strlen(tmpbuf);
-					NdisZeroMemory(pAd->CommonCfg.Ssid, NDIS_802_11_LENGTH_SSID);
-					NdisMoveMemory(pAd->CommonCfg.Ssid, tmpbuf, pAd->CommonCfg.SsidLen);
-					pAd->CommonCfg.LastSsidLen= pAd->CommonCfg.SsidLen;
-					NdisZeroMemory(pAd->CommonCfg.LastSsid, NDIS_802_11_LENGTH_SSID);
-					NdisMoveMemory(pAd->CommonCfg.LastSsid, tmpbuf, pAd->CommonCfg.LastSsidLen);
-					pAd->MlmeAux.AutoReconnectSsidLen = pAd->CommonCfg.SsidLen;
-					NdisZeroMemory(pAd->MlmeAux.AutoReconnectSsid, NDIS_802_11_LENGTH_SSID);
-					NdisMoveMemory(pAd->MlmeAux.AutoReconnectSsid, tmpbuf, pAd->MlmeAux.AutoReconnectSsidLen);
-					pAd->MlmeAux.SsidLen = pAd->CommonCfg.SsidLen;
-					NdisZeroMemory(pAd->MlmeAux.Ssid, NDIS_802_11_LENGTH_SSID);
-					NdisMoveMemory(pAd->MlmeAux.Ssid, tmpbuf, pAd->MlmeAux.SsidLen);
+					RTMPSetSTASSID(pAd, tmpbuf);
 					DBGPRINT(RT_DEBUG_TRACE, ("%s::(SSID=%s)\n", __FUNCTION__, tmpbuf));
 				}
 			}
@@ -1410,15 +1467,30 @@ NDIS_STATUS	RTMPSetProfileParameters(
 			DBGPRINT(RT_DEBUG_TRACE, ("Channel=%d\n", pAd->CommonCfg.Channel));
 		}
 		//WirelessMode
-		if(RTMPGetKeyParameter("WirelessMode", tmpbuf, 10, pBuffer, TRUE))
+		//Note: BssidNum must be put before WirelessMode in dat file
+		if(RTMPGetKeyParameter("WirelessMode", tmpbuf, 32, pBuffer, TRUE))
 		{
-			RT_CfgSetWirelessMode(pAd, tmpbuf);
+			for (i = 0, macptr = rstrtok(tmpbuf,";"); macptr; macptr = rstrtok(NULL,";"), i++)
+			{
+
+				if (i == 0)
+				{
+
+					/* set mode for 1st time */
+					/* in old design, we also only accept the 1st mode */
+					RT_CfgSetWirelessMode(pAd, macptr);
+				}
+			}
+
 			DBGPRINT(RT_DEBUG_TRACE, ("PhyMode=%d\n", pAd->CommonCfg.PhyMode));
 		}
+
+
 	    //BasicRate
 		if(RTMPGetKeyParameter("BasicRate", tmpbuf, 10, pBuffer, TRUE))
 		{
 			pAd->CommonCfg.BasicRateBitmap = (ULONG) simple_strtol(tmpbuf, 0, 10);
+			pAd->CommonCfg.BasicRateBitmapOld = (ULONG) simple_strtol(tmpbuf, 0, 10);
 			DBGPRINT(RT_DEBUG_TRACE, ("BasicRate=%ld\n", pAd->CommonCfg.BasicRateBitmap));
 		}
 		//BeaconPeriod
@@ -1434,6 +1506,7 @@ NDIS_STATUS	RTMPSetProfileParameters(
 			
 			DBGPRINT(RT_DEBUG_TRACE, ("BeaconPeriod=%d\n", pAd->CommonCfg.BeaconPeriod));
 		}
+
 
 
 	    //TxPower
@@ -1569,6 +1642,7 @@ NDIS_STATUS	RTMPSetProfileParameters(
 			RT_CfgSetShortSlot(pAd, tmpbuf);
 			DBGPRINT(RT_DEBUG_TRACE, ("ShortSlot=%d\n", pAd->CommonCfg.bUseShortSlotTime));
 		}
+
 		//IEEE80211H
 		if(RTMPGetKeyParameter("IEEE80211H", tmpbuf, 10, pBuffer, TRUE))
 		{
@@ -1593,55 +1667,6 @@ NDIS_STATUS	RTMPSetProfileParameters(
 				DBGPRINT(RT_DEBUG_TRACE, ("CSPeriod=%d\n", pAd->CommonCfg.RadarDetect.CSPeriod));
 		}
 
-#ifdef MERGE_ARCH_TEAM
-		// DfsLowerLimit
-		if(RTMPGetKeyParameter("DfsLowerLimit", tmpbuf, 10, pBuffer, TRUE))
-		{
-			if(simple_strtol(tmpbuf, 0, 10) != 0)
-				pAd->CommonCfg.RadarDetect.DfsLowerLimit = simple_strtol(tmpbuf, 0, 10);
-
-			DBGPRINT(RT_DEBUG_TRACE, ("DfsLowerLimit=%ld\n", pAd->CommonCfg.RadarDetect.DfsLowerLimit));
-		}
-		
-		// DfsUpperLimit
-		if(RTMPGetKeyParameter("DfsUpperLimit", tmpbuf, 10, pBuffer, TRUE))
-		{
-			if(simple_strtol(tmpbuf, 0, 10) != 0)
-				pAd->CommonCfg.RadarDetect.DfsUpperLimit = simple_strtol(tmpbuf, 0, 10);
-
-			DBGPRINT(RT_DEBUG_TRACE, ("DfsUpperLimit=%ld\n", pAd->CommonCfg.RadarDetect.DfsUpperLimit));
-		}
-
-		// FixDfsLimit
-		if(RTMPGetKeyParameter("FixDfsLimit", tmpbuf, 10, pBuffer, TRUE))
-		{
-		    if(simple_strtol(tmpbuf, 0, 10) != 0)
-				pAd->CommonCfg.RadarDetect.FixDfsLimit = TRUE;
-			else
-				pAd->CommonCfg.RadarDetect.FixDfsLimit = FALSE;
-
-			DBGPRINT(RT_DEBUG_TRACE, ("FixDfsLimit=%d\n", pAd->CommonCfg.RadarDetect.FixDfsLimit));
-		}
-
-		// LongPulseRadarTh
-		if(RTMPGetKeyParameter("LongPulseRadarTh", tmpbuf, 10, pBuffer, TRUE))
-		{
-		    if(simple_strtol(tmpbuf, 0, 10) != 0)
-				pAd->CommonCfg.RadarDetect.LongPulseRadarTh = simple_strtol(tmpbuf, 0, 10);
-
-			DBGPRINT(RT_DEBUG_TRACE, ("LongPulseRadarTh=%d\n", pAd->CommonCfg.RadarDetect.LongPulseRadarTh));
-		}
-
-		// AvgRssiReq
-		if(RTMPGetKeyParameter("AvgRssiReq", tmpbuf, 10, pBuffer, TRUE))
-		{
-			if(simple_strtol(tmpbuf, 0, 10) != 0)
-				pAd->CommonCfg.RadarDetect.AvgRssiReq = simple_strtol(tmpbuf, 0, 10);
-
-			DBGPRINT(RT_DEBUG_TRACE, ("AvgRssiReq=%d\n", pAd->CommonCfg.RadarDetect.AvgRssiReq));
-		}
-
-#endif // MERGE_ARCH_TEAM //
 
 		//RDRegion
 		if(RTMPGetKeyParameter("RDRegion", tmpbuf, 128, pBuffer, TRUE))
@@ -1666,9 +1691,6 @@ NDIS_STATUS	RTMPSetProfileParameters(
 			{
 							pRadarDetect->RDDurRegion = FCC;
 							pRadarDetect->DfsSessionTime = 5;
-#ifdef DFS_FCC_BW40_FIX
-							pRadarDetect->DfsSessionFccOff = 0;
-#endif // DFS_FCC_BW40_FIX //
 			}
 			else if ((strncmp(tmpbuf, "CE", 2) == 0) || (strncmp(tmpbuf, "ce", 2) == 0))
 			{
@@ -1750,339 +1772,327 @@ NDIS_STATUS	RTMPSetProfileParameters(
 					pAd->StaCfg.WepStatus	= Ndis802_11Encryption2Enabled;													
 				else if ((strcmp(tmpbuf, "AES") == 0) || (strcmp(tmpbuf, "aes") == 0))						
 					pAd->StaCfg.WepStatus	= Ndis802_11Encryption3Enabled;														 
-				else						
-					pAd->StaCfg.WepStatus	= Ndis802_11WEPDisabled;													
-
-				// Update all wepstatus related
-				pAd->StaCfg.PairCipher		= pAd->StaCfg.WepStatus;
-				pAd->StaCfg.GroupCipher 	= pAd->StaCfg.WepStatus;
-				pAd->StaCfg.OrigWepStatus 	= pAd->StaCfg.WepStatus; 
-				pAd->StaCfg.bMixCipher 		= FALSE;	
-				
-				//RTMPMakeRSNIE(pAd, pAd->StaCfg.AuthMode, pAd->StaCfg.WepStatus, 0);
-				DBGPRINT(RT_DEBUG_TRACE, ("%s::(EncrypType=%d)\n", __FUNCTION__, pAd->StaCfg.WepStatus));
-			}
-#endif // CONFIG_STA_SUPPORT //
-		}
+						else						
+							pAd->StaCfg.WepStatus	= Ndis802_11WEPDisabled;													
+						RTMPSetSTACipherSuites(pAd, pAd->StaCfg.WepStatus); 			
+						//RTMPMakeRSNIE(pAd, pAd->StaCfg.AuthMode, pAd->StaCfg.WepStatus, 0);
+						DBGPRINT(RT_DEBUG_TRACE, ("%s::(EncrypType=%d)\n", __FUNCTION__, pAd->StaCfg.WepStatus));
+					}
+		#endif // CONFIG_STA_SUPPORT //
+				}
 
 
 #ifdef CONFIG_STA_SUPPORT
-		IF_DEV_CONFIG_OPMODE_ON_STA(pAd)
-		{
-			if(RTMPGetKeyParameter("WPAPSK", tmpbuf, 512, pBuffer, FALSE))
-			{						
-				int     ret = TRUE;
-
-				tmpbuf[strlen(tmpbuf)] = '\0'; // make STA can process .$^& for WPAPSK input 
-
-				if ((pAd->StaCfg.AuthMode != Ndis802_11AuthModeWPAPSK) &&
-					(pAd->StaCfg.AuthMode != Ndis802_11AuthModeWPA2PSK) &&
-					(pAd->StaCfg.AuthMode != Ndis802_11AuthModeWPANone) 
-					)
+				IF_DEV_CONFIG_OPMODE_ON_STA(pAd)
 				{
-					ret = FALSE;
+					if(RTMPGetKeyParameter("WPAPSK", tmpbuf, 512, pBuffer, FALSE))
+						RTMPSetSTAPassPhrase(pAd, tmpbuf);
 				}
-				else
-				{
-					ret = RT_CfgSetWPAPSKKey(pAd, tmpbuf, (PUCHAR)pAd->CommonCfg.Ssid, pAd->CommonCfg.SsidLen, pAd->StaCfg.PMK);
-				}
-				
-				if (ret == TRUE)
-	            		{
-	            	RTMPZeroMemory(pAd->StaCfg.WpaPassPhrase, 64);
-	            	RTMPMoveMemory(pAd->StaCfg.WpaPassPhrase, tmpbuf, strlen(tmpbuf));
-					pAd->StaCfg.WpaPassPhraseLen= strlen(tmpbuf);
-					
-	            			if ((pAd->StaCfg.AuthMode == Ndis802_11AuthModeWPAPSK) ||
-						(pAd->StaCfg.AuthMode == Ndis802_11AuthModeWPA2PSK))
-					{
-						// Start STA supplicant state machine
-						pAd->StaCfg.WpaState = SS_START;
-					}
-					else if (pAd->StaCfg.AuthMode == Ndis802_11AuthModeWPANone)
-					{
-						pAd->StaCfg.WpaState = SS_NOTUSE;
-					}
-					DBGPRINT(RT_DEBUG_TRACE, ("%s::(WPAPSK=%s)\n", __FUNCTION__, tmpbuf));
-				} 
-			}
-		}
 #endif // CONFIG_STA_SUPPORT //													
 
-		//DefaultKeyID, KeyType, KeyStr
-		rtmp_read_key_parms_from_file(pAd, tmpbuf, pBuffer);
+				//DefaultKeyID, KeyType, KeyStr
+				rtmp_read_key_parms_from_file(pAd, tmpbuf, pBuffer);
+
 
 
 
 #ifdef DOT11_N_SUPPORT
-		HTParametersHook(pAd, tmpbuf, pBuffer);
+				HTParametersHook(pAd, tmpbuf, pBuffer);
 #endif // DOT11_N_SUPPORT //
 
-
 #ifdef CARRIER_DETECTION_SUPPORT
-			//CarrierDetect
-			if(RTMPGetKeyParameter("CarrierDetect", tmpbuf, 128, pBuffer, TRUE))
-			{
-				if ((strncmp(tmpbuf, "0", 1) == 0))
-					pAd->CommonCfg.CarrierDetect.Enable = FALSE;
-				else if ((strncmp(tmpbuf, "1", 1) == 0))
-					pAd->CommonCfg.CarrierDetect.Enable = TRUE;
-				else
-					pAd->CommonCfg.CarrierDetect.Enable = FALSE;
+					//CarrierDetect
+					if(RTMPGetKeyParameter("CarrierDetect", tmpbuf, 128, pBuffer, TRUE))
+					{
+						if ((strncmp(tmpbuf, "0", 1) == 0))
+							pAd->CommonCfg.CarrierDetect.Enable = FALSE;
+						else if ((strncmp(tmpbuf, "1", 1) == 0))
+							pAd->CommonCfg.CarrierDetect.Enable = TRUE;
+						else
+							pAd->CommonCfg.CarrierDetect.Enable = FALSE;
 
-				DBGPRINT(RT_DEBUG_TRACE, ("CarrierDetect.Enable=%d\n", pAd->CommonCfg.CarrierDetect.Enable));
-			}
-			else
-				pAd->CommonCfg.CarrierDetect.Enable = FALSE;
+						DBGPRINT(RT_DEBUG_TRACE, ("CarrierDetect.Enable=%d\n", pAd->CommonCfg.CarrierDetect.Enable));
+					}
+					else
+						pAd->CommonCfg.CarrierDetect.Enable = FALSE;
 #endif // CARRIER_DETECTION_SUPPORT //
 
 #ifdef CONFIG_STA_SUPPORT
-		IF_DEV_CONFIG_OPMODE_ON_STA(pAd)
-		{
-			//PSMode
-			if (RTMPGetKeyParameter("PSMode", tmpbuf, 10, pBuffer, TRUE))
-			{
-				if (pAd->StaCfg.BssType == BSS_INFRA)
+				IF_DEV_CONFIG_OPMODE_ON_STA(pAd)
 				{
-					if ((strcmp(tmpbuf, "MAX_PSP") == 0) || (strcmp(tmpbuf, "max_psp") == 0))
+					//PSMode
+					if (RTMPGetKeyParameter("PSMode", tmpbuf, 10, pBuffer, TRUE))
 					{
-						// do NOT turn on PSM bit here, wait until MlmeCheckForPsmChange()
-						// to exclude certain situations.
-						//	   MlmeSetPsm(pAd, PWR_SAVE);
-						OPSTATUS_SET_FLAG(pAd, fOP_STATUS_RECEIVE_DTIM);
-						if (pAd->StaCfg.bWindowsACCAMEnable == FALSE)
-							pAd->StaCfg.WindowsPowerMode = Ndis802_11PowerModeMAX_PSP;
-						pAd->StaCfg.WindowsBatteryPowerMode = Ndis802_11PowerModeMAX_PSP;
-						pAd->StaCfg.DefaultListenCount = 5;
-					}							
-					else if ((strcmp(tmpbuf, "Fast_PSP") == 0) || (strcmp(tmpbuf, "fast_psp") == 0) 
-						|| (strcmp(tmpbuf, "FAST_PSP") == 0))
+						if (pAd->StaCfg.BssType == BSS_INFRA)
+						{
+							if ((strcmp(tmpbuf, "MAX_PSP") == 0) || (strcmp(tmpbuf, "max_psp") == 0))
+							{
+								// do NOT turn on PSM bit here, wait until MlmeCheckForPsmChange()
+								// to exclude certain situations.
+								//	   MlmeSetPsm(pAd, PWR_SAVE);
+								OPSTATUS_SET_FLAG(pAd, fOP_STATUS_RECEIVE_DTIM);
+								if (pAd->StaCfg.bWindowsACCAMEnable == FALSE)
+									pAd->StaCfg.WindowsPowerMode = Ndis802_11PowerModeMAX_PSP;
+								pAd->StaCfg.WindowsBatteryPowerMode = Ndis802_11PowerModeMAX_PSP;
+								pAd->StaCfg.DefaultListenCount = 5;
+							}							
+							else if ((strcmp(tmpbuf, "Fast_PSP") == 0) || (strcmp(tmpbuf, "fast_psp") == 0) 
+								|| (strcmp(tmpbuf, "FAST_PSP") == 0))
+							{
+								// do NOT turn on PSM bit here, wait until MlmeCheckForPsmChange()
+								// to exclude certain situations.
+								OPSTATUS_SET_FLAG(pAd, fOP_STATUS_RECEIVE_DTIM);
+								if (pAd->StaCfg.bWindowsACCAMEnable == FALSE)
+									pAd->StaCfg.WindowsPowerMode = Ndis802_11PowerModeFast_PSP;
+								pAd->StaCfg.WindowsBatteryPowerMode = Ndis802_11PowerModeFast_PSP;
+								pAd->StaCfg.DefaultListenCount = 3;
+							}
+							else if ((strcmp(tmpbuf, "Legacy_PSP") == 0) || (strcmp(tmpbuf, "legacy_psp") == 0) 
+								|| (strcmp(tmpbuf, "LEGACY_PSP") == 0))
+							{
+								// do NOT turn on PSM bit here, wait until MlmeCheckForPsmChange()
+								// to exclude certain situations.
+								OPSTATUS_SET_FLAG(pAd, fOP_STATUS_RECEIVE_DTIM);
+								if (pAd->StaCfg.bWindowsACCAMEnable == FALSE)
+									pAd->StaCfg.WindowsPowerMode = Ndis802_11PowerModeLegacy_PSP;
+								pAd->StaCfg.WindowsBatteryPowerMode = Ndis802_11PowerModeLegacy_PSP;
+								pAd->StaCfg.DefaultListenCount = 3;
+							}
+							else
+							{ //Default Ndis802_11PowerModeCAM
+								// clear PSM bit immediately
+								RTMP_SET_PSM_BIT(pAd, PWR_ACTIVE);
+								OPSTATUS_SET_FLAG(pAd, fOP_STATUS_RECEIVE_DTIM);
+								if (pAd->StaCfg.bWindowsACCAMEnable == FALSE)
+									pAd->StaCfg.WindowsPowerMode = Ndis802_11PowerModeCAM;
+								pAd->StaCfg.WindowsBatteryPowerMode = Ndis802_11PowerModeCAM;
+							}
+							DBGPRINT(RT_DEBUG_TRACE, ("PSMode=%ld\n", pAd->StaCfg.WindowsPowerMode));
+						}
+					}
+					// AutoRoaming by RSSI
+					if (RTMPGetKeyParameter("AutoRoaming", tmpbuf, 32, pBuffer, TRUE))
 					{
-						// do NOT turn on PSM bit here, wait until MlmeCheckForPsmChange()
-						// to exclude certain situations.
-						OPSTATUS_SET_FLAG(pAd, fOP_STATUS_RECEIVE_DTIM);
-						if (pAd->StaCfg.bWindowsACCAMEnable == FALSE)
-							pAd->StaCfg.WindowsPowerMode = Ndis802_11PowerModeFast_PSP;
-						pAd->StaCfg.WindowsBatteryPowerMode = Ndis802_11PowerModeFast_PSP;
-						pAd->StaCfg.DefaultListenCount = 3;
+						if (simple_strtol(tmpbuf, 0, 10) == 0)
+							pAd->StaCfg.bAutoRoaming = FALSE;
+						else
+							pAd->StaCfg.bAutoRoaming = TRUE;
+
+						DBGPRINT(RT_DEBUG_TRACE, ("AutoRoaming=%d\n", pAd->StaCfg.bAutoRoaming));
 					}
-					else if ((strcmp(tmpbuf, "Legacy_PSP") == 0) || (strcmp(tmpbuf, "legacy_psp") == 0) 
-						|| (strcmp(tmpbuf, "LEGACY_PSP") == 0))
+					// RoamThreshold
+					if (RTMPGetKeyParameter("RoamThreshold", tmpbuf, 32, pBuffer, TRUE))
 					{
-						// do NOT turn on PSM bit here, wait until MlmeCheckForPsmChange()
-						// to exclude certain situations.
-						OPSTATUS_SET_FLAG(pAd, fOP_STATUS_RECEIVE_DTIM);
-						if (pAd->StaCfg.bWindowsACCAMEnable == FALSE)
-							pAd->StaCfg.WindowsPowerMode = Ndis802_11PowerModeLegacy_PSP;
-						pAd->StaCfg.WindowsBatteryPowerMode = Ndis802_11PowerModeLegacy_PSP;
-						pAd->StaCfg.DefaultListenCount = 3;
+						long lInfo = simple_strtol(tmpbuf, 0, 10);
+
+						if (lInfo > 90 || lInfo < 60)
+							pAd->StaCfg.dBmToRoam = -70;
+						else    
+							pAd->StaCfg.dBmToRoam = (CHAR)(-1)*lInfo;
+
+						DBGPRINT(RT_DEBUG_TRACE, ("RoamThreshold=%d  dBm\n", pAd->StaCfg.dBmToRoam));
 					}
-					else
-					{ //Default Ndis802_11PowerModeCAM
-						// clear PSM bit immediately
-						RTMP_SET_PSM_BIT(pAd, PWR_ACTIVE);
-						OPSTATUS_SET_FLAG(pAd, fOP_STATUS_RECEIVE_DTIM);
-						if (pAd->StaCfg.bWindowsACCAMEnable == FALSE)
-							pAd->StaCfg.WindowsPowerMode = Ndis802_11PowerModeCAM;
-						pAd->StaCfg.WindowsBatteryPowerMode = Ndis802_11PowerModeCAM;
+
+		
+						 
+
+					if(RTMPGetKeyParameter("TGnWifiTest", tmpbuf, 10, pBuffer, TRUE))
+					{				
+						if(simple_strtol(tmpbuf, 0, 10) == 0)
+							pAd->StaCfg.bTGnWifiTest = FALSE;
+						else
+							pAd->StaCfg.bTGnWifiTest = TRUE;
+							DBGPRINT(RT_DEBUG_TRACE, ("TGnWifiTest=%d\n", pAd->StaCfg.bTGnWifiTest));
 					}
-					DBGPRINT(RT_DEBUG_TRACE, ("PSMode=%ld\n", pAd->StaCfg.WindowsPowerMode));
+
+					// Beacon Lost Time
+					if (RTMPGetKeyParameter("BeaconLostTime", tmpbuf, 32, pBuffer, TRUE))
+					{
+						ULONG lInfo = (ULONG)simple_strtol(tmpbuf, 0, 10);
+
+						if ((lInfo != 0) && (lInfo <= 60))
+							pAd->StaCfg.BeaconLostTime = (lInfo * OS_HZ);
+						DBGPRINT(RT_DEBUG_TRACE, ("BeaconLostTime=%ld \n", pAd->StaCfg.BeaconLostTime));
+					}
+
+					// Auto Connet Setting if no SSID			
+					if (RTMPGetKeyParameter("AutoConnect", tmpbuf, 32, pBuffer, TRUE))
+					{
+						if (simple_strtol(tmpbuf, 0, 10) == 0)
+							pAd->StaCfg.bAutoConnectIfNoSSID = FALSE;
+						else
+							pAd->StaCfg.bAutoConnectIfNoSSID = TRUE;
+					}
+
+					
+
+					// FastConnect
+					if(RTMPGetKeyParameter("FastConnect", tmpbuf, 32, pBuffer, TRUE))
+					{
+						if (simple_strtol(tmpbuf, 0, 10) == 0)
+							pAd->StaCfg.bFastConnect = FALSE;
+						else
+							pAd->StaCfg.bFastConnect = TRUE;
+				
+						DBGPRINT(RT_DEBUG_TRACE, ("FastConnect=%d\n", pAd->StaCfg.bFastConnect));
+					}
 				}
-			}
-			// AutoRoaming by RSSI
-			if (RTMPGetKeyParameter("AutoRoaming", tmpbuf, 32, pBuffer, TRUE))
-			{
-				if (simple_strtol(tmpbuf, 0, 10) == 0)
-					pAd->StaCfg.bAutoRoaming = FALSE;
-				else
-					pAd->StaCfg.bAutoRoaming = TRUE;
-
-				DBGPRINT(RT_DEBUG_TRACE, ("AutoRoaming=%d\n", pAd->StaCfg.bAutoRoaming));
-			}
-			// RoamThreshold
-			if (RTMPGetKeyParameter("RoamThreshold", tmpbuf, 32, pBuffer, TRUE))
-			{
-				long lInfo = simple_strtol(tmpbuf, 0, 10);
-
-				if (lInfo > 90 || lInfo < 60)
-					pAd->StaCfg.dBmToRoam = -70;
-				else    
-					pAd->StaCfg.dBmToRoam = (CHAR)(-1)*lInfo;
-
-				DBGPRINT(RT_DEBUG_TRACE, ("RoamThreshold=%d  dBm\n", pAd->StaCfg.dBmToRoam));
-			}
-
-
-                 
-
-			if(RTMPGetKeyParameter("TGnWifiTest", tmpbuf, 10, pBuffer, TRUE))
-			{				
-				if(simple_strtol(tmpbuf, 0, 10) == 0)
-					pAd->StaCfg.bTGnWifiTest = FALSE;
-				else
-					pAd->StaCfg.bTGnWifiTest = TRUE;
-					DBGPRINT(RT_DEBUG_TRACE, ("TGnWifiTest=%d\n", pAd->StaCfg.bTGnWifiTest));
-			}
-
-			// Beacon Lost Time
-			if (RTMPGetKeyParameter("BeaconLostTime", tmpbuf, 32, pBuffer, TRUE))
-			{
-				ULONG lInfo = (ULONG)simple_strtol(tmpbuf, 0, 10);
-
-				if ((lInfo != 0) && (lInfo <= 60))
-					pAd->StaCfg.BeaconLostTime = (lInfo * OS_HZ);
-				DBGPRINT(RT_DEBUG_TRACE, ("BeaconLostTime=%ld \n", pAd->StaCfg.BeaconLostTime));
-			}
-
-			// Auto Connet Setting if no SSID			
-			if (RTMPGetKeyParameter("AutoConnect", tmpbuf, 32, pBuffer, TRUE))
-			{
-				if (simple_strtol(tmpbuf, 0, 10) == 0)
-					pAd->StaCfg.bAutoConnectIfNoSSID = FALSE;
-				else
-					pAd->StaCfg.bAutoConnectIfNoSSID = TRUE;
-			}
-
-			
-		}
 #endif // CONFIG_STA_SUPPORT //
 
 
-
 #ifdef RT30xx
+#ifdef ANT_DIVERSITY_SUPPORT
+				//IF_DEV_CONFIG_OPMODE_ON_STA(pAd)
+				{
+					if(RTMPGetKeyParameter("AntDiversity", tmpbuf, 10, pBuffer, TRUE))
+					{
+						for (i = 0, macptr = rstrtok(tmpbuf,";"); macptr; macptr = rstrtok(NULL,";"), i++)
+						{
+							UCHAR Ant = simple_strtol(tmpbuf, 0, 10);
+							if(Ant < 3)
+								pAd->CommonCfg.bRxAntDiversity = Ant;
+							else
+								pAd->CommonCfg.bRxAntDiversity = ANT_DIVERSITY_DISABLE;
+
+							DBGPRINT(RT_DEBUG_ERROR, ("AntDiversity=%d\n", pAd->CommonCfg.bRxAntDiversity));
+						}
+					}
+				}
+#endif // ANT_DIVERSITY_SUPPORT //
 #endif // RT30xx //
 
 
-#ifdef SINGLE_SKU
-		if (RTMPGetKeyParameter("AntGain", tmpbuf, 10, pBuffer, TRUE))
-		{
-			UCHAR AntGain = simple_strtol(tmpbuf, 0, 10);
-			pAd->CommonCfg.AntGain= AntGain;
-	
-			DBGPRINT(RT_DEBUG_TRACE, ("AntGain=%d\n", pAd->CommonCfg.AntGain));
-		}
-		if (RTMPGetKeyParameter("BandedgeDelta", tmpbuf, 10, pBuffer, TRUE))
-		{
-			UCHAR Bandedge = simple_strtol(tmpbuf, 0, 10);
-			pAd->CommonCfg.BandedgeDelta = Bandedge;
 
-			DBGPRINT(RT_DEBUG_TRACE, ("BandedgeDelta=%d\n", pAd->CommonCfg.BandedgeDelta));
-		}
+#ifdef SINGLE_SKU
+				if(RTMPGetKeyParameter("AntGain", tmpbuf, 10, pBuffer, TRUE))
+				{
+					UCHAR AntGain = simple_strtol(tmpbuf, 0, 10);
+					pAd->CommonCfg.AntGain= AntGain;
+			
+					DBGPRINT(RT_DEBUG_TRACE, ("AntGain=%d\n", pAd->CommonCfg.AntGain));
+				}
+				if(RTMPGetKeyParameter("BandedgeDelta", tmpbuf, 10, pBuffer, TRUE))
+				{
+					UCHAR Bandedge = simple_strtol(tmpbuf, 0, 10);
+					pAd->CommonCfg.BandedgeDelta = Bandedge;
+
+					DBGPRINT(RT_DEBUG_TRACE, ("BandedgeDelta=%d\n", pAd->CommonCfg.BandedgeDelta));
+				}
 #endif // SINGLE_SKU //
 
-		if (RTMPGetKeyParameter("WiMaxCoexistenceOn", tmpbuf, 10, pBuffer, TRUE))
-		{
-			if (simple_strtol(tmpbuf, 0, 10) == 0)
-				pAd->bWiMaxCoexistenceOn = FALSE;
-			else
-				pAd->bWiMaxCoexistenceOn = TRUE;
+				if (RTMPGetKeyParameter("WiMaxCoexistenceOn", tmpbuf, 10, pBuffer, TRUE))
+				{
+					if (simple_strtol(tmpbuf, 0, 10) == 0)
+						pAd->bWiMaxCoexistenceOn = FALSE;
+					else
+						pAd->bWiMaxCoexistenceOn = TRUE;
+			
+					DBGPRINT(RT_DEBUG_TRACE, ("WiMaxCoexistenceOn=%d\n", pAd->bWiMaxCoexistenceOn));
+				}
 	
-			DBGPRINT(RT_DEBUG_TRACE, ("WiMaxCoexistenceOn=%d\n", pAd->bWiMaxCoexistenceOn));
+			}while(0);
+
+			kfree(tmpbuf);
+			
+			return NDIS_STATUS_SUCCESS;
 		}
-
-	}while(0);
-
-
-	kfree(tmpbuf);
-	
-	return NDIS_STATUS_SUCCESS;
-	
-}
 
 
 #ifdef MULTIPLE_CARD_SUPPORT
-// record whether the card in the card list is used in the card file
-UINT8  MC_CardUsed[MAX_NUM_OF_MULTIPLE_CARD];
-// record used card mac address in the card list
-static UINT8  MC_CardMac[MAX_NUM_OF_MULTIPLE_CARD][6];
+		// record whether the card in the card list is used in the card file
+		UINT8  MC_CardUsed[MAX_NUM_OF_MULTIPLE_CARD];
+		// record used card mac address in the card list
+		static UINT8  MC_CardMac[MAX_NUM_OF_MULTIPLE_CARD][6];
 
-/*
-========================================================================
-Routine Description:
-    Get card profile path.
+		/*
+		========================================================================
+		Routine Description:
+			Get card profile path.
 
-Arguments:
-    pAd
+		Arguments:
+			pAd
 
-Return Value:
-    TRUE		- Find a card profile
-	FALSE		- use default profile
+		Return Value:
+			TRUE		- Find a card profile
+			FALSE		- use default profile
 
-Note:
-========================================================================
-*/
-BOOLEAN RTMP_CardInfoRead(
-	IN	PRTMP_ADAPTER pAd)
-{
-#define MC_SELECT_CARDID		0	/* use CARD ID (0 ~ 31) to identify different cards */
-#define MC_SELECT_MAC			1	/* use CARD MAC to identify different cards */
-#define MC_SELECT_CARDTYPE		2	/* use CARD type (abgn or bgn) to identify different cards */
+		Note:
+		========================================================================
+		*/
+		BOOLEAN RTMP_CardInfoRead(
+			IN	PRTMP_ADAPTER pAd)
+		{
+		#define MC_SELECT_CARDID		0	/* use CARD ID (0 ~ 31) to identify different cards */
+		#define MC_SELECT_MAC			1	/* use CARD MAC to identify different cards */
+		#define MC_SELECT_CARDTYPE		2	/* use CARD type (abgn or bgn) to identify different cards */
 
-#define LETTER_CASE_TRANSLATE(txt_p, card_id)			\
-	{	UINT32 _len; char _char;						\
-		for(_len=0; _len<strlen(card_id); _len++) {		\
-			_char = *(txt_p + _len);					\
-			if (('A' <= _char) && (_char <= 'Z'))		\
-				*(txt_p+_len) = 'a'+(_char-'A');		\
-		} }
+		#define LETTER_CASE_TRANSLATE(txt_p, card_id)			\
+			{	UINT32 _len; char _char;						\
+				for(_len=0; _len<strlen(card_id); _len++) {		\
+					_char = *(txt_p + _len);					\
+					if (('A' <= _char) && (_char <= 'Z'))		\
+						*(txt_p+_len) = 'a'+(_char-'A');		\
+				} }
 
-	RTMP_OS_FD srcf;
-	INT retval;
-	PSTRING buffer, tmpbuf;
-	STRING card_id_buf[30], RFIC_word[30];
-	BOOLEAN flg_match_ok = FALSE;
-	INT32 card_select_method;
-	INT32 card_free_id, card_nouse_id, card_same_mac_id, card_match_id;
-	EEPROM_ANTENNA_STRUC antenna;
-	USHORT addr01, addr23, addr45;
-	UINT8 mac[6];
-	UINT32 data, card_index;
-	UCHAR *start_ptr;
-	RTMP_OS_FS_INFO osFSInfo;
+			RTMP_OS_FD srcf;
+			INT retval;
+			PSTRING buffer, tmpbuf;
+			STRING card_id_buf[30], RFIC_word[30];
+			BOOLEAN flg_match_ok = FALSE;
+			INT32 card_select_method;
+			INT32 card_free_id, card_nouse_id, card_same_mac_id, card_match_id;
+			EEPROM_ANTENNA_STRUC antenna;
+			USHORT addr01, addr23, addr45;
+			UINT8 mac[6];
+			UINT32 data, card_index;
+			UCHAR *start_ptr;
+			RTMP_OS_FS_INFO osFSInfo;
 
-	// init
-	buffer = kmalloc(MAX_INI_BUFFER_SIZE, MEM_ALLOC_FLAG);
-	if (buffer == NULL)
-		return FALSE;
+			// init
+			buffer = kmalloc(MAX_INI_BUFFER_SIZE, MEM_ALLOC_FLAG);
+			if (buffer == NULL)
+				return FALSE;
 
-	tmpbuf = kmalloc(MAX_PARAM_BUFFER_SIZE, MEM_ALLOC_FLAG);
-	if(tmpbuf == NULL)
-	{
-		kfree(buffer);
-		return NDIS_STATUS_FAILURE;
-	}
+			tmpbuf = kmalloc(MAX_PARAM_BUFFER_SIZE, MEM_ALLOC_FLAG);
+			if(tmpbuf == NULL)
+			{
+				kfree(buffer);
+				return NDIS_STATUS_FAILURE;
+			}
 
-	// get RF IC type
-	RTMP_IO_READ32(pAd, E2PROM_CSR, &data);
+			// get RF IC type
+			RTMP_IO_READ32(pAd, E2PROM_CSR, &data);
 
-	if ((data & 0x30) == 0)
-		pAd->EEPROMAddressNum = 6;	// 93C46
-	else if ((data & 0x30) == 0x10)
-		pAd->EEPROMAddressNum = 8;	// 93C66
-	else
-		pAd->EEPROMAddressNum = 8;	// 93C86
-	
-	RT28xx_EEPROM_READ16(pAd, EEPROM_NIC1_OFFSET, antenna.word);
+			if ((data & 0x30) == 0)
+				pAd->EEPROMAddressNum = 6;	// 93C46
+			else if ((data & 0x30) == 0x10)
+				pAd->EEPROMAddressNum = 8;	// 93C66
+			else
+				pAd->EEPROMAddressNum = 8;	// 93C86
+			
+			RT28xx_EEPROM_READ16(pAd, EEPROM_NIC1_OFFSET, antenna.word);
 
-	if ((antenna.field.RfIcType == RFIC_2850) ||
-		(antenna.field.RfIcType == RFIC_2750))
-	{
-		/* ABGN card */
-		strcpy(RFIC_word, "abgn");
-	}
-	else
-	{
-		/* BGN card */
-		strcpy(RFIC_word, "bgn");
-	}
+			if ((antenna.field.RfIcType == RFIC_2850) ||
+				(antenna.field.RfIcType == RFIC_2750) || 
+				(antenna.field.RfIcType == RFIC_2853) || 
+				(antenna.field.RfIcType == RFIC_3853))
+			{
+				/* ABGN card */
+				strcpy(RFIC_word, "abgn");
+			}
+			else
+			{
+				/* BGN card */
+				strcpy(RFIC_word, "bgn");
+			}
 
-	// get MAC address
-	RT28xx_EEPROM_READ16(pAd, 0x04, addr01);
-	RT28xx_EEPROM_READ16(pAd, 0x06, addr23);
-	RT28xx_EEPROM_READ16(pAd, 0x08, addr45);
+			// get MAC address
+			RT28xx_EEPROM_READ16(pAd, 0x04, addr01);
+			RT28xx_EEPROM_READ16(pAd, 0x06, addr23);
+			RT28xx_EEPROM_READ16(pAd, 0x08, addr45);
 
-	mac[0] = (UCHAR)(addr01 & 0xff);
-	mac[1] = (UCHAR)(addr01 >> 8);
+			mac[0] = (UCHAR)(addr01 & 0xff);
+			mac[1] = (UCHAR)(addr01 >> 8);
 	mac[2] = (UCHAR)(addr23 & 0xff);
 	mac[3] = (UCHAR)(addr23 >> 8);
 	mac[4] = (UCHAR)(addr45 & 0xff);

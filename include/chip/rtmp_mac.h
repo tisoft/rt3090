@@ -5,35 +5,25 @@
  * Hsinchu County 302,
  * Taiwan, R.O.C.
  *
- * (c) Copyright 2002-2007, Ralink Technology, Inc.
+ * (c) Copyright 2002-2010, Ralink Technology, Inc.
  *
- * This program is free software; you can redistribute it and/or modify  * 
- * it under the terms of the GNU General Public License as published by  * 
- * the Free Software Foundation; either version 2 of the License, or     * 
- * (at your option) any later version.                                   * 
- *                                                                       * 
- * This program is distributed in the hope that it will be useful,       * 
- * but WITHOUT ANY WARRANTY; without even the implied warranty of        * 
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         * 
- * GNU General Public License for more details.                          * 
- *                                                                       * 
- * You should have received a copy of the GNU General Public License     * 
- * along with this program; if not, write to the                         * 
- * Free Software Foundation, Inc.,                                       * 
- * 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             * 
- *                                                                       * 
- *************************************************************************
+ * This program is free software; you can redistribute it and/or modify  *
+ * it under the terms of the GNU General Public License as published by  *
+ * the Free Software Foundation; either version 2 of the License, or     *
+ * (at your option) any later version.                                   *
+ *                                                                       *
+ * This program is distributed in the hope that it will be useful,       *
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of        *
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
+ * GNU General Public License for more details.                          *
+ *                                                                       *
+ * You should have received a copy of the GNU General Public License     *
+ * along with this program; if not, write to the                         *
+ * Free Software Foundation, Inc.,                                       *
+ * 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
+ *                                                                       *
+ *************************************************************************/
 
-	Module Name:
-	rtmp_mac.h
-
-	Abstract:
-	Ralink Wireless Chip MAC related definition & structures
-
-	Revision History:
-	Who			When		  What
-	--------	----------	  ----------------------------------------------
-*/
 
 #ifndef __RTMP_MAC_H__
 #define __RTMP_MAC_H__
@@ -61,28 +51,14 @@
 typedef	struct	GNU_PACKED _TXWI_STRUC {
 	// Word 0
 	UINT32		PHYMODE:2;
-#if defined(RT2883) || defined(RT3593)
-	UINT32		iTxBF:1; // iTxBF enable
-	UINT32		Sounding:1; // Sounding enable
-	UINT32		eTxBF:1; // eTxBF enable
-#else
 	UINT32		rsv2:2;
 	UINT32		Ifs:1;
-#endif // RT2883 || RT3593 //
 	UINT32		STBC:2;	//channel bandwidth 20MHz or 40 MHz
 	UINT32		ShortGI:1;
 	UINT32		BW:1;	//channel bandwidth 20MHz or 40 MHz
 	UINT32		MCS:7;
 	
-#ifdef RT3593
-	UINT32		rsv:1;
-	UINT32		TXRPT:1;
-	UINT32		Autofallback:1; // TX rate auto fallback disable
-	UINT32		NDPSndBW:1; // NDP sounding BW
-	UINT32		NDPSndRate:2; // 0 : MCS0, 1: MCS8, 2: MCS16, 3: reserved
-#else
 	UINT32		rsv:6;
-#endif // RT3593 //
 	UINT32		txop:2;	//tx back off mode 0:HT TXOP rule , 1:PIFS TX ,2:Backoff, 3:sifs only when previous frame exchange is successful.
 	UINT32		MpduDensity:3;
 	UINT32		AMPDU:1;
@@ -115,28 +91,14 @@ typedef	struct	GNU_PACKED _TXWI_STRUC {
 	UINT32		AMPDU:1;
 	UINT32		MpduDensity:3;
 	UINT32		txop:2;	//FOR "THIS" frame. 0:HT TXOP rule , 1:PIFS TX ,2:Backoff, 3:sifs only when previous frame exchange is successful.
-#ifdef RT3593
-	UINT32		NDPSndRate:2; // 0 : MCS0, 1: MCS8, 2: MCS16, 3: reserved
-	UINT32		NDPSndBW:1; // NDP sounding BW
-	UINT32		Autofallback:1; // TX rate auto fallback disable
-	UINT32		TXRPT:1;
-	UINT32		rsv:1;
-#else
 	UINT32		rsv:6;
-#endif // RT3593 //
 	
 	UINT32		MCS:7;
 	UINT32		BW:1;	//channel bandwidth 20MHz or 40 MHz
 	UINT32		ShortGI:1;
 	UINT32		STBC:2;	// 1: STBC support MCS =0-7,   2,3 : RESERVE
-#if defined(RT2883) || defined(RT3593)
-	UINT32		eTxBF:1; // eTxBF enable
-	UINT32		Sounding:1; // Sounding enable
-	UINT32		iTxBF:1; // iTxBF enable
-#else
 	UINT32		Ifs:1;
 	UINT32		rsv2:2;	//channel bandwidth 20MHz or 40 MHz
-#endif // RT2883 || RT3593 //
 	UINT32		PHYMODE:2;  
 	// Word1
 	// ex:  1c ff 38 00 means ACK=0, BAWinSize=7, MPDUtotalByteCount = 0x38
@@ -168,13 +130,7 @@ typedef	struct	GNU_PACKED _RXWI_STRUC {
 	UINT32		WirelessCliID:8;
 	// Word 1
 	UINT32		PHYMODE:2;              // 1: this RX frame is unicast to me
-#if defined(RT2883) || defined(RT3593)
-	UINT32		iTxBF:1; // iTxBF enable
-	UINT32		Sounding:1; // Sounding enable
-	UINT32		eTxBF:1; // eTxBF enable
-#else
 	UINT32		rsv:3;
-#endif // RT2883 //
 	UINT32		STBC:2;
 	UINT32		ShortGI:1;
 	UINT32		BW:1;
@@ -188,22 +144,10 @@ typedef	struct	GNU_PACKED _RXWI_STRUC {
 	UINT32		RSSI0:8;
 	// Word 3
 	/*UINT32		rsv2:16;*/
-#if defined(RT2883) || defined(RT3593)
-	UINT32		FOFFSET:8;
-	UINT32		SNR2:8;
-#else
 	UINT32		rsv2:8;	
 	UINT32		FOFFSET:8;	// RT35xx	
-#endif // RT2883 //
 	UINT32		SNR1:8;
 	UINT32		SNR0:8;
-#if defined(RT2883) || defined(RT3593)
-	// Word 4
-	UINT32		BFSNR2:8;
-	UINT32		BFSNR1:8;
-	UINT32		BFSNR0:8;
-	UINT32		RSSIANT0:8;
-#endif // RT2883 //
 }	RXWI_STRUC, *PRXWI_STRUC;
 #else
 typedef	struct	GNU_PACKED _RXWI_STRUC {
@@ -221,13 +165,7 @@ typedef	struct	GNU_PACKED _RXWI_STRUC {
 	UINT32		BW:1;
 	UINT32		ShortGI:1;
 	UINT32		STBC:2;
-#if defined(RT2883) || defined(RT3593)
-	UINT32		eTxBF:1; // eTxBF enable
-	UINT32		Sounding:1; // Sounding enable
-	UINT32		iTxBF:1; // iTxBF enable
-#else
 	UINT32		rsv:3;
-#endif // RT2883 //
 	UINT32		PHYMODE:2;              // 1: this RX frame is unicast to me
 	//Word2
 	UINT32		RSSI0:8;
@@ -237,21 +175,9 @@ typedef	struct	GNU_PACKED _RXWI_STRUC {
 	//Word3
 	UINT32		SNR0:8;
 	UINT32		SNR1:8;
-#if defined(RT2883) || defined(RT3593)
-	UINT32		SNR2:8;
-	UINT32		FOFFSET:8;
-#else
 	UINT32		FOFFSET:8;	// RT35xx	
 	UINT32		rsv2:8;
-#endif // RT2883 //
 	/*UINT32		rsv2:16;*/
-#if defined(RT2883) || defined(RT3593)
-	// Word 4
-	UINT32		RSSIANT0:8;
-	UINT32		BFSNR0:8;
-	UINT32		BFSNR1:8;
-	UINT32		BFSNR2:8;
-#endif // RT2883 //
 }	RXWI_STRUC, *PRXWI_STRUC;
 #endif
 
@@ -1045,27 +971,45 @@ typedef	union	_LED_CFG_STRUC	{
 }	LED_CFG_STRUC, *PLED_CFG_STRUC;
 #endif
 
-#define TX_CHAIN_ADDR0_L		0x1044
+//
+// The number of the Tx chains
+//
+#define NUM_OF_TX_CHAIN		4
+
+#define TX_CHAIN_ADDR0_L	0x1044		// Stream mode MAC address registers
+#define TX_CHAIN_ADDR0_H	0x1048
+#define TX_CHAIN_ADDR1_L	0x104C
+#define TX_CHAIN_ADDR1_H	0x1050
+#define TX_CHAIN_ADDR2_L	0x1054
+#define TX_CHAIN_ADDR2_H	0x1058
+#define TX_CHAIN_ADDR3_L	0x105C
+#define TX_CHAIN_ADDR3_H	0x1060
 
 #ifdef RT_BIG_ENDIAN
 typedef union _TX_CHAIN_ADDR0_L_STRUC
 {
 	struct
 	{
-		ULONG	TxChainAddr0L:32; // Destination MAC address bit 31~0 of Tx chain0
+		UCHAR	TxChainAddr0L_Byte3; // Destination MAC address of Tx chain0 (byte 3)
+		UCHAR	TxChainAddr0L_Byte2; // Destination MAC address of Tx chain0 (byte 2)
+		UCHAR	TxChainAddr0L_Byte1; // Destination MAC address of Tx chain0 (byte 1)
+		UCHAR	TxChainAddr0L_Byte0; // Destination MAC address of Tx chain0 (byte 0)
 	} field;
 	
-	ULONG word;
+	UINT32 word;
 } TX_CHAIN_ADDR0_L_STRUC, *PTX_CHAIN_ADDR0_L_STRUC;
 #else
 typedef union _TX_CHAIN_ADDR0_L_STRUC
 {
 	struct
 	{
-		ULONG	TxChainAddr0L:32; // Destination MAC address bit 31~0 of Tx chain0
+		UCHAR	TxChainAddr0L_Byte0; // Destination MAC address of Tx chain0 (byte 0)
+		UCHAR	TxChainAddr0L_Byte1; // Destination MAC address of Tx chain0 (byte 1)
+		UCHAR	TxChainAddr0L_Byte2; // Destination MAC address of Tx chain0 (byte 2)
+		UCHAR	TxChainAddr0L_Byte3; // Destination MAC address of Tx chain0 (byte 3)
 	} field;
 	
-	ULONG word;
+	UINT32 word;
 }	TX_CHAIN_ADDR0_L_STRUC, *PTX_CHAIN_ADDR0_L_STRUC;
 #endif
 
@@ -1076,25 +1020,207 @@ typedef union _TX_CHAIN_ADDR0_H_STRUC
 {
 	struct
 	{
-		ULONG	Reserved:12; // Reserved
-		ULONG	TxChainSel0:4; // Selection value of Tx chain0
-		ULONG	TxChainAddr0H:16; // Destination MAC address bit 47~32 of Tx chain0
+		USHORT	Reserved:12; // Reserved
+		USHORT	TxChainSel0:4; // Selection value of Tx chain0
+		UCHAR	TxChainAddr0H_Byte5; // Destination MAC address of Tx chain0 (byte 5)
+		UCHAR	TxChainAddr0H_Byte4; // Destination MAC address of Tx chain0 (byte 4)
 	} field;
 	
-	ULONG word;
+	UINT32 word;
 } TX_CHAIN_ADDR0_H_STRUC, *PTX_CHAIN_ADDR0_H_STRUC;
 #else
 typedef union _TX_CHAIN_ADDR0_H_STRUC
 {
 	struct
 	{
-		ULONG	TxChainAddr0H:16; // Destination MAC address bit 47~32 of Tx chain0
-		ULONG	TxChainSel0:4; // Selection value of Tx chain0
-		ULONG	Reserved:12; // Reserved
+		UCHAR	TxChainAddr0H_Byte4; // Destination MAC address of Tx chain0 (byte 4)
+		UCHAR	TxChainAddr0H_Byte5; // Destination MAC address of Tx chain0 (byte 5)		
+		USHORT	TxChainSel0:4; // Selection value of Tx chain0
+		USHORT	Reserved:12; // Reserved
 	} field;
 	
-	ULONG word;
+	UINT32 word;
 }	TX_CHAIN_ADDR0_H_STRUC, *PTX_CHAIN_ADDR0_HA_STRUC;
+#endif
+
+#define TX_CHAIN_ADDR1_L		0x104C
+
+#ifdef BIG_ENDIAN
+typedef union _TX_CHAIN_ADDR1_L_STRUC
+{
+	struct
+	{
+		UCHAR	TxChainAddr1L_Byte3; // Destination MAC address of Tx chain1 (byte 3)
+		UCHAR	TxChainAddr1L_Byte2; // Destination MAC address of Tx chain1 (byte 2)
+		UCHAR	TxChainAddr1L_Byte1; // Destination MAC address of Tx chain1 (byte 1)
+		UCHAR	TxChainAddr1L_Byte0; // Destination MAC address of Tx chain1 (byte 0)
+	} field;
+	
+	UINT32 word;
+} TX_CHAIN_ADDR1_L_STRUC, *PTX_CHAIN_ADDR1_L_STRUC;
+#else
+typedef union _TX_CHAIN_ADDR1_L_STRUC
+{
+	struct
+	{
+		UCHAR	TxChainAddr1L_Byte0; // Destination MAC address of Tx chain1 (byte 0)
+		UCHAR	TxChainAddr1L_Byte1; // Destination MAC address of Tx chain1 (byte 1)
+		UCHAR	TxChainAddr1L_Byte2; // Destination MAC address of Tx chain1 (byte 2)
+		UCHAR	TxChainAddr1L_Byte3; // Destination MAC address of Tx chain1 (byte 3)
+	} field;
+	
+	UINT32 word;
+}	TX_CHAIN_ADDR1_L_STRUC, *PTX_CHAIN_ADDR1_L_STRUC;
+#endif
+
+#define TX_CHAIN_ADDR1_H	0x1050
+
+#ifdef RT_BIG_ENDIAN
+typedef union _TX_CHAIN_ADDR1_H_STRUC
+{
+	struct
+	{
+		USHORT	Reserved:12; // Reserved
+		USHORT	TxChainSel0:4; // Selection value of Tx chain0
+		UCHAR	TxChainAddr1H_Byte5; // Destination MAC address of Tx chain1 (byte 5)
+		UCHAR	TxChainAddr1H_Byte4; // Destination MAC address of Tx chain1 (byte 4)
+	} field;
+	
+	UINT32 word;
+} TX_CHAIN_ADDR1_H_STRUC, *PTX_CHAIN_ADDR1_H_STRUC;
+#else
+typedef union _TX_CHAIN_ADDR1_H_STRUC
+{
+	struct
+	{
+		UCHAR	TxChainAddr1H_Byte4; // Destination MAC address of Tx chain1 (byte 4)
+		UCHAR	TxChainAddr1H_Byte5; // Destination MAC address of Tx chain1 (byte 5)		
+		USHORT	TxChainSel0:4; // Selection value of Tx chain0
+		USHORT	Reserved:12; // Reserved
+	} field;
+	
+	UINT32 word;
+}	TX_CHAIN_ADDR1_H_STRUC, *PTX_CHAIN_ADDR1_HA_STRUC;
+#endif
+
+#define TX_CHAIN_ADDR2_L		0x1054
+
+#ifdef RT_BIG_ENDIAN
+typedef union _TX_CHAIN_ADDR2_L_STRUC
+{
+	struct
+	{
+		UCHAR	TxChainAddr2L_Byte3; // Destination MAC address of Tx chain2 (byte 3)
+		UCHAR	TxChainAddr2L_Byte2; // Destination MAC address of Tx chain2 (byte 2)
+		UCHAR	TxChainAddr2L_Byte1; // Destination MAC address of Tx chain2 (byte 1)
+		UCHAR	TxChainAddr2L_Byte0; // Destination MAC address of Tx chain2 (byte 0)
+	} field;
+	
+	UINT32 word;
+} TX_CHAIN_ADDR2_L_STRUC, *PTX_CHAIN_ADDR2_L_STRUC;
+#else
+typedef union _TX_CHAIN_ADDR2_L_STRUC
+{
+	struct
+	{
+		UCHAR	TxChainAddr2L_Byte0; // Destination MAC address of Tx chain2 (byte 0)
+		UCHAR	TxChainAddr2L_Byte1; // Destination MAC address of Tx chain2 (byte 1)
+		UCHAR	TxChainAddr2L_Byte2; // Destination MAC address of Tx chain2 (byte 2)
+		UCHAR	TxChainAddr2L_Byte3; // Destination MAC address of Tx chain2 (byte 3)
+	} field;
+	
+	UINT32 word;
+}	TX_CHAIN_ADDR2_L_STRUC, *PTX_CHAIN_ADDR2_L_STRUC;
+#endif
+
+#define TX_CHAIN_ADDR2_H	0x1058
+
+#ifdef RT_BIG_ENDIAN
+typedef union _TX_CHAIN_ADDR2_H_STRUC
+{
+	struct
+	{
+		USHORT	Reserved:12; // Reserved
+		USHORT	TxChainSel0:4; // Selection value of Tx chain0
+		UCHAR	TxChainAddr2H_Byte5; // Destination MAC address of Tx chain2 (byte 5)
+		UCHAR	TxChainAddr2H_Byte4; // Destination MAC address of Tx chain2 (byte 4)
+	} field;
+	
+	UINT32 word;
+} TX_CHAIN_ADDR2_H_STRUC, *PTX_CHAIN_ADDR2_H_STRUC;
+#else
+typedef union _TX_CHAIN_ADDR2_H_STRUC
+{
+	struct
+	{
+		UCHAR	TxChainAddr2H_Byte4; // Destination MAC address of Tx chain2 (byte 4)
+		UCHAR	TxChainAddr2H_Byte5; // Destination MAC address of Tx chain2 (byte 5)		
+		USHORT	TxChainSel0:4; // Selection value of Tx chain0
+		USHORT	Reserved:12; // Reserved
+	} field;
+	
+	UINT32 word;
+}	TX_CHAIN_ADDR2_H_STRUC, *PTX_CHAIN_ADDR2_HA_STRUC;
+#endif
+
+#define TX_CHAIN_ADDR3_L		0x105C
+
+#ifdef RT_BIG_ENDIAN
+typedef union _TX_CHAIN_ADDR3_L_STRUC
+{
+	struct
+	{
+		UCHAR	TxChainAddr3L_Byte3; // Destination MAC address of Tx chain3 (byte 3)
+		UCHAR	TxChainAddr3L_Byte2; // Destination MAC address of Tx chain3 (byte 2)
+		UCHAR	TxChainAddr3L_Byte1; // Destination MAC address of Tx chain3 (byte 1)
+		UCHAR	TxChainAddr3L_Byte0; // Destination MAC address of Tx chain3 (byte 0)
+	} field;
+	
+	UINT32 word;
+} TX_CHAIN_ADDR3_L_STRUC, *PTX_CHAIN_ADDR3_L_STRUC;
+#else
+typedef union _TX_CHAIN_ADDR3_L_STRUC
+{
+	struct
+	{
+		UCHAR	TxChainAddr3L_Byte0; // Destination MAC address of Tx chain3 (byte 0)
+		UCHAR	TxChainAddr3L_Byte1; // Destination MAC address of Tx chain3 (byte 1)
+		UCHAR	TxChainAddr3L_Byte2; // Destination MAC address of Tx chain3 (byte 2)
+		UCHAR	TxChainAddr3L_Byte3; // Destination MAC address of Tx chain3 (byte 3)
+	} field;
+	
+	UINT32 word;
+}	TX_CHAIN_ADDR3_L_STRUC, *PTX_CHAIN_ADDR3_L_STRUC;
+#endif
+
+#define TX_CHAIN_ADDR3_H	0x1060
+
+#ifdef RT_BIG_ENDIAN
+typedef union _TX_CHAIN_ADDR3_H_STRUC
+{
+	struct
+	{
+		USHORT	Reserved:12; // Reserved
+		USHORT	TxChainSel0:4; // Selection value of Tx chain0
+		UCHAR	TxChainAddr3H_Byte5; // Destination MAC address of Tx chain3 (byte 5)
+		UCHAR	TxChainAddr3H_Byte4; // Destination MAC address of Tx chain3 (byte 4)
+	} field;
+	
+	UINT32 word;
+} TX_CHAIN_ADDR3_H_STRUC, *PTX_CHAIN_ADDR3_H_STRUC;
+#else
+typedef union _TX_CHAIN_ADDR3_H_STRUC
+{
+	struct
+	{
+		UCHAR	TxChainAddr3H_Byte4; // Destination MAC address of Tx chain3 (byte 4)
+		UCHAR	TxChainAddr3H_Byte5; // Destination MAC address of Tx chain3 (byte 5)		
+		USHORT	TxChainSel0:4; // Selection value of Tx chain0
+		USHORT	Reserved:12; // Reserved
+	} field;
+	
+	UINT32 word;
+}	TX_CHAIN_ADDR3_H_STRUC, *PTX_CHAIN_ADDR3_HA_STRUC;
 #endif
 
 //
@@ -1135,6 +1261,10 @@ typedef	union	_IFS_SLOT_CFG_STRUC	{
 
 #define BCN_OFFSET0				0x042C
 #define BCN_OFFSET1				0x0430
+#ifdef SPECIFIC_BCN_BUF_SUPPORT
+#define BCN_OFFSET2				0x0444
+#define BCN_OFFSET3				0x0448
+#endif // SPECIFIC_BCN_BUF_SUPPORT //
 
 //
 // BCN_TIME_CFG : Synchronization control register
@@ -1265,8 +1395,42 @@ typedef	union	_EDCA_AC_CFG_STRUC	{
 #define TX_SW_CFG1		0x1334
 #define TX_SW_CFG2		0x1338
 #define TXOP_THRES_CFG		0x133c
+
+#ifdef RT_BIG_ENDIAN
+typedef union _TXOP_THRESHOLD_CFG_STRUC
+{
+	struct
+	{
+		UINT32	TXOP_REM_THRES:8; // Remaining TXOP threshold (unit: 32us)
+		UINT32	CF_END_THRES:8; // CF-END threshold (unit: 32us)
+		UINT32	RDG_IN_THRES:8; // Rx RDG threshold (unit: 32us)
+		UINT32	RDG_OUT_THRES:8; // Tx RDG threshold (unit: 32us)
+	} field;
+	
+	UINT32		word;
+} TXOP_THRESHOLD_CFG_STRUC, *PTXOP_THRESHOLD_CFG_STRUC;
+#else
+typedef union _TXOP_THRESHOLD_CFG_STRUC
+{
+	struct
+	{
+		UINT32	RDG_OUT_THRES:8; // Tx RDG threshold (unit: 32us)
+		UINT32	RDG_IN_THRES:8; // Rx RDG threshold (unit: 32us)
+		UINT32	CF_END_THRES:8; // CF-END threshold (unit: 32us)
+		UINT32	TXOP_REM_THRES:8; // Remaining TXOP threshold (unit: 32us)
+	} field;
+	
+	UINT32		word;
+} TXOP_THRESHOLD_CFG_STRUC, *PTXOP_THRESHOLD_CFG_STRUC;
+#endif
+
 #define TXOP_CTRL_CFG		0x1340
 #define TX_RTS_CFG		0x1344
+
+#define TX_TXBF_CFG_0		0x138c
+#define TX_TXBF_CFG_1		0x13A4
+#define TX_TXBF_CFG_2		0x13A8
+#define TX_TXBF_CFG_3		0x13AC
 
 #ifdef RT_BIG_ENDIAN
 typedef	union	_TX_RTS_CFG_STRUC	{
@@ -1289,6 +1453,40 @@ typedef	union	_TX_RTS_CFG_STRUC	{
 	UINT32			word;
 }	TX_RTS_CFG_STRUC, *PTX_RTS_CFG_STRUC;
 #endif
+
+typedef	union	_TX_TXBF_CFG_0_STRUC	{
+	struct	{
+#ifdef RT_BIG_ENDIAN
+	    UINT32       EtxbfFbkRate:16;     
+	    UINT32       EtxbfFbkEn:1;
+	    UINT32       EtxbfFbkSeqEn:1;
+	    UINT32       EtxbfFbkCoef:2;
+	    UINT32       EtxbfFbkCode:2;
+	    UINT32       EtxbfFbkNg:2;
+	    UINT32       CsdBypass:1;
+	    UINT32       EtxbfForce:1;
+	    UINT32       EtxbfEnable:1;
+	    UINT32       AutoTxbfEn:3;
+	    UINT32       ItxbfForce:1;
+	    UINT32       ItxbfEn:1;
+#else
+	    UINT32       ItxbfEn:1;
+	    UINT32       ItxbfForce:1;
+	    UINT32       AutoTxbfEn:3;
+	    UINT32       EtxbfEnable:1;
+	    UINT32       EtxbfForce:1;
+	    UINT32       CsdBypass:1;
+	    UINT32       EtxbfFbkNg:2;
+	    UINT32       EtxbfFbkCode:2;
+	    UINT32       EtxbfFbkCoef:2;
+	    UINT32       EtxbfFbkSeqEn:1;
+	    UINT32       EtxbfFbkEn:1;
+	    UINT32       EtxbfFbkRate:16;     
+#endif
+	}	field;
+	UINT32			word;
+}	TX_TXBF_CFG_0_STRUC, *PTX_TXBF_CFG_0_STRUC;
+
 #define TX_TIMEOUT_CFG	0x1348
 #ifdef RT_BIG_ENDIAN
 typedef	union	_TX_TIMEOUT_CFG_STRUC	{
@@ -1489,69 +1687,6 @@ typedef	union	_LG_FBK_CFG1_STRUC	{
 }	LG_FBK_CFG1_STRUC, *PLG_FBK_CFG1_STRUC;
 #endif
 
-#if defined(RT2883) || defined(RT3593)
-#define TX_FBK_CFG_3S_0	0x13c4
-#ifdef RT_BIG_ENDIAN
-typedef	union	_TX_FBK_CFG_3S_0_STRUC	{
-	struct	{
-		UINT32       rsv0:4;
-		UINT32       HTMCS19FBK:4;
-		UINT32       rsv1:4;
-		UINT32       HTMCS18FBK:4;
-		UINT32       rsv2:4;
-		UINT32       HTMCS17FBK:4;
-		UINT32       rsv3:4;
-		UINT32       HTMCS16FBK:4;
-	}	field;
-	UINT32			word;
-}	TX_FBK_CFG_3S_0_STRUC, *PTX_FBK_CFG_3S_0_STRUC;
-#else
-typedef	union	_TX_FBK_CFG_3S_0_STRUC	{
-	struct	{
-		UINT32       HTMCS16FBK:4;
-		UINT32       rsv3:4;
-		UINT32       HTMCS17FBK:4;
-		UINT32       rsv2:4;
-		UINT32       HTMCS18FBK:4;
-		UINT32       rsv1:4;
-		UINT32       HTMCS19FBK:4;
-		UINT32       rsv0:4;
-	}	field;
-	UINT32			word;
-}	TX_FBK_CFG_3S_0_STRUC, *PTX_FBK_CFG_3S_0_STRUC;
-#endif
-
-#define TX_FBK_CFG_3S_1	0x13c8
-#ifdef RT_BIG_ENDIAN
-typedef	union	_TX_FBK_CFG_3S_1_STRUC	{
-	struct	{
-		UINT32       rsv0:3;
-		UINT32       HTMCS23FBK:5;
-		UINT32       rsv1:3;
-		UINT32       HTMCS22FBK:5;
-		UINT32       rsv2:3;
-		UINT32       HTMCS21FBK:5;
-		UINT32       rsv3:3;
-		UINT32       HTMCS20FBK:5;
-	}	field;
-	UINT32			word;
-}	TX_FBK_CFG_3S_1_STRUC, *PTX_FBK_CFG_3S_1_STRUC;
-#else
-typedef	union	_TX_FBK_CFG_3S_1_STRUC	{
-	struct	{
-		UINT32       HTMCS20FBK:5;
-		UINT32       rsv3:3;
-		UINT32       HTMCS21FBK:5;
-		UINT32       rsv2:3;
-		UINT32       HTMCS22FBK:5;
-		UINT32       rsv1:3;
-		UINT32       HTMCS23FBK:5;
-		UINT32       rsv0:3;
-	}	field;
-	UINT32			word;
-}	TX_FBK_CFG_3S_1_STRUC, *PTX_FBK_CFG_3S_1_STRUC;
-#endif
-#endif // RT2883 || RT3593 //
 
 //=======================================================
 //================ Protection Paramater================================
@@ -1604,6 +1739,68 @@ typedef	union	_PROT_CFG_STRUC	{
 #define GF40_PROT_CFG	0x1378		//GR40 Protection
 #define EXP_CTS_TIME	0x137C		// 
 #define EXP_ACK_TIME	0x1380		// 
+
+#define HT_FBK_3SS_CFG0	0x13C4
+#ifdef RT_BIG_ENDIAN
+typedef	union	_HT_FBK_3SS_CFG0_STRUC	{
+	struct	{
+	    UINT32       HTMCS19FBK:5;
+	    UINT32       rsv3:3;
+	    UINT32       HTMCS18FBK:5;
+	    UINT32       rsv2:3;
+	    UINT32       HTMCS17BK:5;
+	    UINT32       rsv1:3;
+	    UINT32       HTMCS16FBK:5;
+	    UINT32       rsv0:3;
+	}	field;
+	UINT32			word;
+}	HT_FBK_3SS_CFG0_STRUC, *PHT_FBK_3SS_CFG0_STRUC;
+#else
+typedef	union	_HT_FBK_3SS_CFG0_STRUC	{
+	struct	{
+	    UINT32       HTMCS16FBK:5;
+	    UINT32       rsv0:3;
+	    UINT32       HTMCS17FBK:5;
+	    UINT32       rsv1:3;
+	    UINT32       HTMCS18FBK:5;
+	    UINT32       rsv2:3;
+	    UINT32       HTMCS19FBK:5;
+	    UINT32       rsv3:3;
+	}	field;
+	UINT32			word;
+}	HT_FBK_3SS_CFG0_STRUC, *PHT_FBK_3SS_CFG0_STRUC;
+#endif
+
+#define HT_FBK_3SS_CFG1	0x13C8
+#ifdef RT_BIG_ENDIAN
+typedef	union	_HT_FBK_3SS_CFG1_STRUC	{
+	struct	{
+	    UINT32       HTMCS23FBK:5;
+	    UINT32       rsv3:3;
+	    UINT32       HTMCS22FBK:5;
+	    UINT32       rsv2:3;
+	    UINT32       HTMCS21BK:5;
+	    UINT32       rsv1:3;
+	    UINT32       HTMCS20FBK:5;
+	    UINT32       rsv0:3;
+	}	field;
+	UINT32			word;
+}	HT_FBK_3SS_CFG1_STRUC, *PHT_FBK_3SS_CFG1_STRUC;
+#else
+typedef	union	_HT_FBK_3SS_CFG1_STRUC	{
+	struct	{
+	    UINT32       HTMCS20FBK:5;
+	    UINT32       rsv0:3;
+	    UINT32       HTMCS21FBK:5;
+	    UINT32       rsv1:3;
+	    UINT32       HTMCS22FBK:5;
+	    UINT32       rsv2:3;
+	    UINT32       HTMCS23FBK:5;
+	    UINT32       rsv3:3;
+	}	field;
+	UINT32			word;
+}	HT_FBK_3SS_CFG1_STRUC, *PHT_FBK_3SS_CFG1_STRUC;
+#endif
 
 //
 //  4.4 MAC RX configuration registers (offset:0x1400)
@@ -1806,16 +2003,9 @@ typedef	union	_TX_STA_CNT2_STRUC	{
 typedef	union GNU_PACKED _TX_STA_FIFO_STRUC	{
 	struct	{
 		UINT32		Reserve:2;
-#if defined(RT2883) || defined(RT3593)
-		UINT32		iTxBF:1; // iTxBF enable
-		UINT32		Sounding:1; // Sounding enable
-		UINT32		eTxBF:1; // eTxBF enable
-		UINT32		SuccessRate:11;	//include MCS, mode ,shortGI, BW settingSame format as TXWI Word 0 Bit 31-16. 
-#else
 		UINT32		TxBF:1; // 3*3
 		UINT32		SuccessRate:13;	//include MCS, mode ,shortGI, BW settingSame format as TXWI Word 0 Bit 31-16. 
 //		UINT32		SuccessRate:16;	//include MCS, mode ,shortGI, BW settingSame format as TXWI Word 0 Bit 31-16. 
-#endif // RT2883 //
 		UINT32		wcid:8;		//wireless client index
 		UINT32       	TxAckRequired:1;    // ack required
 		UINT32       	TxAggre:1;    // Tx is aggregated
@@ -1834,16 +2024,9 @@ typedef	union GNU_PACKED _TX_STA_FIFO_STRUC	{
 		UINT32       	TxAggre:1;    // Tx Retry Success
 		UINT32       	TxAckRequired:1;    // Tx fail
 		UINT32		wcid:8;		//wireless client index
-#if defined(RT2883) || defined(RT3593)
-		UINT32		SuccessRate:11;	//include MCS, mode ,shortGI, BW settingSame format as TXWI Word 0 Bit 31-16. 
-		UINT32		eTxBF:1; // eTxBF enable
-		UINT32		Sounding:1; // Sounding enable
-		UINT32		iTxBF:1; // iTxBF enable
-#else
 //		UINT32		SuccessRate:16;	//include MCS, mode ,shortGI, BW settingSame format as TXWI Word 0 Bit 31-16. 
 		UINT32		SuccessRate:13;	//include MCS, mode ,shortGI, BW settingSame format as TXWI Word 0 Bit 31-16. 
 		UINT32		TxBF:1;
-#endif // RT2883 //
 		UINT32		Reserve:2;
 	}	field;
 	UINT32			word;
@@ -2567,13 +2750,41 @@ typedef union _RF_CSR_CFG_EXT_STRUC
 #define HW_DEBUG_SETTING_BASE   0x77f0  // 0x77f0~0x77ff total 16 bytes
 #define HW_DEBUG_SETTING_BASE2   0x7770  // 0x77f0~0x77ff total 16 bytes
 
-// In order to support maximum 8 MBSS and its maximum length is 512 for each beacon
-// Three section discontinue memory segments will be used.
-// 1. The original region for BCN 0~3
-// 2. Extract memory from FCE table for BCN 4~5
-// 3. Extract memory from Pair-wise key table for BCN 6~7
-//	  It occupied those memory of wcid 238~253 for BCN 6 
-//						      and wcid 222~237 for BCN 7  	
+/* 
+	On-chip BEACON frame space -
+   	1. HW_BEACON_OFFSET/64B must be 0;
+   	2. BCN_OFFSETx(0~) must also be changed in MACRegTable(common/rtmp_init.c)
+ */
+#define HW_BEACON_OFFSET		0x0200 
+#ifdef SPECIFIC_BCN_BUF_SUPPORT
+/* It's allowed to use the higher(secordary) 8KB shared memory */
+//#define HW_BEACON_MAX_COUNT     16
+#define HW_BEACON_MAX_SIZE	0x2000 /* unit: byte */
+#define HW_BEACON_BASE0		0x4000
+#define HW_BEACON_BASE1		0x4200
+#define HW_BEACON_BASE2		0x4400
+#define HW_BEACON_BASE3		0x4600
+#define HW_BEACON_BASE4		0x4800
+#define HW_BEACON_BASE5		0x4A00
+#define HW_BEACON_BASE6		0x4C00
+#define HW_BEACON_BASE7		0x4E00
+#define HW_BEACON_BASE8		0x5000
+#define HW_BEACON_BASE9		0x5200
+#define HW_BEACON_BASE10	0x5400
+#define HW_BEACON_BASE11	0x5600
+#define HW_BEACON_BASE12	0x5800
+#define HW_BEACON_BASE13	0x5A00
+#define HW_BEACON_BASE14	0x5C00
+#define HW_BEACON_BASE15	0x5E00
+#else
+/* 	In order to support maximum 8 MBSS and its maximum length is 512 for each beacon
+	Three section discontinue memory segments will be used.
+	1. The original region for BCN 0~3
+	2. Extract memory from FCE table for BCN 4~5
+	3. Extract memory from Pair-wise key table for BCN 6~7
+  		It occupied those memory of wcid 238~253 for BCN 6 
+		and wcid 222~237 for BCN 7  	*/
+//#define HW_BEACON_MAX_COUNT     8 
 #define HW_BEACON_MAX_SIZE      0x1000 /* unit: byte */
 #define HW_BEACON_BASE0         0x7800
 #define HW_BEACON_BASE1         0x7A00
@@ -2583,6 +2794,7 @@ typedef union _RF_CSR_CFG_EXT_STRUC
 #define HW_BEACON_BASE5         0x7400
 #define HW_BEACON_BASE6         0x5DC0
 #define HW_BEACON_BASE7         0x5BC0
+#endif // SPECIFIC_BCN_BUF_SUPPORT //
 
 //
 // Higher 8KB shared memory
@@ -2596,9 +2808,6 @@ typedef union _RF_CSR_CFG_EXT_STRUC
 #define HW_BEACON_BASE6_REDIRECTION	0x4C00
 #define HW_BEACON_BASE7_REDIRECTION	0x4E00
 
-#define HW_BEACON_MAX_COUNT     8 
-#define HW_BEACON_OFFSET		0x0200 
-#define HW_BEACON_CONTENT_LEN	(HW_BEACON_OFFSET - TXWI_SIZE)
 
 // HOST-MCU shared memory - base address = 0x2100
 #define HOST_CMD_CSR		0x404
@@ -2651,5 +2860,78 @@ typedef union _RF_CSR_CFG_EXT_STRUC
 
 #define ACT_CNT 0x7030
 
+#ifdef SPECIFIC_BCN_BUF_SUPPORT
+#define LOWER_SHRMEM		0
+#define HIGHER_SHRMEM		1
+
+/* Shared memory access selection.
+ * 0: address 0x4000 ~ 0x7FFF mapping to lower 16kB of shared memory
+ * 1: address 0x4000 ~ 0x5FFF mapping to higher 8kB of shared memory
+ */	
+#define	RTMP_HIGH_SHARED_MEM_SET(_pAd)									\
+	do{										\
+		UINT32			regValue;					\
+											\
+		if (_pAd->ShrMSel != HIGHER_SHRMEM)								\
+		{									\
+			_pAd->ShrMSel = HIGHER_SHRMEM;								\
+			RTMP_IO_READ32(_pAd, PBF_SYS_CTRL, &regValue);				\
+			RTMP_IO_WRITE32(_pAd, PBF_SYS_CTRL, regValue | (1 << 19));	\
+		}									\
+	} while(0)
+
+#define	RTMP_LOW_SHARED_MEM_SET(_pAd)									\
+	do{																	\
+		UINT32			regValue;										\
+																		\
+		if (_pAd->ShrMSel != LOWER_SHRMEM)								\
+		{									\
+			_pAd->ShrMSel = LOWER_SHRMEM;								\
+			RTMP_IO_READ32(_pAd, PBF_SYS_CTRL, &regValue);				\
+			RTMP_IO_WRITE32(_pAd, PBF_SYS_CTRL, regValue & ~(1 << 19));	\
+		}									\
+	} while(0)
+	
+/* 	
+	Disable irq to make sure the shared memory status(Mac Reg : 0x0400, bit-19)
+	doesn't been changed.
+	Becasue the PRE-TBTT interrupt would change this status. */	
+#define	RTMP_MAC_SHR_MSEL_LOCK(_pAd, _shr_msel, _irqFlag)					\
+	do{										\
+		UINT32			__regValue;					\
+											\
+		RTMP_INT_LOCK(&_pAd->ShrMemLock, _irqFlag);						\
+		_pAd->ShrMSel = _shr_msel;						\
+		RTMP_IO_READ32(_pAd, PBF_SYS_CTRL, &__regValue);					\
+		if (_shr_msel == HIGHER_SHRMEM)										\
+		{									\
+			RTMP_IO_WRITE32(_pAd, PBF_SYS_CTRL, __regValue | (1 << 19));	\
+		}									\
+		else									\
+		{									\
+			RTMP_IO_WRITE32(_pAd, PBF_SYS_CTRL, __regValue & ~(1 << 19));	\
+		}									\
+	} while(0)
+
+
+#define	RTMP_MAC_SHR_MSEL_UNLOCK(_pAd, _shr_msel, _irqFlag)					\
+	do{										\
+		UINT32			__regValue;					\
+											\
+		_pAd->ShrMSel = _shr_msel;						\
+		RTMP_IO_READ32(_pAd, PBF_SYS_CTRL, &__regValue);					\
+		if (_shr_msel == HIGHER_SHRMEM)										\
+		{									\
+			RTMP_IO_WRITE32(_pAd, PBF_SYS_CTRL, __regValue | (1 << 19));	\
+		}									\
+		else									\
+		{									\
+			RTMP_IO_WRITE32(_pAd, PBF_SYS_CTRL, __regValue & ~(1 << 19));	\
+		}									\
+		RTMP_INT_UNLOCK(&_pAd->ShrMemLock, _irqFlag);						\
+	} while(0)
+
+#endif // SPECIFIC_BCN_BUF_SUPPORT //
 
 #endif // __RTMP_MAC_H__ //
+

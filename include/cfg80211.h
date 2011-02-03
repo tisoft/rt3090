@@ -5,45 +5,29 @@
  * Hsinchu County 302,
  * Taiwan, R.O.C.
  *
- * (c) Copyright 2002-2007, Ralink Technology, Inc.
+ * (c) Copyright 2002-2010, Ralink Technology, Inc.
  *
- * This program is free software; you can redistribute it and/or modify  * 
- * it under the terms of the GNU General Public License as published by  * 
- * the Free Software Foundation; either version 2 of the License, or     * 
- * (at your option) any later version.                                   * 
- *                                                                       * 
- * This program is distributed in the hope that it will be useful,       * 
- * but WITHOUT ANY WARRANTY; without even the implied warranty of        * 
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         * 
- * GNU General Public License for more details.                          * 
- *                                                                       * 
- * You should have received a copy of the GNU General Public License     * 
- * along with this program; if not, write to the                         * 
- * Free Software Foundation, Inc.,                                       * 
- * 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             * 
- *                                                                       * 
+ * This program is free software; you can redistribute it and/or modify  *
+ * it under the terms of the GNU General Public License as published by  *
+ * the Free Software Foundation; either version 2 of the License, or     *
+ * (at your option) any later version.                                   *
+ *                                                                       *
+ * This program is distributed in the hope that it will be useful,       *
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of        *
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
+ * GNU General Public License for more details.                          *
+ *                                                                       *
+ * You should have received a copy of the GNU General Public License     *
+ * along with this program; if not, write to the                         *
+ * Free Software Foundation, Inc.,                                       *
+ * 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
+ *                                                                       *
  *************************************************************************/
 
-/****************************************************************************
-
-	Abstract:
-
-	All MAC80211/CFG80211 Related Structure & Definition.
-
-***************************************************************************/
 
 #ifdef RT_CFG80211_SUPPORT
 
 #include <linux/ieee80211.h>
-#define RT_CFG80211_CRDA_REG_RULE_APPLY(__pAd)							\
-		if (__pAd->pCfg80211_CB != NULL)								\
-			CFG80211_RegRuleApply(__pAd, NULL, __pAd->Cfg80211_Alpha2);
-
-#define RT_CFG80211_REINIT(__pAd)										\
-		if (__pAd->pCfg80211_CB != NULL)								\
-			CFG80211_SupBandReInit(__pAd);		
-
-#define RT_CFG80211_SCANNING_INFORM					CFG80211_Scaning
 
 
 /*
@@ -67,7 +51,7 @@ Note:
 ========================================================================
 */
 VOID CFG80211_Register(
-	IN PRTMP_ADAPTER 		pAd,
+	IN VOID 				*pAdCB,
 	IN struct device		*pDev,
 	IN struct net_device	*pNetDev);
 
@@ -107,7 +91,7 @@ Note:
 ========================================================================
 */
 VOID CFG80211_BeaconCountryRegionParse(
-	IN PRTMP_ADAPTER			pAd,
+	IN VOID						*pAdCB,
 	IN NDIS_802_11_VARIABLE_IEs	*pVIE,
 	IN UINT16					LenVIE);
 
@@ -129,9 +113,9 @@ Note:
 ========================================================================
 */
 VOID CFG80211_RegHint(
-	IN PRTMP_ADAPTER	pAd,
-	IN UCHAR			*pCountryIe,
-	IN ULONG			CountryIeLen);
+	IN VOID						*pAdCB,
+	IN UCHAR					*pCountryIe,
+	IN ULONG					CountryIeLen);
 
 /*
 ========================================================================
@@ -150,9 +134,9 @@ Note:
 ========================================================================
 */
 VOID CFG80211_RegHint11D(
-	IN PRTMP_ADAPTER	pAd,
-	IN UCHAR			*pCountryIe,
-	IN ULONG			CountryIeLen);
+	IN VOID							*pAdCB,
+	IN UCHAR						*pCountryIe,
+	IN ULONG						CountryIeLen);
 
 /*
 ========================================================================
@@ -172,11 +156,10 @@ Note:
 ========================================================================
 */
 VOID CFG80211_RegRuleApply(
-	IN PRTMP_ADAPTER				pAd,
+	IN VOID							*pAdCB,
 	IN struct wiphy					*pWiphy,
 	IN UCHAR						*pAlpha2);
 
-#if defined(AP_SCAN_SUPPORT) || defined(CONFIG_STA_SUPPORT)
 /*
 ========================================================================
 Routine Description:
@@ -193,7 +176,7 @@ Note:
 ========================================================================
 */
 VOID CFG80211_Scaning(
-	IN PRTMP_ADAPTER				pAd,
+	IN VOID							*pAdCB,
 	IN UINT32						BssIdx,
 	IN UINT32						ChanId,
 	IN UCHAR						*pFrame,
@@ -217,9 +200,8 @@ Note:
 ========================================================================
 */
 VOID CFG80211_ScanEnd(
-	IN PRTMP_ADAPTER				pAd,
+	IN VOID							*pAdCB,
 	IN BOOLEAN						FlgIsAborted);
-#endif // AP_SCAN_SUPPORT || CONFIG_STA_SUPPORT //
 
 /*
 ========================================================================
@@ -240,7 +222,7 @@ Note:
 ========================================================================
 */
 BOOLEAN CFG80211_SupBandReInit(
-	IN PRTMP_ADAPTER 				pAd);
+	IN VOID							*pAdCB);
 
 /*
 ========================================================================
@@ -262,8 +244,8 @@ Return Value:
 Note:
 ========================================================================
 */
-void CFG80211_ConnectResultInform(
-	IN PRTMP_ADAPTER 				pAd,
+VOID CFG80211_ConnectResultInform(
+	IN VOID							*pAdCB,
 	IN UCHAR						*pBSSID,
 	IN UCHAR						*pReqIe,
 	IN UINT32						ReqIeLen,
@@ -272,5 +254,10 @@ void CFG80211_ConnectResultInform(
 	IN UCHAR						FlgIsSuccess);
 
 #endif // RT_CFG80211_SUPPORT //
+
+
+VOID RFKillStatusUpdate(
+        IN PRTMP_ADAPTER pAd,
+        IN BOOLEAN active);
 
 /* End of cfg80211.h */

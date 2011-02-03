@@ -5,35 +5,26 @@
  * Hsinchu County 302,
  * Taiwan, R.O.C.
  *
- * (c) Copyright 2002-2007, Ralink Technology, Inc.
+ * (c) Copyright 2002-2010, Ralink Technology, Inc.
  *
- * This program is free software; you can redistribute it and/or modify  * 
- * it under the terms of the GNU General Public License as published by  * 
- * the Free Software Foundation; either version 2 of the License, or     * 
- * (at your option) any later version.                                   * 
- *                                                                       * 
- * This program is distributed in the hope that it will be useful,       * 
- * but WITHOUT ANY WARRANTY; without even the implied warranty of        * 
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         * 
- * GNU General Public License for more details.                          * 
- *                                                                       * 
- * You should have received a copy of the GNU General Public License     * 
- * along with this program; if not, write to the                         * 
- * Free Software Foundation, Inc.,                                       * 
- * 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             * 
- *                                                                       * 
- *************************************************************************
+ * This program is free software; you can redistribute it and/or modify  *
+ * it under the terms of the GNU General Public License as published by  *
+ * the Free Software Foundation; either version 2 of the License, or     *
+ * (at your option) any later version.                                   *
+ *                                                                       *
+ * This program is distributed in the hope that it will be useful,       *
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of        *
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
+ * GNU General Public License for more details.                          *
+ *                                                                       *
+ * You should have received a copy of the GNU General Public License     *
+ * along with this program; if not, write to the                         *
+ * Free Software Foundation, Inc.,                                       *
+ * 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
+ *                                                                       *
+ *************************************************************************/
 
-	Module Name:
-	auth_rsp.c
 
-	Abstract:
-
-	Revision History:
-	Who			When			What
-	--------	----------		----------------------------------------------
-	John		2004-10-1		copy from RT2560
-*/
 #include "rt_config.h"
 
 /*
@@ -122,6 +113,7 @@ VOID PeerDeauthAction(
     UCHAR       Addr2[MAC_ADDR_LEN];
 	UCHAR       Addr3[MAC_ADDR_LEN];
     USHORT      Reason;
+	BOOLEAN		bDoIterate = FALSE;
 
     if (PeerDeauthSanity(pAd, Elem->Msg, Elem->MsgLen, Addr1, Addr2, Addr3, &Reason)) 
     {
@@ -133,14 +125,20 @@ VOID PeerDeauthAction(
         {
             DBGPRINT(RT_DEBUG_TRACE,("AUTH_RSP - receive DE-AUTH from our AP (Reason=%d)\n", Reason));
 
+			if (Reason == REASON_4_WAY_TIMEOUT)
+				RTMPSendWirelessEvent(pAd, IW_PAIRWISE_HS_TIMEOUT_EVENT_FLAG, NULL, 0, 0); 
+
+			if (Reason == REASON_GROUP_KEY_HS_TIMEOUT)
+				RTMPSendWirelessEvent(pAd, IW_GROUP_HS_TIMEOUT_EVENT_FLAG, NULL, 0, 0); 
+
 
 #ifdef NATIVE_WPA_SUPPLICANT_SUPPORT
-		RtmpOSWrielessEventSend(pAd, SIOCGIWAP, -1, NULL, NULL, 0);
+			RtmpOSWrielessEventSend(pAd, SIOCGIWAP, -1, NULL, NULL, 0);
 #endif // NATIVE_WPA_SUPPLICANT_SUPPORT //        
             
 
 			// send wireless event - for deauthentication
-				RTMPSendWirelessEvent(pAd, IW_DEAUTH_EVENT_FLAG, NULL, BSS0, 0); 
+			RTMPSendWirelessEvent(pAd, IW_DEAUTH_EVENT_FLAG, NULL, BSS0, 0); 
 
 #ifdef WPA_SUPPLICANT_SUPPORT
 			if ((pAd->StaCfg.WpaSupplicantUP != WPA_SUPPLICANT_DISABLE) &&
@@ -149,19 +147,24 @@ VOID PeerDeauthAction(
 				pAd->StaCfg.bLostAp = TRUE;
 #endif // WPA_SUPPLICANT_SUPPORT //
 
+			/*
+				Some customer would set AP1 & AP2 same SSID, AuthMode & EncrypType but different WPAPSK,
+				therefore we need to do iterate here.
+			*/
+			if ((pAd->StaCfg.PortSecured == WPA_802_1X_PORT_NOT_SECURED)
+				&& ((pAd->StaCfg.AuthMode == Ndis802_11AuthModeWPAPSK) || (pAd->StaCfg.AuthMode == Ndis802_11AuthModeWPA2PSK))
+				)
+				bDoIterate  = TRUE;
+
             LinkDown(pAd, TRUE);
+			
+			if (bDoIterate)
+			{
+				pAd->MlmeAux.BssIdx++;
+				IterateOnBssTab(pAd);
+			}
+
         }
-        else if (ADHOC_ON(pAd)
-            && (MAC_ADDR_EQUAL(Addr1, pAd->CurrentAddress) || MAC_ADDR_EQUAL(Addr1, BROADCAST_ADDR)))
-        {
-            MAC_TABLE_ENTRY     *pEntry;
-
-            pEntry = MacTableLookup(pAd, Addr2);
-            if (pEntry && IS_ENTRY_CLIENT(pEntry))
-                MacTableDeleteEntry(pAd, pEntry->Aid, pEntry->Addr);
-
-            DBGPRINT(RT_DEBUG_TRACE,("AUTH_RSP - receive DE-AUTH from %02x:%02x:%02x:%02x:%02x:%02x \n", PRINT_MAC(Addr2)));            
-        }        
     }
     else
     {

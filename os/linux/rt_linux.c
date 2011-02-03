@@ -5,29 +5,34 @@
  * Hsinchu County 302,
  * Taiwan, R.O.C.
  *
- * (c) Copyright 2002-2007, Ralink Technology, Inc.
+ * (c) Copyright 2002-2010, Ralink Technology, Inc.
  *
- * This program is free software; you can redistribute it and/or modify  * 
- * it under the terms of the GNU General Public License as published by  * 
- * the Free Software Foundation; either version 2 of the License, or     * 
- * (at your option) any later version.                                   * 
- *                                                                       * 
- * This program is distributed in the hope that it will be useful,       * 
- * but WITHOUT ANY WARRANTY; without even the implied warranty of        * 
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         * 
- * GNU General Public License for more details.                          * 
- *                                                                       * 
- * You should have received a copy of the GNU General Public License     * 
- * along with this program; if not, write to the                         * 
- * Free Software Foundation, Inc.,                                       * 
- * 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             * 
- *                                                                       * 
- *************************************************************************
- */
+ * This program is free software; you can redistribute it and/or modify  *
+ * it under the terms of the GNU General Public License as published by  *
+ * the Free Software Foundation; either version 2 of the License, or     *
+ * (at your option) any later version.                                   *
+ *                                                                       *
+ * This program is distributed in the hope that it will be useful,       *
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of        *
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
+ * GNU General Public License for more details.                          *
+ *                                                                       *
+ * You should have received a copy of the GNU General Public License     *
+ * along with this program; if not, write to the                         *
+ * Free Software Foundation, Inc.,                                       *
+ * 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
+ *                                                                       *
+ *************************************************************************/
+
 
 #include "rt_config.h"
 
-ULONG	RTDebugLevel = RT_DEBUG_ERROR;
+ULONG	RTDebugLevel = RT_DEBUG_TRACE;
+
+
+#ifdef VENDOR_FEATURE4_SUPPORT
+ULONG	OS_NumOfMemAlloc = 0, OS_NumOfMemFree = 0;
+#endif // VENDOR_FEATURE4_SUPPORT //
 
 
 #ifdef SYSTEM_LOG_SUPPORT
@@ -60,6 +65,7 @@ char const *pWirelessSysEventText[IW_SYS_EVENT_TYPE_NUM] = {
 	"Scanning",												/* IW_SCANNING_EVENT_FLAG */
 	"Start a new IBSS",										/* IW_START_IBSS_FLAG */
 	"Join the IBSS",										/* IW_JOIN_IBSS_FLAG */
+	"Shared WEP fail",										/* IW_SHARED_WEP_FAIL*/
 	};
 
 #ifdef IDS_SUPPORT
@@ -179,7 +185,13 @@ NDIS_STATUS os_alloc_mem(
 {	
 	*mem = (PUCHAR) kmalloc(size, GFP_ATOMIC);
 	if (*mem)
+	{
+#ifdef VENDOR_FEATURE4_SUPPORT
+		OS_NumOfMemAlloc ++;
+#endif // VENDOR_FEATURE4_SUPPORT //
+
 		return (NDIS_STATUS_SUCCESS);
+	}
 	else
 		return (NDIS_STATUS_FAILURE);
 }
@@ -189,13 +201,77 @@ NDIS_STATUS os_free_mem(
 	IN	PRTMP_ADAPTER pAd,
 	IN	PVOID mem)
 {
-	
 	ASSERT(mem);
 	kfree(mem);
+
+#ifdef VENDOR_FEATURE4_SUPPORT
+	OS_NumOfMemFree ++;
+#endif // VENDOR_FEATURE4_SUPPORT //
+
 	return (NDIS_STATUS_SUCCESS);
 }
 
 
+#if defined(RTMP_RBUS_SUPPORT) || defined (RTMP_FLASH_SUPPORT)
+/* The flag "CONFIG_RALINK_FLASH_API" is used for APSoC Linux SDK */
+#ifdef CONFIG_RALINK_FLASH_API
+
+int32_t FlashRead(uint32_t *dst, uint32_t *src, uint32_t count);
+int32_t FlashWrite(uint16_t *source, uint16_t *destination, uint32_t numBytes);
+#define NVRAM_OFFSET                            0x30000
+#if defined (CONFIG_RT2880_FLASH_32M)
+#define RF_OFFSET                               0x1FE0000
+#else
+#ifdef RTMP_FLASH_SUPPORT
+#define RF_OFFSET                               0x48000
+#else
+#define RF_OFFSET                               0x40000
+#endif // RTMP_FLASH_SUPPORT //
+#endif
+
+#else // CONFIG_RALINK_FLASH_API //
+
+#ifdef RA_MTD_RW_BY_NUM
+#if defined (CONFIG_RT2880_FLASH_32M)
+#define MTD_NUM_FACTORY 5
+#else
+#define MTD_NUM_FACTORY 2
+#endif
+extern int ra_mtd_write(int num, loff_t to, size_t len, const u_char *buf);
+extern int ra_mtd_read(int num, loff_t from, size_t len, u_char *buf);
+#else
+extern int ra_mtd_write_nm(char *name, loff_t to, size_t len, const u_char *buf);
+extern int ra_mtd_read_nm(char *name, loff_t from, size_t len, u_char *buf);
+#endif
+
+#endif // CONFIG_RALINK_FLASH_API //
+
+void RtmpFlashRead(UCHAR * p, ULONG a, ULONG b)
+{
+#ifdef CONFIG_RALINK_FLASH_API
+	FlashRead((uint32_t *)p, (uint32_t *)a, (uint32_t)b);
+#else
+#ifdef RA_MTD_RW_BY_NUM
+	ra_mtd_read(MTD_NUM_FACTORY, 0, (size_t)b, p);
+#else
+	ra_mtd_read_nm("Factory", 0, (size_t)b, p);
+#endif
+#endif // CONFIG_RALINK_FLASH_API //
+}
+
+void RtmpFlashWrite(UCHAR * p, ULONG a, ULONG b)
+{
+#ifdef CONFIG_RALINK_FLASH_API
+	FlashWrite((uint16_t *)p, (uint16_t *)a, (uint32_t)b);
+#else
+#ifdef RA_MTD_RW_BY_NUM
+	ra_mtd_write(MTD_NUM_FACTORY, 0, (size_t)b, p);
+#else
+	ra_mtd_write_nm("Factory", 0, (size_t)b, p);
+#endif
+#endif // CONFIG_RALINK_FLASH_API //
+}
+#endif // defined(RTMP_RBUS_SUPPORT) || defined (RTMP_FLASH_SUPPORT) //
 
 
 PNDIS_PACKET RtmpOSNetPktAlloc(
@@ -614,17 +690,16 @@ void wlan_802_11_to_802_3_packet(
 	}
 
 
-
 void announce_802_3_packet(
 	IN	PRTMP_ADAPTER	pAd, 
 	IN	PNDIS_PACKET	pPacket)
 {
 
 	struct sk_buff	*pRxPkt;
-#ifdef INF_AMAZON_PPA
+#ifdef INF_PPA_SUPPORT
         int             ret = 0;
         unsigned int ppa_flags = 0; /* reserved for now */
-#endif // INF_AMAZON_PPA //
+#endif // INF_PPA_SUPPORT //
 
 
 	ASSERT(pPacket);
@@ -637,6 +712,7 @@ void announce_802_3_packet(
 #endif // CONFIG_STA_SUPPORT //
 
     /* Push up the protocol stack */
+
 #ifdef IKANOS_VX_1X0
 	IKANOS_DataFrameRx(pAd, pRxPkt->dev, pRxPkt, pRxPkt->len);
 #else
@@ -644,7 +720,7 @@ void announce_802_3_packet(
 // mark for bridge fast path, 2009/06/22
 //	pRxPkt->protocol = eth_type_trans(pRxPkt, pRxPkt->dev);
 
-#ifdef INF_AMAZON_PPA
+#ifdef INF_PPA_SUPPORT
 	if (ppa_hook_directpath_send_fn && pAd->PPAEnable==TRUE ) 
 	{
 		pRxPkt->protocol = eth_type_trans(pRxPkt, pRxPkt->dev);
@@ -658,7 +734,7 @@ void announce_802_3_packet(
 		return;
 
 	}	  	
-#endif // INF_AMAZON_PPA //
+#endif // INF_PPA_SUPPORT //
 
 //#ifdef CONFIG_5VT_ENHANCE
 //	*(int*)(pRxPkt->cb) = BRIDGE_TAG; 
@@ -1052,7 +1128,14 @@ void send_monitor_packets(
 		/* data_rate is the rate index in the wireshark rate table */
 	  	if (pRxBlk->pRxWI->PHYMODE >= MODE_HTMIX)
 	  	{
-	     	if (pRxBlk->pRxWI->MCS > 15)
+			if (pRxBlk->pRxWI->MCS == 32)
+			{
+				if (pRxBlk->pRxWI->ShortGI)
+					ph_11n33->data_rate = 16;
+				else
+					ph_11n33->data_rate = 4;    
+			}
+			else if (pRxBlk->pRxWI->MCS > 15)
 	     		ph_11n33->data_rate = (16*4 + ((UCHAR)pRxBlk->pRxWI->BW *16) + ((UCHAR)pRxBlk->pRxWI->ShortGI *32) + ((UCHAR)pRxBlk->pRxWI->MCS));                          
 	     	else
 	     		ph_11n33->data_rate = 16 + ((UCHAR)pRxBlk->pRxWI->BW *16) + ((UCHAR)pRxBlk->pRxWI->ShortGI *32) + ((UCHAR)pRxBlk->pRxWI->MCS);
@@ -1267,7 +1350,6 @@ void RtmpOSTaskCustomize(
 #endif
 }
 
-
 NDIS_STATUS RtmpOSTaskAttach(
 	IN RTMP_OS_TASK *pTask,
 	IN RTMP_OS_TASK_CALLBACK fn, 
@@ -1281,11 +1363,11 @@ NDIS_STATUS RtmpOSTaskAttach(
 #ifdef KTHREAD_SUPPORT
 	pTask->task_killed = 0;
 	pTask->kthread_task = NULL;
-	pTask->kthread_task = kthread_run(fn, (void *)arg, pTask->taskName);
+	pTask->kthread_task = kthread_run((cast_fn)fn, (void *)arg, pTask->taskName);
 	if (IS_ERR(pTask->kthread_task))
 		status = NDIS_STATUS_FAILURE;
 #else
-	pid_number = kernel_thread(fn, (void *)arg, RTMP_OS_MGMT_TASK_FLAGS);
+	pid_number = kernel_thread((cast_fn)fn, (void *)arg, RTMP_OS_MGMT_TASK_FLAGS);
 	if (pid_number < 0) 
 	{
 		DBGPRINT (RT_DEBUG_ERROR, ("Attach task(%s) failed!\n", pTask->taskName));
@@ -1332,8 +1414,11 @@ NDIS_STATUS RtmpOSTaskInit(
 
 
 void RTMP_IndicateMediaState(
-	IN	PRTMP_ADAPTER	pAd)
+	IN	PRTMP_ADAPTER		pAd,
+	IN  NDIS_MEDIA_STATE	media_state)
 {	
+#ifdef SYSTEM_LOG_SUPPORT
+		pAd->IndicateMediaState = media_state;
 		if (pAd->IndicateMediaState == NdisMediaStateConnected)
 		{
 			RTMPSendWirelessEvent(pAd, IW_STA_LINKUP_EVENT_FLAG, pAd->MacTab.Content[BSSID_WCID].Addr, BSS0, 0);
@@ -1342,6 +1427,7 @@ void RTMP_IndicateMediaState(
 		{							
 			RTMPSendWirelessEvent(pAd, IW_STA_LINKDOWN_EVENT_FLAG, pAd->MacTab.Content[BSSID_WCID].Addr, BSS0, 0); 		
 		}	
+#endif // SYSTEM_LOG_SUPPORT //
 }
 
 
@@ -1648,11 +1734,12 @@ int RtmpOSNetDevAttach(
 {	
 	int ret, rtnl_locked = FALSE;
 
-	DBGPRINT(RT_DEBUG_TRACE, ("RtmpOSNetDevAttach()--->\n"));
-
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,31)
 	struct net_device_ops *pNetDevOps = pNetDev->netdev_ops;
 #endif
+
+	DBGPRINT(RT_DEBUG_TRACE, ("RtmpOSNetDevAttach()--->\n"));
+
 	// If we need hook some callback function to the net device structrue, now do it.
 	if (pDevOpHook)
 	{
@@ -1726,7 +1813,7 @@ int RtmpOSNetDevAttach(
 			Or you will suffer NULL pointer in list_add of
 			cfg80211_netdev_notifier_call().
 		*/
-		CFG80211_Register(pAd, pAd->pCfgDev, pNetDev);
+		RT_CFG80211_REGISTER(pAd, pAd->pCfgDev, pNetDev);
 #endif // RT_CFG80211_SUPPORT //
 	}
 
@@ -1852,6 +1939,10 @@ NDIS_STATUS AdapterBlockAllocateMemory(
 	IN PVOID	handle,
 	OUT	PVOID	*ppAd)
 {
+#ifdef WORKQUEUE_BH
+	POS_COOKIE cookie;
+#endif // WORKQUEUE_BH //
+
 
 	*ppAd = (PVOID)vmalloc(sizeof(RTMP_ADAPTER)); //pci_alloc_consistent(pci_dev, sizeof(RTMP_ADAPTER), phy_addr);
     
@@ -1859,6 +1950,11 @@ NDIS_STATUS AdapterBlockAllocateMemory(
 	{
 		NdisZeroMemory(*ppAd, sizeof(RTMP_ADAPTER));
 		((PRTMP_ADAPTER)*ppAd)->OS_Cookie = handle;
+#ifdef WORKQUEUE_BH
+		cookie = (POS_COOKIE)(((PRTMP_ADAPTER)*ppAd)->OS_Cookie);
+		cookie->pAd_va = *ppAd;
+#endif // WORKQUEUE_BH //
+
 		return (NDIS_STATUS_SUCCESS);
 	} else {
 		return (NDIS_STATUS_FAILURE);
@@ -1924,7 +2020,9 @@ EXPORT_SYMBOL(get_netdev_from_bssid);
 EXPORT_SYMBOL(hex_dump);
 EXPORT_SYMBOL(RTMPFreeAdapter);
 EXPORT_SYMBOL(RTMP_GetCurrentSystemTime);
+#ifdef SYSTEM_LOG_SUPPORT
 EXPORT_SYMBOL(RTMPSendWirelessEvent);
+#endif // SYSTEM_LOG_SUPPORT //
 EXPORT_SYMBOL(RTMPusecDelay);
 EXPORT_SYMBOL(RtmpOSWrielessEventSend);
 

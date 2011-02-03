@@ -5,37 +5,26 @@
  * Hsinchu County 302,
  * Taiwan, R.O.C.
  *
- * (c) Copyright 2002-2007, Ralink Technology, Inc.
+ * (c) Copyright 2002-2010, Ralink Technology, Inc.
  *
- * This program is free software; you can redistribute it and/or modify  * 
- * it under the terms of the GNU General Public License as published by  * 
- * the Free Software Foundation; either version 2 of the License, or     * 
- * (at your option) any later version.                                   * 
- *                                                                       * 
- * This program is distributed in the hope that it will be useful,       * 
- * but WITHOUT ANY WARRANTY; without even the implied warranty of        * 
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         * 
- * GNU General Public License for more details.                          * 
- *                                                                       * 
- * You should have received a copy of the GNU General Public License     * 
- * along with this program; if not, write to the                         * 
- * Free Software Foundation, Inc.,                                       * 
- * 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             * 
- *                                                                       * 
- ***************************************************************************
+ * This program is free software; you can redistribute it and/or modify  *
+ * it under the terms of the GNU General Public License as published by  *
+ * the Free Software Foundation; either version 2 of the License, or     *
+ * (at your option) any later version.                                   *
+ *                                                                       *
+ * This program is distributed in the hope that it will be useful,       *
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of        *
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
+ * GNU General Public License for more details.                          *
+ *                                                                       *
+ * You should have received a copy of the GNU General Public License     *
+ * along with this program; if not, write to the                         *
+ * Free Software Foundation, Inc.,                                       *
+ * 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
+ *                                                                       *
+ *************************************************************************/
 
-	Module Name:
-	mlme.h
 
-	Abstract:
-
-	Revision History:
-	Who			When			What
-	--------	----------		----------------------------------------------
-	John Chang	2003-08-28		Created
-	John Chang  2004-09-06      modified for RT2600
-	
-*/
 #ifndef __MLME_H__
 #define __MLME_H__
 
@@ -75,9 +64,12 @@
 #define MAX_CHANNEL_TIME            140       // unit: msec, for single band scan
 #define	FAST_ACTIVE_SCAN_TIME	    30 		  // Active scan waiting for probe response time
 #define CW_MIN_IN_BITS              4         // actual CwMin = 2^CW_MIN_IN_BITS - 1
+#define AUTO_CHANNEL_SEL_TIMEOUT		400		// uint: msec
 #define LINK_DOWN_TIMEOUT           20000      // unit: msec
 #define AUTO_WAKEUP_TIMEOUT			70			//unit: msec
-
+#ifdef AUTO_RETRY_CNT_LIMIT
+#define MAX_AUTO_RECONNECT_CNT		7			/* Max Auto Reconnect Count Limitation */
+#endif /* AUTO_RETRY_CNT_LIMIT */
 
 #ifdef CONFIG_STA_SUPPORT
 #define CW_MAX_IN_BITS              10        // actual CwMax = 2^CW_MAX_IN_BITS - 1
@@ -210,6 +202,51 @@ if (((__pEntry)) != NULL) \
 	(__pEntry)->OneSecTxFailCount = 0; \
 	(__pEntry)->OneSecTxNoRetryOkCount = 0; \
 }
+
+//#ifdef RTMP_RBUS_SUPPORT
+#ifdef NEW_RATE_ADAPT_SUPPORT
+//added ys
+//added for rate adaptation by ys
+//#define NEW_RATE_ADAPT_SUPPORT//3T3R always use the new rate adaptation algorithm, regardless whether this is defined
+//#define CCK_SUPPORT
+//#define USE_NEW_THRD//not useful when (NEW_RATE_ADAPT_SUPPORT is not defined) and (2T2R)
+#define USE_GREATER_UP_MCS //rate(upMcs)> rate(thisMcs) if this is defined. otherwise, rate(upMcs)>= rate(thisMcs); meaningful when (NEW_RATE_ADAPT_SUPPORT is supported) or 3T3R
+#define PER_THRD_ADJ			1
+#define RA_PER_LOW_THRD			8
+#define FEW_PKTS_CNT_THRD 1
+//#define RA_PER_HIGH_THRD_FACTOR 90 //high thrd = 1 - (rate of lower MCS) * factor/100/(rate of this MCS), useful when NEW_RATE_ADAPT_SUPPORT and USE_NEW_THRD are defined
+
+//#if !defined(NEW_RATE_ADAPT_SUPPORT)
+//	#undef USE_NEW_THRD//actually, whether this is defined doesn't matter when !defined(NEW_RATE_ADAPT_SUPPORT). This is just for clarification.
+//	#undef USE_GREATER_UP_MCS //actually, whether this is defined doesn't matter when !defined(NEW_RATE_ADAPT_SUPPORT). This is just for clarification.
+//#endif
+//#define MAX_STREAMS 2, this information is now determined by pAd->MACVersion >= RALINK_2883_VERSION
+//#if MAX_STREAMS==3
+//	#define NEW_RATE_ADAPT_SUPPORT
+//#endif
+#endif // NEW_RATE_ADAPT_SUPPORT //
+//#endif // RTMP_RBUS_SUPPORT //
+
+#ifdef TXBF_SUPPORT
+//#define MRQ_FORCE_TX//regardless the capability of the station
+#define ETXBF_EN_COND		0 //this value can be set by iwpriv ra0 set ETxBfEnCond=?
+// 0:no etxbf, 
+// 1:etxbf update periodically, 
+// 2:etxbf updated if mcs changes in RateSwitchingAdapt() or APQuickResponeForRateUpExecAdapt(). 
+// 3:auto-selection: if mfb changes or timer expires, then send sounding packets <----not finished yet!!!
+// note: when = 1 or 3, NO_SNDG_CNT_THRD controls the frequency to update the matrix(ETXBF_EN_COND=1) or activate the whole bf evaluation process(not defined)
+
+#define MSI_TOGGLE_BF		6
+#define TOGGLE_BF_PKTS		5// the number of packets with inverted BF status
+#define READY_FOR_SNDG0		0//jump to WAIT_SNDG_FB0 when channel change or periodically
+#define WAIT_SNDG_FB0		1//jump to WAIT_SNDG_FB1 when bf report0 is received
+#define WAIT_SNDG_FB1		2
+#define WAIT_MFB			3
+#define WAIT_USELESS_RSP	4
+#define WAIT_BEST_SNDG		5
+#define NO_SNDG_CNT_THRD	0//send sndg packet if there is no sounding for (NO_SNDG_CNT_THRD+1)*500msec. If this =0, bf matrix is updated at each call of APMlmeDynamicTxRateSwitchingAdapt()
+//rate adaptation end
+#endif // TXBF_SUPPORT //
 
 
 //
@@ -1099,13 +1136,13 @@ typedef struct {
 
 	UCHAR   MacAddr[MAC_ADDR_LEN];
 
-#if defined(AP_SCAN_SUPPORT) || defined(CONFIG_STA_SUPPORT)
 #ifdef LINUX
+#ifdef CONFIG_STA_SUPPORT
 #ifdef RT_CFG80211_SUPPORT
 	VOID *pCfg80211_Chan;
 #endif // RT_CFG80211_SUPPORT //
+#endif // CONFIG_STA_SUPPORT //
 #endif // LINUX //
-#endif // AP_SCAN_SUPPORT || CONFIG_STA_SUPPORT //
 } BSS_ENTRY, *PBSS_ENTRY;
 
 typedef struct {
@@ -1321,6 +1358,35 @@ typedef struct GNU_PACKED _RTMP_TX_RATE_SWITCH
 	UCHAR   TrainDown;
 } RRTMP_TX_RATE_SWITCH, *PRTMP_TX_RATE_SWITCH;
 
+//#ifdef RTMP_RBUS_SUPPORT
+typedef struct  _RTMP_TX_RATE_SWITCH_3S
+{
+	UCHAR   ItemNo;
+#ifdef RT_BIG_ENDIAN
+	UCHAR	Rsv2:2;
+	UCHAR	Mode:2;
+	UCHAR	Rsv1:1;	
+	UCHAR	BW:1;
+	UCHAR	ShortGI:1;
+	UCHAR	STBC:1;
+#else
+	UCHAR	STBC:1;
+	UCHAR	ShortGI:1;
+	UCHAR	BW:1;
+	UCHAR	Rsv1:1;
+	UCHAR	Mode:2;
+	UCHAR	Rsv2:2;
+#endif	
+	UCHAR   CurrMCS;
+	UCHAR   TrainUp;
+	UCHAR   TrainDown;
+	UCHAR	downMcs;
+	UCHAR	upMcs3;
+	UCHAR	upMcs2;
+	UCHAR	upMcs1;
+	UCHAR	dataRate;
+} RRTMP_TX_RATE_SWITCH_3S, *PRTMP_TX_RATE_SWITCH_3S;
+//#endif // RTMP_RBUS_SUPPORT //
 
 // ========================== AP mlme.h ===============================
 #define TBTT_PRELOAD_TIME       384        // usec. LomgPreamble + 24-byte at 1Mbps
@@ -1337,7 +1403,7 @@ typedef struct GNU_PACKED _RTMP_TX_RATE_SWITCH
 #define MAC_TABLE_FULL(Tab)				((Tab).size == MAX_LEN_OF_MAC_TABLE)
 
 // AP shall drop the sta if contine Tx fail count reach it.
-#define MAC_ENTRY_LIFE_CHECK_CNT		20			// packet cnt.
+#define MAC_ENTRY_LIFE_CHECK_CNT		1024			// packet cnt.
 
 // Value domain of pMacEntry->Sst
 typedef enum _Sst {

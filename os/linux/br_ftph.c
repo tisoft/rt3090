@@ -5,36 +5,25 @@
  * Hsinchu County 302,
  * Taiwan, R.O.C.
  *
- * (c) Copyright 2002-2007, Ralink Technology, Inc.
+ * (c) Copyright 2002-2010, Ralink Technology, Inc.
  *
- * This program is free software; you can redistribute it and/or modify  * 
- * it under the terms of the GNU General Public License as published by  * 
- * the Free Software Foundation; either version 2 of the License, or     * 
- * (at your option) any later version.                                   * 
- *                                                                       * 
- * This program is distributed in the hope that it will be useful,       * 
- * but WITHOUT ANY WARRANTY; without even the implied warranty of        * 
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         * 
- * GNU General Public License for more details.                          * 
- *                                                                       * 
- * You should have received a copy of the GNU General Public License     * 
- * along with this program; if not, write to the                         * 
- * Free Software Foundation, Inc.,                                       * 
- * 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             * 
- *                                                                       * 
- *************************************************************************
-    Module Name:
-    bg_ftph.c
- 
-    Abstract:
-    Provide fast path between LAN and WLAN.
- 
-    Revision History:
-    Who         When          What
-    --------    ----------    ----------------------------------------------
-    Sample Lin	01-22-2008    Created
+ * This program is free software; you can redistribute it and/or modify  *
+ * it under the terms of the GNU General Public License as published by  *
+ * the Free Software Foundation; either version 2 of the License, or     *
+ * (at your option) any later version.                                   *
+ *                                                                       *
+ * This program is distributed in the hope that it will be useful,       *
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of        *
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
+ * GNU General Public License for more details.                          *
+ *                                                                       *
+ * You should have received a copy of the GNU General Public License     *
+ * along with this program; if not, write to the                         *
+ * Free Software Foundation, Inc.,                                       *
+ * 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
+ *                                                                       *
+ *************************************************************************/
 
- */
 
 #include "rt_config.h"
 
@@ -122,14 +111,15 @@ VOID BG_FTPH_Remove(VOID)
 } /* End of BG_FTPH_Init */
 
 
+
+
 /*
 ========================================================================
 Routine Description:
-	Pass the packet to the port directly or bridge layer.
+	Forward the received packet.
 
 Arguments:
-	pAd				- WLAN control block pointer
-	skb_p			- the received packet
+	pPacket			- the received packet
 
 Return Value:
 	None
@@ -137,13 +127,6 @@ Return Value:
 Note:
 ========================================================================
 */
-static inline unsigned packet_length(const struct sk_buff *skb)
-{
-#define VLAN_HLEN	4
-	return skb->len - (skb->protocol == htons(ETH_P_8021Q) ? VLAN_HLEN : 0);
-}
-
-
 UINT32 BG_FTPH_PacketFromApHandle(
 	IN		PNDIS_PACKET	pPacket)
 {

@@ -5,25 +5,24 @@
  * Hsinchu County 302,
  * Taiwan, R.O.C.
  *
- * (c) Copyright 2002-2007, Ralink Technology, Inc.
+ * (c) Copyright 2002-2010, Ralink Technology, Inc.
  *
- * This program is free software; you can redistribute it and/or modify  * 
- * it under the terms of the GNU General Public License as published by  * 
- * the Free Software Foundation; either version 2 of the License, or     * 
- * (at your option) any later version.                                   * 
- *                                                                       * 
- * This program is distributed in the hope that it will be useful,       * 
- * but WITHOUT ANY WARRANTY; without even the implied warranty of        * 
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         * 
- * GNU General Public License for more details.                          * 
- *                                                                       * 
- * You should have received a copy of the GNU General Public License     * 
- * along with this program; if not, write to the                         * 
- * Free Software Foundation, Inc.,                                       * 
- * 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             * 
- *                                                                       * 
- *************************************************************************
- */
+ * This program is free software; you can redistribute it and/or modify  *
+ * it under the terms of the GNU General Public License as published by  *
+ * the Free Software Foundation; either version 2 of the License, or     *
+ * (at your option) any later version.                                   *
+ *                                                                       *
+ * This program is distributed in the hope that it will be useful,       *
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of        *
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
+ * GNU General Public License for more details.                          *
+ *                                                                       *
+ * You should have received a copy of the GNU General Public License     *
+ * along with this program; if not, write to the                         *
+ * Free Software Foundation, Inc.,                                       *
+ * 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
+ *                                                                       *
+ *************************************************************************/
 
 
 #ifdef DOT11_N_SUPPORT
@@ -79,9 +78,11 @@ VOID BA_MaxWinSizeReasign(
 	OUT UCHAR			*pWinSize)
 {
 	UCHAR MaxSize;
+	UCHAR MaxPeerRxSize;
 
 
-	if (pAd->MACVersion >= RALINK_2883_VERSION) // 3*3
+	MaxPeerRxSize = (((1 << (pEntryPeer->MaxRAmpduFactor + 3)) * 10) / 16) -1;
+	if (pAd->MACVersion >= RALINK_2883_VERSION)
 	{
 		if (pAd->MACVersion >= RALINK_3070_VERSION)
 		{
@@ -105,21 +106,13 @@ VOID BA_MaxWinSizeReasign(
 
 
 #ifdef CONFIG_STA_SUPPORT
-#ifdef RT3593
-	if (IS_RT3593(pAd) &&
-		(pAd->StaActive.SupportedPhyInfo.MCSSet[2] != 0x00) &&
-		INFRA_ON(pAd))
-	{
-		/* the receive capability can accept MCS16 ~ MCS23 */
-		MaxSize = 31; //RT2883 will use 31
-	}
-#endif // RT3593 //
 #endif // CONFIG_STA_SUPPORT //
 
 
-	DBGPRINT(RT_DEBUG_TRACE, ("ba> Win Size = %d, Max Size = %d\n", 
-			*pWinSize, MaxSize));
+	DBGPRINT(RT_DEBUG_TRACE, ("ba>WinSize=%d, MaxSize=%d, MaxPeerRxSize=%d\n", 
+			*pWinSize, MaxSize, MaxPeerRxSize));
 
+	MaxSize = min(MaxPeerRxSize, MaxSize);
 	if ((*pWinSize) > MaxSize)
 	{
 		DBGPRINT(RT_DEBUG_TRACE, ("ba> reassign max win size from %d to %d\n", 

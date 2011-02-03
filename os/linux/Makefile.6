@@ -4,8 +4,8 @@ include $(RT28xx_DIR)/os/linux/config.mk
 #ifdef CONFIG_STA_SUPPORT
 ifeq ($(RT28xx_MODE), STA)
 MOD_NAME = rt$(CHIPSET)sta
-DAT_PATH = /etc/Wireless/RT$(CHIPSET)STA
-DAT_FILE_NAME = RT$(CHIPSET)STA.dat
+DAT_PATH = /etc/Wireless/RT$(CHIPSET_DAT)STA
+DAT_FILE_NAME = RT$(CHIPSET_DAT)STA.dat
 endif
 #endif // CONFIG_STA_SUPPORT //
 
@@ -33,7 +33,6 @@ rt$(CHIPSET)sta-objs := \
 	../../common/cmm_info.o\
 	../../common/cmm_cfg.o\
 	../../common/cmm_wpa.o\
-	../../common/cmm_wpa_adhoc.o\
 	../../common/dfs.o\
 	../../common/spectrum.o\
 	../../common/rtmp_timer.o\
@@ -49,6 +48,7 @@ rt$(CHIPSET)sta-objs := \
 	../../sta/rtmp_data.o\
 	../../sta/connect.o\
 	../../sta/wpa.o\
+	../../sta/ags.o\
 	../../sta/sta_cfg.o
 
 ifeq ($(OSABL),NO)
@@ -78,6 +78,9 @@ endif
 #endif // ETH_CONVERT //
 
 
+
+
+
 ifeq ($(HAS_BLOCK_NET_IF),y)
 rt$(CHIPSET)sta-objs += ../../common/netif_block.o
 endif
@@ -90,8 +93,6 @@ endif
 
 #ifdef RT3090
 ifeq ($(CHIPSET),3090)
-DAT_PATH = /etc/Wireless/RT2860STA
-DAT_FILE_NAME = RT2860STA.dat
 rt$(CHIPSET)sta-objs += \
 	../../common/cmm_mac_pci.o\
 	../../common/cmm_data_pci.o\
@@ -115,10 +116,32 @@ endif
 
 
 
+#ifdef RT3390
+ifeq ($(CHIPSET),3390)
+rt$(CHIPSET)sta-objs += \
+	../../common/cmm_mac_pci.o\
+	../../common/cmm_data_pci.o\
+	../../common/ee_prom.o\
+	../../common/ee_efuse.o\
+	../../common/rtmp_mcu.o\
+	../../common/rt_rf.o\
+	../../chips/rt30xx.o\
+	../../chips/rt3090.o\
+	../../chips/rt33xx.o\
+	../../chips/rt3390.o
+
+ifeq ($(OSABL),NO)
+rt$(CHIPSET)sta-objs += \
+	../../os/linux/rt_pci_rbus.o\
+	../../os/linux/rt_rbus_pci_util.o\
+	../../os/linux/pci_main_dev.o
+endif
+endif
+#endif // RT3390 //
 
 
 ifeq ($(HAS_ATE),y)
-rt$(CHIPSET)sta-objs += ../../os/linux/rt_ate.o
+rt$(CHIPSET)sta-objs += ../../common/rt_ate.o
 endif
 
 
@@ -141,17 +164,22 @@ rt$(CHIPSET)sta-objs += \
 #endif // CONFIG_STA_SUPPORT //
 
 
+
+PHONY := clean install uninstall
+
 clean:
 	rm -f ../../common/*.o
-	rm -f ../../common/.*.{cmd,flags,d}
+	rm -f ../../common/.*.{cmd,flags,d,bak}
 	rm -f ../../os/linux/*.{o,ko,mod.{o,c}}
-	rm -f ../../os/linux/.*.{cmd,flags,d}
+	rm -f ../../os/linux/.*.{cmd,flags,d,bak}
 	rm -fr ../../os/linux/.tmp_versions
 #Must clean Module.symvers; or you will suffer symbol version not match
 #when OS_ABL = YES.
 	rm -f ../../os/linux/Module.symvers
+	rm -f ../../os/linux/Module.markers
+	rm -f ../../os/linux/modules.order
 	rm -f ../../chips/*.o
-	rm -f ../../chips/.*.{cmd,flags,d}
+	rm -f ../../chips/.*.{cmd,flags,d,bak}
 ifeq ($(RT28xx_MODE),AP)
 	rm -f ../../ap/*.o
 	rm -f ../../ap/.*.{cmd,flags,d}
@@ -182,3 +210,7 @@ uninstall:
 #	rm -rf $(DAT_PATH)
 	rm -rf $(addprefix $(LINUX_SRC_MODULE),$(addsuffix .ko,$(MOD_NAME)))
 	/sbin/depmod -a ${shell uname -r}
+
+# Declare the contents of the .PHONY variable as phony.  We keep that
+# information in a variable so we can use it in if_changed and friends.
+.PHONY: $(PHONY)

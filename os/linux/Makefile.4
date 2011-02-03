@@ -4,8 +4,8 @@ include $(RT28xx_DIR)/os/linux/config.mk
 #ifdef CONFIG_STA_SUPPORT
 ifeq ($(RT28xx_MODE), STA)
 MOD_NAME = rt$(CHIPSET)sta
-DAT_PATH = /etc/Wireless/RT$(CHIPSET)STA
-DAT_FILE_NAME = RT$(CHIPSET)STA.dat
+DAT_PATH = /etc/Wireless/RT$(CHIPSET_DAT)STA
+DAT_FILE_NAME = RT$(CHIPSET_DAT)STA.dat
 endif
 #endif // CONFIG_STA_SUPPORT //
 
@@ -34,7 +34,6 @@ RT28XX_STA_OBJ := \
 	$(RT28xx_DIR)/common/cmm_info.o\
 	$(RT28xx_DIR)/common/cmm_cfg.o\
 	$(RT28xx_DIR)/common/cmm_wpa.o\
-	$(RT28xx_DIR)/common/cmm_wpa_adhoc.o\
 	$(RT28xx_DIR)/common/dfs.o\
 	$(RT28xx_DIR)/common/spectrum.o\
 	$(RT28xx_DIR)/common/rtmp_timer.o\
@@ -79,6 +78,8 @@ endif
 #endif // ETH_CONVERT //
 
 
+
+
 ifeq ($(HAS_BLOCK_NET_IF),y)
 RT28XX_STA_OBJ += $(RT28xx_DIR)/common/netif_block.o
 endif
@@ -91,8 +92,6 @@ endif
 
 #ifdef RT3090
 ifeq ($(CHIPSET),3090)
-DAT_PATH = /etc/Wireless/RT2860STA
-DAT_FILE_NAME = RT2860STA.dat
 RT28XX_STA_OBJ += \
 	$(RT28xx_DIR)/common/cmm_mac_pci.o\
 	$(RT28xx_DIR)/common/cmm_data_pci.o\
@@ -117,9 +116,35 @@ endif
 
 
 
+#ifdef RT3390
+ifeq ($(CHIPSET),3390)
+RT28XX_STA_OBJ += \
+	$(RT28xx_DIR)/common/cmm_mac_usb.o\
+	$(RT28xx_DIR)/common/rtusb_io.o\
+	$(RT28xx_DIR)/common/rtusb_bulk.o\
+	$(RT28xx_DIR)/common/rtusb_data.o\
+	$(RT28xx_DIR)/common/cmm_data_usb.o\
+	$(RT28xx_DIR)/common/ee_prom.o\
+	$(RT28xx_DIR)/common/ee_efuse.o\
+	$(RT28xx_DIR)/common/rtmp_mcu.o\
+	$(RT28xx_DIR)/chips/rt30xx.o\
+	$(RT28xx_DIR)/chips/rt3090.o\
+	$(RT28xx_DIR)/chips/rt33xx.o\
+	$(RT28xx_DIR)/common/rt_rf.o\
+	$(RT28xx_DIR)/chips/rt3390.o
+
+ifeq ($(OSABL),NO)
+RT28XX_STA_OBJ += \
+	$(RT28xx_DIR)/common/rtusb_dev_id.o\
+	$(RT28xx_DIR)/os/linux/rt_usb.o\
+	$(RT28xx_DIR)/os/linux/rt_usb_util.o\
+	$(RT28xx_DIR)/os/linux/usb_main_dev.o
+endif
+endif
+#endif // RT3390 //
 
 ifeq ($(HAS_ATE),y)
-RT28XX_STA_OBJ += $(RT28xx_DIR)/os/linux/rt_ate.o
+RT28XX_STA_OBJ += $(RT28xx_DIR)/common/rt_ate.o
 endif
 
 
@@ -131,6 +156,8 @@ RT28XX_STA_OBJ += \
 
 #endif // CONFIG_STA_SUPPORT //
 
+
+PHONY := all release clean install uninstall
 
 all:$(OBJ)
 
@@ -184,3 +211,8 @@ uninstall:
 #	rm -rf $(DAT_PATH)
 	rm -rf $(addprefix $(LINUX_SRC_MODULE),$(addsuffix .o,$(MOD_NAME)))
 	/sbin/depmod -a ${shell uname -r}
+
+# Declare the contents of the .PHONY variable as phony.  We keep that
+# information in a variable so we can use it in if_changed and friends.
+.PHONY: $(PHONY)
+

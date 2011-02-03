@@ -5,33 +5,25 @@
  * Hsinchu County 302,
  * Taiwan, R.O.C.
  *
- * (c) Copyright 2002-2007, Ralink Technology, Inc.
+ * (c) Copyright 2002-2010, Ralink Technology, Inc.
  *
- * This program is free software; you can redistribute it and/or modify  * 
- * it under the terms of the GNU General Public License as published by  * 
- * the Free Software Foundation; either version 2 of the License, or     * 
- * (at your option) any later version.                                   * 
- *                                                                       * 
- * This program is distributed in the hope that it will be useful,       * 
- * but WITHOUT ANY WARRANTY; without even the implied warranty of        * 
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         * 
- * GNU General Public License for more details.                          * 
- *                                                                       * 
- * You should have received a copy of the GNU General Public License     * 
- * along with this program; if not, write to the                         * 
- * Free Software Foundation, Inc.,                                       * 
- * 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             * 
- *                                                                       * 
- *************************************************************************
-    Module Name:
-	mac_pci.h
- 
-    Abstract:
- 
-    Revision History:
-    Who          When          What
-    ---------    ----------    ----------------------------------------------
- */
+ * This program is free software; you can redistribute it and/or modify  *
+ * it under the terms of the GNU General Public License as published by  *
+ * the Free Software Foundation; either version 2 of the License, or     *
+ * (at your option) any later version.                                   *
+ *                                                                       *
+ * This program is distributed in the hope that it will be useful,       *
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of        *
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
+ * GNU General Public License for more details.                          *
+ *                                                                       *
+ * You should have received a copy of the GNU General Public License     *
+ * along with this program; if not, write to the                         *
+ * Free Software Foundation, Inc.,                                       *
+ * 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
+ *                                                                       *
+ *************************************************************************/
+
 
 #ifndef __MAC_PCI_H__
 #define __MAC_PCI_H__
@@ -228,25 +220,27 @@ typedef union _TX_ATTENUATION_CTRL_STRUC {
 
 
 /* ----------------- Frimware Related MACRO ----------------- */
-#define RTMP_WRITE_FIRMWARE(_pAd, _pFwImage, _FwLen)			\
-	do{								\
-		ULONG	_i, _firm;					\
+#define RTMP_WRITE_FIRMWARE(_pAd, _pFwImage, _FwLen)		\
+	do{														\
+		ULONG	_i, _firm;									\
+		/* protect 8051 we will do firmware upload */		\
 		RTMP_IO_WRITE32(_pAd, PBF_SYS_CTRL, 0x10000);		\
-									\
-		for(_i=0; _i<_FwLen; _i+=4)				\
-		{							\
-			_firm = _pFwImage[_i] +				\
-			   (_pFwImage[_i+3] << 24) +			\
-			   (_pFwImage[_i+2] << 16) +			\
-			   (_pFwImage[_i+1] << 8);			\
+															\
+		for(_i=0; _i<_FwLen; _i+=4)						\
+		{													\
+			_firm = _pFwImage[_i] +							\
+			   (_pFwImage[_i+3] << 24) +					\
+			   (_pFwImage[_i+2] << 16) +					\
+			   (_pFwImage[_i+1] << 8);						\
 			RTMP_IO_WRITE32(_pAd, FIRMWARE_IMAGE_BASE + _i, _firm);	\
-		}							\
+		}													\
+		/* do 8051 firmware reset */						\
 		RTMP_IO_WRITE32(_pAd, PBF_SYS_CTRL, 0x00000);		\
 		RTMP_IO_WRITE32(_pAd, PBF_SYS_CTRL, 0x00001);		\
-									\
-		/* initialize BBP R/W access agent */			\
-		RTMP_IO_WRITE32(_pAd, H2M_BBP_AGENT, 0);		\
-		RTMP_IO_WRITE32(_pAd, H2M_MAILBOX_CSR, 0);		\
+															\
+		/* initialize BBP R/W access agent */				\
+		RTMP_IO_WRITE32(_pAd, H2M_BBP_AGENT, 0);			\
+		RTMP_IO_WRITE32(_pAd, H2M_MAILBOX_CSR, 0);			\
 	}while(0)
 
 

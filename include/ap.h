@@ -5,38 +5,26 @@
  * Hsinchu County 302,
  * Taiwan, R.O.C.
  *
- * (c) Copyright 2002-2007, Ralink Technology, Inc.
+ * (c) Copyright 2002-2010, Ralink Technology, Inc.
  *
- * This program is free software; you can redistribute it and/or modify  * 
- * it under the terms of the GNU General Public License as published by  * 
- * the Free Software Foundation; either version 2 of the License, or     * 
- * (at your option) any later version.                                   * 
- *                                                                       * 
- * This program is distributed in the hope that it will be useful,       * 
- * but WITHOUT ANY WARRANTY; without even the implied warranty of        * 
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         * 
- * GNU General Public License for more details.                          * 
- *                                                                       * 
- * You should have received a copy of the GNU General Public License     * 
- * along with this program; if not, write to the                         * 
- * Free Software Foundation, Inc.,                                       * 
- * 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             * 
- *                                                                       * 
- *************************************************************************
+ * This program is free software; you can redistribute it and/or modify  *
+ * it under the terms of the GNU General Public License as published by  *
+ * the Free Software Foundation; either version 2 of the License, or     *
+ * (at your option) any later version.                                   *
+ *                                                                       *
+ * This program is distributed in the hope that it will be useful,       *
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of        *
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
+ * GNU General Public License for more details.                          *
+ *                                                                       *
+ * You should have received a copy of the GNU General Public License     *
+ * along with this program; if not, write to the                         *
+ * Free Software Foundation, Inc.,                                       *
+ * 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
+ *                                                                       *
+ *************************************************************************/
 
-    Module Name:
-    ap.h
 
-    Abstract:
-    Miniport generic portion header file
-
-    Revision History:
-    Who         When          What
-    --------    ----------    ----------------------------------------------
-    Paul Lin    08-01-2002    created
-    James Tan   09-06-2002    modified (Revise NTCRegTable)
-    John Chang  12-22-2004    modified for RT2561/2661. merge with STA driver
-*/
 #ifndef __AP_H__
 #define __AP_H__
 
@@ -69,6 +57,11 @@ NDIS_STATUS APSendPacket(
     IN  PRTMP_ADAPTER   pAd,
     IN  PNDIS_PACKET    pPacket);
 
+NDIS_STATUS APInsertPsQueue(
+	IN PRTMP_ADAPTER pAd,
+	IN PNDIS_PACKET pPacket,
+	IN MAC_TABLE_ENTRY *pMacEntry,
+	IN UCHAR QueIdx);
 
 NDIS_STATUS APHardTransmit(
 	IN	PRTMP_ADAPTER	pAd,
@@ -158,7 +151,7 @@ USHORT APBuildAssociation(
     IN ULONG  RalinkIe,
     IN EXT_CAP_INFO_ELEMENT ExtCapInfo,
 	IN HT_CAPABILITY_IE		*pHtCapability,
-	IN UCHAR		 HtCapabilityLen,
+	OUT UCHAR		 *pHtCapabilityLen,
     OUT USHORT *pAid);
 
 /*
@@ -247,7 +240,8 @@ VOID APScanCnclAction(
 VOID ApSiteSurvey(
 	IN	PRTMP_ADAPTER  		pAd,
 	IN	PNDIS_802_11_SSID	pSsid,
-	IN	UCHAR				ScanType);
+	IN	UCHAR				ScanType,
+	IN	BOOLEAN				ChannelSel);
 
 VOID SupportRate(
 	IN PUCHAR SupRate,
@@ -294,6 +288,10 @@ VOID APMlmeSetTxRate(
 	IN PMAC_TABLE_ENTRY		pEntry,
 	IN PRTMP_TX_RATE_SWITCH	pTxRate);
 
+VOID APMlmeSelectRateSwitchTable11N3SReplacement(
+	IN PUCHAR	*ppTable);
+
+
 VOID APMlmeDynamicTxRateSwitching(
     IN PRTMP_ADAPTER pAd);
 
@@ -315,6 +313,15 @@ VOID APQuickResponeForRateUpExec(
     IN PVOID SystemSpecific2, 
     IN PVOID SystemSpecific3);
 
+#ifdef NEW_RATE_ADAPT_SUPPORT
+VOID APMlmeDynamicTxRateSwitchingAdapt(
+    IN PRTMP_ADAPTER pAd,
+    IN ULONG idx);
+
+VOID APQuickResponeForRateUpExecAdapt(
+    IN PRTMP_ADAPTER pAd,
+    IN ULONG idx);
+#endif //NEW_RATE_ADAPT_SUPPORT //
 
 
 VOID RTMPSetPiggyBack(
@@ -498,13 +505,6 @@ BOOLEAN DOT1X_EapTriggerAction(
 #endif // DOT1X_SUPPORT //
 
 #ifdef DOT11_N_SUPPORT
-#ifdef GREENAP_SUPPORT
-VOID EnableAPMIMOPS(
-    IN PRTMP_ADAPTER pAd);
-
-VOID DisableAPMIMOPS(
-    IN PRTMP_ADAPTER pAd);
-#endif // GREENAP_SUPPORT //
 #endif // DOT11_N_SUPPORT //
 #endif  // __AP_H__
 

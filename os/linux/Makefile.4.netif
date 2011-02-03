@@ -3,16 +3,12 @@ include $(RT28xx_DIR)/os/linux/config.mk
 #ifdef CONFIG_AP_SUPPORT
 ifeq ($(RT28xx_MODE),AP)
 MOD_NAME = rtnet$(CHIPSET)ap
-DAT_PATH = /etc/Wireless/RT$(CHIPSET)AP
-DAT_FILE_NAME = RT$(CHIPSET)AP.dat
 endif
 #endif // CONFIG_AP_SUPPORT //
 
 #ifdef CONFIG_STA_SUPPORT
 ifeq ($(RT28xx_MODE), STA)
 MOD_NAME = rtnet$(CHIPSET)sta
-DAT_PATH = /etc/Wireless/RT$(CHIPSET)STA
-DAT_FILE_NAME = RT$(CHIPSET)STA.dat
 endif
 #endif // CONFIG_STA_SUPPORT //
 
@@ -311,6 +307,8 @@ endif
 
 #endif // CONFIG_APSTA_SUPPORT //
 
+PHONY := all clean
+
 all:$(OBJ)
 
 rtnet$(CHIPSET)sta.o: $(RT28XX_STA_OBJ)
@@ -346,3 +344,16 @@ ifeq ($(RT28xx_MODE),APSTA)
 endif
 endif
 endif
+
+install:
+	install -d $(LINUX_SRC_MODULE)
+	install -m 644 -c $(addsuffix .o,$(MOD_NAME)) $(LINUX_SRC_MODULE)
+	/sbin/depmod -a ${shell uname -r}
+
+uninstall:
+	rm -rf $(addprefix $(LINUX_SRC_MODULE),$(addsuffix .o,$(MOD_NAME)))
+	/sbin/depmod -a ${shell uname -r}
+
+# Declare the contents of the .PHONY variable as phony.  We keep that
+# # information in a variable so we can use it in if_changed and friends.
+.PHONY: $(PHONY)
