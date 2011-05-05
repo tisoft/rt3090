@@ -1,8 +1,2 @@
-#net_device_ops.dpatch
 Makefile.dpatch
-#enable-wpa-supplicant.dpatch
-#fix-rt_ioctl_siwencode-check.dpatch
-#return-value-with-void.dpatch
-#unexpected-format.dpatch
-#include_sched_h.dpatch
 nl80211.dpatch
