@@ -1,3 +1,9 @@
+rt3090 (1:2.4.0.4-0ubuntu0~ppa0) natty; urgency=low
+
+  * upgraded to upstream 2.4.0.4
+
+ -- Markus Heberling <markus@tisoft.de>  Thu, 05 May 2011 15:12:00 +0200
+
 rt3090 (1:2.3.1.7-0ubuntu0~ppa2) lucid; urgency=low
 
   * fixed version in dkms source dir

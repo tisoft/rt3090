@@ -5,3 +5,4 @@ Makefile.dpatch
 #return-value-with-void.dpatch
 #unexpected-format.dpatch
 #include_sched_h.dpatch
+nl80211.dpatch
